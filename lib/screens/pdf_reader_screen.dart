@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:pdfx/pdfx.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class PdfReaderScreen extends StatefulWidget {
@@ -15,14 +15,24 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   static const _channel = MethodChannel('com.vocabreader/picker');
 
   File? _pdfFile;
+  PdfDocument? _pdfDocument;
   String _pdfName = '';
   String _extractedText = '';
   bool _isLoading = false;
-  bool _showText = false; // toggle: PDF view vs text view
-  int? _totalPages;
+  bool _showText = false;
   String? _error;
 
+  @override
+  void dispose() {
+    _pdfDocument?.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickAndLoad() async {
+    // Dispose previous document
+    _pdfDocument?.dispose();
+    _pdfDocument = null;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -33,12 +43,15 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       final result = await _channel.invokeMapMethod<String, dynamic>('pickPdf');
       if (result == null) {
         setState(() => _isLoading = false);
-        return; // User cancelled
+        return;
       }
 
       final path = result['path'] as String;
       final name = result['name'] as String? ?? 'document.pdf';
       final file = File(path);
+
+      // Open for native rendering
+      _pdfDocument = await PdfDocument.openFile(path);
 
       // Extract text in background for the text view
       _extractTextInBackground(file);
@@ -71,7 +84,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_pdfFile == null) {
+    if (_pdfFile == null || _pdfDocument == null) {
       return _buildEmptyState();
     }
 
@@ -95,7 +108,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Toggle: PDF / Text
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(value: false, label: Text('PDF'), icon: Icon(Icons.picture_as_pdf, size: 16)),
@@ -131,20 +143,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   }
 
   Widget _buildPdfView() {
-    return PDFView(
-      filePath: _pdfFile!.absolute.path,
-      enableSwipe: true,
-      swipeHorizontal: false,
-      autoSpacing: true,
-      pageFling: true,
-      onRender: (_) {},
-      onViewCreated: (controller) {},
-      onPageChanged: (page, total) {
-        setState(() => _totalPages = total);
-      },
-      onError: (error) {
-        setState(() => _error = error.toString());
-      },
+    return PdfViewPinch(
+      document: _pdfDocument!,
     );
   }
 
@@ -152,10 +152,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     if (_extractedText.isEmpty) {
       return const Center(child: Text('No text extracted'));
     }
-    return SelectableText(
-      _extractedText,
-      style: const TextStyle(fontSize: 14, height: 1.6),
-      scrollPhysics: const BouncingScrollPhysics(),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: SelectableText(
+        _extractedText,
+        style: const TextStyle(fontSize: 14, height: 1.6),
+      ),
     );
   }
 
