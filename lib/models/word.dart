@@ -1,3 +1,23 @@
+/// ─── Word Data Model ────────────────────────────────────────────────
+///
+/// Represents a vocabulary word stored in the local SQLite database.
+/// Each word has a source language, target language translation,
+/// example sentences in both languages, and review tracking.
+///
+/// ## Why this model structure
+/// - **Flat, not nested:** The database is SQLite, not a document store.
+///   Multiple meanings are stored as comma-separated values in `translation`
+///   rather than a separate table — simpler for this app's scale.
+/// - **Timestamps:** `createdAt` and `updatedAt` enable sort-by-newest
+///   and future sync conflict resolution.
+/// - **isReviewed:** Boolean flag for the flashcards feature — tracks
+///   whether the user has flipped the card at least once.
+///
+/// ## Safe parsing in fromMap
+/// The `parseDate` helper catches malformed date strings and returns
+/// `DateTime.now()` instead of crashing. This was added after discovering
+/// that manual DB edits could introduce invalid timestamp formats.
+
 class Word {
   int? id;
   String word;
@@ -25,7 +45,12 @@ class Word {
         updatedAt = updatedAt ?? DateTime.now();
 
   /// Create from a database row map.
+  /// All fields are null-safe — missing or null values become
+  /// empty strings or defaults rather than throwing.
   factory Word.fromMap(Map<String, dynamic> map) {
+    // Helper: safely parse ISO 8601 date strings.
+    // Returns DateTime.now() on any parse failure to avoid crashes
+    // from malformed data (e.g. manual DB edits).
     DateTime parseDate(String? val) {
       if (val == null) return DateTime.now();
       try {
@@ -50,6 +75,8 @@ class Word {
   }
 
   /// Convert to a map for database storage.
+  /// Excludes `id` when null — SQLite auto-increments on insert,
+  /// but needs the id on update.
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
@@ -66,6 +93,8 @@ class Word {
   }
 
   /// Create a copy with optional field changes.
+  /// Used by the provider to toggle review status without
+  /// mutating the original object (immutable update pattern).
   Word copyWith({
     int? id,
     String? word,

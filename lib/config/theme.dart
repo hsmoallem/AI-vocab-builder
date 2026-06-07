@@ -1,3 +1,22 @@
+/// ─── App Theme — Material 3 Light & Dark ────────────────────────────
+///
+/// Defines the visual identity of the app using Material 3's
+/// ColorScheme.fromSeed() — this generates a full color palette
+/// from a single seed color, ensuring accessibility-compliant
+/// contrast ratios automatically.
+///
+/// ## Why Material 3
+/// Material 3 is the current Flutter standard. It provides:
+///   - Dynamic color on Android 12+
+///   - Consistent typography scale
+///   - Better dark mode support than Material 2
+///
+/// ## Design choices
+/// - **Primary:** Blue (#4A90D9) — calm, academic, readable
+/// - **Accent/Review:** Green (#50C878) — "success" association
+/// - **Rounded cards (12px)** — softer than default 4px Material radius
+/// - **Filled input fields** — better for text-heavy form UIs
+
 import 'package:flutter/material.dart';
 
 class AppTheme {

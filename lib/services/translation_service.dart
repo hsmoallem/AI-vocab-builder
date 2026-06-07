@@ -1,3 +1,25 @@
+/// ─── Translation Service — DeepSeek AI ──────────────────────────────
+///
+/// Handles all AI-powered features:
+///   1. Word translation with multiple meanings
+///   2. Daily phrase generation
+///
+/// ## Why DeepSeek
+///   - $0.14 per million input tokens — cheapest viable LLM for translation
+///   - `deepseek-chat` model is instruction-tuned and reliably returns JSON
+///   - API is OpenAI-compatible, so we can swap to OpenAI/Groq with minimal changes
+///   - No rate limits hit during development with single-user usage
+///
+/// ## Prompt engineering
+///   - System message sets the role: "professional translator" or "language teacher"
+///   - User message provides the word + language pair + exact JSON format
+///   - Temperature 0.3 for translation (precise), 0.7 for daily phrases (variety)
+///   - `max_tokens: 800` gives room for multi-meaning responses with examples
+///
+/// ## API key management
+///   - Falls back to AppConfig.deepseekApiKey if no key in shared_preferences
+///   - setApiKey() saves to shared_preferences (future Settings screen)
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,25 +33,35 @@ class TranslationService {
 
   String? _apiKey;
 
+  /// Save a user-provided API key to shared_preferences.
   Future<void> setApiKey(String key) async {
     _apiKey = key;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_apiKeyKey, key);
   }
 
+  /// Get the API key — checks memory, then shared_preferences,
+  /// then falls back to the embedded key in AppConfig.
   Future<String?> getApiKey() async {
     if (_apiKey != null) return _apiKey;
     final prefs = await SharedPreferences.getInstance();
     _apiKey = prefs.getString(_apiKeyKey);
+    // Fall back to the embedded key from config
     _apiKey ??= AppConfig.deepseekApiKey;
     return _apiKey;
   }
 
+  /// Check if any API key is configured.
   Future<bool> isConfigured() async {
     final key = await getApiKey();
     return key != null && key.isNotEmpty;
   }
 
+  /// Translate a word/phrase with multi-meaning support.
+  ///
+  /// The prompt instructs DeepSeek to return ALL distinct meanings
+  /// with separate example sentences for each. German nouns get
+  /// automatic article detection (der/die/das).
   Future<TranslationResult> translate({
     required String word,
     String sourceLang = _defaultSourceLang,
@@ -60,8 +92,8 @@ class TranslationService {
             'content': prompt,
           },
         ],
-        'temperature': 0.3,
-        'max_tokens': 800,
+        'temperature': 0.3,  // Low temp for consistent, accurate translations
+        'max_tokens': 800,    // Enough space for multiple meanings + examples
       }),
     );
 
@@ -75,6 +107,7 @@ class TranslationService {
     return TranslationResult.fromJson(content.trim());
   }
 
+  /// Build the translation prompt with language names.
   String _buildPrompt(String word, String sourceLang, String targetLang) {
     final sourceName = _langName(sourceLang);
     final targetName = _langName(targetLang);
@@ -105,7 +138,10 @@ Return ONLY a JSON object (no other text) with this format:
   }
 
   /// Generate 5 daily-life phrases in the given language.
-  /// Returns a list of {phrase, memorized: false}.
+  ///
+  /// Used by the Daily Phrases screen. Phrases are practical,
+  /// everyday expressions from different situations.
+  /// Temperature 0.7 adds variety — each day feels fresh.
   Future<List<DailyPhrase>> generateDailyPhrases({String lang = 'de'}) async {
     final apiKey = await getApiKey();
     if (apiKey == null || apiKey.isEmpty) {
@@ -140,8 +176,8 @@ Return ONLY a JSON object (no other text):
             'content': prompt,
           },
         ],
-        'temperature': 0.7,
-        'max_tokens': 300,
+        'temperature': 0.7,  // Higher temp for daily variety
+        'max_tokens': 300,    // 5 short phrases need less tokens
       }),
     );
 
@@ -152,7 +188,7 @@ Return ONLY a JSON object (no other text):
     final data = jsonDecode(response.body);
     final content = data['choices'][0]['message']['content'] as String;
 
-    // Parse JSON — clean markdown fences if present
+    // Parse JSON — clean markdown fences if DeepSeek wraps in ```json```
     String jsonStr = content.trim();
     if (jsonStr.startsWith('```')) {
       jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
@@ -165,6 +201,7 @@ Return ONLY a JSON object (no other text):
     return phrases.map((p) => DailyPhrase(phrase: p)).toList();
   }
 
+  /// Map language codes to human-readable names for the AI prompt.
   String _langName(String code) {
     const names = {
       'de': 'German', 'en': 'English', 'fr': 'French', 'es': 'Spanish',
@@ -180,12 +217,15 @@ Return ONLY a JSON object (no other text):
   }
 }
 
-/// A single meaning with its own example
+/// A single meaning with its own example.
+///
+/// Used by the multi-meaning translation feature.
+/// `article` is optional — only populated for German nouns.
 class Meaning {
   final String text;
-  final String? article;
-  final String exampleSource;
-  final String exampleTarget;
+  final String? article;          // der/die/das for German nouns, null otherwise
+  final String exampleSource;     // Example in the source language
+  final String exampleTarget;     // Example translated to target language
 
   Meaning({
     required this.text,
@@ -195,16 +235,22 @@ class Meaning {
   });
 }
 
-/// Result from DeepSeek translation
+/// Result from DeepSeek translation — contains one or more meanings.
+///
+/// ## Why a list of meanings instead of a single translation
+/// German words like "Bank" (bench / bank) or "Schloss" (castle / lock)
+/// have completely different meanings. Showing all of them with separate
+/// examples helps the learner understand context.
 class TranslationResult {
   final List<Meaning> meanings;
 
   TranslationResult({required this.meanings});
 
-  /// Combined translation string (all meanings joined)
+  /// Combined translation string — all meanings joined with commas.
   String get translation => meanings.map((m) => m.text).join(', ');
 
-  /// Combined examples (source)
+  /// Combined examples in source language.
+  /// Single meaning: just the example. Multiple: numbered list.
   String get exampleSource {
     if (meanings.length == 1) return meanings.first.exampleSource;
     return meanings.asMap().entries.map((e) =>
@@ -212,7 +258,7 @@ class TranslationResult {
     ).join('\n');
   }
 
-  /// Combined examples (target)
+  /// Combined examples in target language (translated).
   String get exampleTarget {
     if (meanings.length == 1) return meanings.first.exampleTarget;
     return meanings.asMap().entries.map((e) =>
@@ -220,8 +266,15 @@ class TranslationResult {
     ).join('\n');
   }
 
+  /// Parse the JSON response from DeepSeek.
+  ///
+  /// Handles three response formats:
+  ///   1. Modern format: {"meanings": [{...}, {...}]}  ← preferred
+  ///   2. Legacy format: {"translation": "...", "example_sentence_source": "..."}
+  ///   3. Raw text: all JSON parsing failed → returned as single meaning
   factory TranslationResult.fromJson(String rawJson) {
     try {
+      // Strip markdown code fences if DeepSeek wraps the JSON
       String jsonStr = rawJson.trim();
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
@@ -230,6 +283,7 @@ class TranslationResult {
 
       final map = jsonDecode(jsonStr);
 
+      // Modern multi-meaning format
       if (map['meanings'] is List) {
         final meanings = (map['meanings'] as List).map((m) {
           final article = m['article']?.toString();
@@ -246,7 +300,7 @@ class TranslationResult {
         }
       }
 
-      // Fallback: single meaning from old format
+      // Fallback: legacy single-meaning format
       final single = Meaning(
         text: map['translation']?.toString() ?? rawJson,
         exampleSource: map['example_sentence_source']?.toString() ?? '',
@@ -254,6 +308,7 @@ class TranslationResult {
       );
       return TranslationResult(meanings: [single]);
     } catch (e) {
+      // Ultimate fallback: raw text as single meaning
       return TranslationResult(meanings: [
         Meaning(text: rawJson, exampleSource: '', exampleTarget: ''),
       ]);
@@ -261,14 +316,20 @@ class TranslationResult {
   }
 }
 
-/// Daily phrase — generated fresh each day
+/// Daily phrase — generated fresh each day by the AI.
+///
+/// Stored in shared_preferences (not the database) because phrases
+/// reset daily — no value in persisting old ones permanently.
 class DailyPhrase {
   final String phrase;
-  bool memorized;
+  bool memorized;   // Toggled by the user in the Daily Phrases screen
 
   DailyPhrase({required this.phrase, this.memorized = false});
 
+  /// Serialize to JSON for shared_preferences storage.
   Map<String, dynamic> toJson() => {'phrase': phrase, 'memorized': memorized};
+
+  /// Deserialize from shared_preferences JSON.
   factory DailyPhrase.fromJson(Map<String, dynamic> json) =>
       DailyPhrase(phrase: json['phrase'] as String, memorized: json['memorized'] == true);
 }

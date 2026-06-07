@@ -5,12 +5,16 @@ class WordCard extends StatelessWidget {
   final Word word;
   final VoidCallback? onDelete;
   final VoidCallback? onToggleReview;
+  final VoidCallback? onSpeakWord;       // Speak the word in source language
+  final VoidCallback? onSpeakExample;    // Speak the example in source language
 
   const WordCard({
     super.key,
     required this.word,
     this.onDelete,
     this.onToggleReview,
+    this.onSpeakWord,
+    this.onSpeakExample,
   });
 
   @override
@@ -24,9 +28,20 @@ class WordCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Word + review + delete
+            // Word + speak + review + delete
             Row(
               children: [
+                // 🔊 Speak word button — plays the word in source language
+                if (onSpeakWord != null)
+                  IconButton(
+                    icon: const Icon(Icons.volume_up, size: 20),
+                    tooltip: 'Listen to word',
+                    onPressed: onSpeakWord,
+                    color: Theme.of(context).colorScheme.primary,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
                 Expanded(
                   child: Text(
                     word.word,
@@ -85,7 +100,7 @@ class WordCard extends StatelessWidget {
               ],
             ),
 
-            // Example (source)
+            // Example (source) — with 🔊 speak button
             if (word.exampleSource.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
@@ -94,12 +109,28 @@ class WordCard extends StatelessWidget {
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  word.exampleSource,
-                  style: const TextStyle(
-                    fontStyle: FontStyle.italic,
-                    fontSize: 14,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (onSpeakExample != null)
+                      GestureDetector(
+                        onTap: onSpeakExample,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 6, top: 1),
+                          child: Icon(Icons.volume_up,
+                              size: 16, color: Colors.grey[600]),
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        word.exampleSource,
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

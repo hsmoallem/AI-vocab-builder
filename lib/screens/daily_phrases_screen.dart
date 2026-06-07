@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/translation_service.dart';
+import '../services/tts_service.dart';
 
 class DailyPhrasesScreen extends StatefulWidget {
   const DailyPhrasesScreen({super.key});
@@ -12,10 +13,12 @@ class DailyPhrasesScreen extends StatefulWidget {
 
 class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   final TranslationService _translator = TranslationService();
+  final TtsService _tts = TtsService();
 
   List<DailyPhrase>? _phrases;
   bool _isLoading = true;
   String? _error;
+  String _lang = 'de'; // Default German, loaded from prefs
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -32,6 +35,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     _loadPhrases();
   }
 
+  @override
+  void dispose() {
+    _tts.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPhrases() async {
     setState(() {
       _isLoading = true;
@@ -42,6 +51,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       final prefs = await SharedPreferences.getInstance();
       final savedDate = prefs.getString(_dateKey);
       final lang = prefs.getString(_langKey) ?? 'de';
+      _lang = lang;
 
       if (savedDate == _today()) {
         final jsonStr = prefs.getString(_phrasesKey);
@@ -193,15 +203,38 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                       ),
                     ),
                   ),
-                  title: Text(
-                    phrase.phrase,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      decoration: phrase.memorized
-                          ? TextDecoration.lineThrough
-                          : null,
-                      color: phrase.memorized ? Colors.grey : null,
-                    ),
+                  title: Row(
+                    children: [
+                      // 🔊 Speak phrase in the daily phrases language
+                      IconButton(
+                        icon: Icon(Icons.volume_up,
+                            size: 18,
+                            color: phrase.memorized
+                                ? Colors.grey[400]
+                                : theme.colorScheme.primary),
+                        tooltip: 'Listen',
+                        onPressed: phrase.memorized
+                            ? null
+                            : () => _tts.speak(phrase.phrase, language: _lang),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          phrase.phrase,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            decoration: phrase.memorized
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: phrase.memorized ? Colors.grey : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   trailing: phrase.memorized
                       ? Icon(Icons.check_circle, color: Colors.green[400])

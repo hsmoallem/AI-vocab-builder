@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
+import '../services/tts_service.dart';
 import '../widgets/word_card.dart';
 
 class WordListScreen extends StatefulWidget {
@@ -13,10 +14,12 @@ class WordListScreen extends StatefulWidget {
 
 class _WordListScreenState extends State<WordListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TtsService _tts = TtsService();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tts.dispose();
     super.dispose();
   }
 
@@ -176,6 +179,17 @@ class _WordListScreenState extends State<WordListScreen> {
                             onToggleReview: () {
                               context.read<WordProvider>().toggleReview(word);
                             },
+                            // 🔊 Speak word in its source language
+                            onSpeakWord: () {
+                              _tts.speak(word.word, language: word.sourceLang);
+                            },
+                            // 🔊 Speak example in its source language
+                            onSpeakExample: word.exampleSource.isNotEmpty
+                                ? () {
+                                    _tts.speak(word.exampleSource,
+                                        language: word.sourceLang);
+                                  }
+                                : null,
                           ),
                         );
                       },
