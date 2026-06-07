@@ -69,11 +69,21 @@ class _AddWordDialogState extends State<AddWordDialog> {
 
       setState(() {
         _meanings = result.meanings.map((m) => _MeaningEntry(
+          article: m.article,
           meaning: TextEditingController(text: m.text),
           exampleSource: TextEditingController(text: m.exampleSource),
           exampleTarget: TextEditingController(text: m.exampleTarget),
         )).toList();
       });
+
+      // If an article was returned, prepend it to the word field
+      final article = result.meanings.firstOrNull?.article;
+      if (article != null && article.isNotEmpty) {
+        final currentWord = _wordController.text.trim();
+        if (!currentWord.startsWith(article)) {
+          _wordController.text = '$article $currentWord';
+        }
+      }
     } catch (e) {
       setState(() => _error = 'Translation failed: $e');
     }
@@ -267,6 +277,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
                   return _MeaningCard(
                     index: i,
                     total: _meanings.length,
+                    article: m.article,
                     meaning: m.meaning,
                     exampleSource: m.exampleSource,
                     exampleTarget: m.exampleTarget,
@@ -302,11 +313,13 @@ class _AddWordDialogState extends State<AddWordDialog> {
 
 /// Holds controllers for one meaning entry
 class _MeaningEntry {
+  final String? article;
   final TextEditingController meaning;
   final TextEditingController exampleSource;
   final TextEditingController exampleTarget;
 
   _MeaningEntry({
+    this.article,
     required this.meaning,
     required this.exampleSource,
     required this.exampleTarget,
@@ -323,6 +336,7 @@ class _MeaningEntry {
 class _MeaningCard extends StatelessWidget {
   final int index;
   final int total;
+  final String? article;
   final TextEditingController meaning;
   final TextEditingController exampleSource;
   final TextEditingController exampleTarget;
@@ -330,6 +344,7 @@ class _MeaningCard extends StatelessWidget {
   const _MeaningCard({
     required this.index,
     required this.total,
+    this.article,
     required this.meaning,
     required this.exampleSource,
     required this.exampleTarget,
@@ -369,6 +384,23 @@ class _MeaningCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Article badge
+                if (article != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      article!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: TextField(
                     controller: meaning,

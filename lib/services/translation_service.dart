@@ -83,16 +83,20 @@ class TranslationService {
 
 IMPORTANT: If this word has MULTIPLE distinct meanings, include ALL of them as separate items in the array. Each meaning MUST have its own example sentence that demonstrates THAT specific meaning.
 
+For GERMAN nouns: ALWAYS include the correct article (der/die/das) in the "article" field.
+
 Return ONLY a JSON object (no other text) with this format:
 {
   "meanings": [
     {
       "meaning": "first meaning in $targetName",
+      "article": "der/die/das (only for German nouns, otherwise omit)",
       "example_source": "example sentence using '$word' with this specific meaning in $sourceName",
       "example_target": "natural $targetName translation of the example"
     },
     {
       "meaning": "second meaning in $targetName",
+      "article": "der/die/das (only for German nouns, otherwise omit)",
       "example_source": "example sentence using '$word' with this specific meaning in $sourceName",
       "example_target": "natural $targetName translation of the example"
     }
@@ -118,11 +122,13 @@ Return ONLY a JSON object (no other text) with this format:
 /// A single meaning with its own example
 class Meaning {
   final String text;
+  final String? article;
   final String exampleSource;
   final String exampleTarget;
 
   Meaning({
     required this.text,
+    this.article,
     required this.exampleSource,
     required this.exampleTarget,
   });
@@ -165,8 +171,10 @@ class TranslationResult {
 
       if (map['meanings'] is List) {
         final meanings = (map['meanings'] as List).map((m) {
+          final article = m['article']?.toString();
           return Meaning(
             text: m['meaning']?.toString() ?? '',
+            article: (article != null && article.isNotEmpty) ? article : null,
             exampleSource: m['example_source']?.toString() ?? '',
             exampleTarget: m['example_target']?.toString() ?? '',
           );
