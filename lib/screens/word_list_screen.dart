@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_strings.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/tts_service.dart';
@@ -32,20 +33,21 @@ class _WordListScreenState extends State<WordListScreen> {
   }
 
   Future<void> _deleteWord(BuildContext context, Word word) async {
+    final s = AppStrings.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Word'),
-        content: Text('Delete "${word.word}"?'),
+        title: Text(s.deleteConfirmTitle),
+        content: Text(s.deleteConfirmBody(word.word)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -56,13 +58,13 @@ class _WordListScreenState extends State<WordListScreen> {
         await context.read<WordProvider>().deleteWord(word.id!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('"${word.word}" deleted')),
+            SnackBar(content: Text('"${word.word}" ${s.locale == "de" ? "gelöscht" : "deleted"}')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Delete failed: $e')),
+            SnackBar(content: Text('${s.locale == "de" ? "Löschen fehlgeschlagen" : "Delete failed"}: $e')),
           );
         }
       }
@@ -73,24 +75,23 @@ class _WordListScreenState extends State<WordListScreen> {
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
       builder: (context, provider, _) {
-        // Compute filtered list on every build — no stale state
+        final s = AppStrings.of(context);
         final filtered = _filter(provider.words, _searchController.text);
 
         return Column(
           children: [
-            // Search bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: TextField(
                 controller: _searchController,
-                onChanged: (_) => setState(() {}), // trigger rebuild for filter
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Search words...',
+                  hintText: s.searchHint,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
-                          tooltip: 'Clear search',
+                          tooltip: s.locale == 'de' ? 'Suche löschen' : 'Clear search',
                           onPressed: () {
                             _searchController.clear();
                             setState(() {});
@@ -111,21 +112,21 @@ class _WordListScreenState extends State<WordListScreen> {
               child: Row(
                 children: [
                   _SortChip(
-                    label: 'A-Z',
+                    label: s.sortAlphabetical,
                     icon: Icons.sort_by_alpha,
                     selected: provider.sortMode == SortMode.alphabetical,
                     onTap: () => provider.setSortMode(SortMode.alphabetical),
                   ),
                   const SizedBox(width: 8),
                   _SortChip(
-                    label: 'Newest',
+                    label: s.sortNewest,
                     icon: Icons.access_time,
                     selected: provider.sortMode == SortMode.newestFirst,
                     onTap: () => provider.setSortMode(SortMode.newestFirst),
                   ),
                   const Spacer(),
                   Text(
-                    '${filtered.length} word${filtered.length == 1 ? '' : 's'}',
+                    '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ],
@@ -144,8 +145,8 @@ class _WordListScreenState extends State<WordListScreen> {
                           const SizedBox(height: 12),
                           Text(
                             _searchController.text.isNotEmpty
-                                ? 'No matching words'
-                                : 'No words yet.\nTap + to add one!',
+                                ? (s.locale == 'de' ? 'Keine passenden Wörter' : 'No matching words')
+                                : s.noWords,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,

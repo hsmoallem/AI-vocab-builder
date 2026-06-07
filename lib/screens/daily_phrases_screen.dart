@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_strings.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
@@ -23,7 +24,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   bool _isLoading = true;
   String? _error;
   String _lang = 'de';
-  String? _lastTheme; // Remember the last theme used
+  String? _lastTheme;
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -58,7 +59,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       final lang = prefs.getString(_langKey) ?? 'de';
       _lang = lang;
 
-      // Only use cache if no theme is specified and it's still today
       if (theme == null && savedDate == _today()) {
         final jsonStr = prefs.getString(_phrasesKey);
         if (jsonStr != null) {
@@ -70,7 +70,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         }
       }
 
-      // Generate fresh phrases (with optional theme)
       final phrases = await _translator.generateDailyPhrases(
         lang: lang,
         theme: theme,
@@ -89,7 +88,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     }
   }
 
-  /// Generate a completely new batch (ignores today's cache).
   void _generateNew() {
     final theme = _themeCtrl.text.trim();
     _loadPhrases(theme: theme.isNotEmpty ? theme : null);
@@ -112,17 +110,16 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     await _saveToPrefs(prefs);
   }
 
-  /// Save a phrase to My Words so the user can review it later.
   void _saveToMyWords(int index) async {
     final phrase = _phrases![index];
     final provider = context.read<WordProvider>();
+    final s = AppStrings.of(context);
 
-    // Check if already saved
     final exists = provider.words.any((w) => w.word == phrase.phrase);
     if (exists) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Already in My Words')),
+          SnackBar(content: Text(s.locale == 'de' ? 'Bereits in Meine Wörter' : 'Already in My Words')),
         );
       }
       return;
@@ -130,7 +127,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
     final success = await provider.addWord(
       word: phrase.phrase,
-      translation: '', // User can translate later from My Words
+      translation: '',
       exampleSource: '',
       exampleTarget: '',
       sourceLang: _lang,
@@ -138,9 +135,10 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     );
 
     if (mounted) {
+      final msg = s.savedWordToMyWords.replaceAll('{word}', phrase.phrase);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Saved to My Words' : 'Failed to save'),
+          content: Text(success ? msg : (s.locale == 'de' ? 'Fehler beim Speichern' : 'Failed to save')),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
@@ -150,6 +148,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = AppStrings.of(context);
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -170,7 +169,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               FilledButton.icon(
                 onPressed: _loadPhrases,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(s.retry),
               ),
             ],
           ),
@@ -179,6 +178,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     }
 
     final allMemorized = _phrases!.every((p) => p.memorized);
+    final doneCount = _phrases!.where((p) => p.memorized).length;
 
     return Column(
       children: [
@@ -191,7 +191,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                 child: TextField(
                   controller: _themeCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Theme (e.g. "at the restaurant")',
+                    hintText: s.themeHint,
                     prefixIcon: const Icon(Icons.topic, size: 20),
                     isDense: true,
                     contentPadding:
@@ -206,7 +206,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               ),
               const SizedBox(width: 8),
               Tooltip(
-                message: 'Generate new phrases',
+                message: s.generateNew,
                 child: IconButton.filled(
                   onPressed: _generateNew,
                   icon: const Icon(Icons.refresh, size: 20),
@@ -240,15 +240,17 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               Expanded(
                 child: Text(
                   allMemorized
-                      ? 'All done! 🎉\nGenerate new phrases or check back tomorrow.'
-                      : 'Memorize these 5 phrases today',
+                      ? s.allDone
+                      : s.locale == 'de'
+                          ? 'Lerne diese 5 Phrasen heute'
+                          : 'Memorize these 5 phrases today',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               Text(
-                '${_phrases!.where((p) => p.memorized).length}/${_phrases!.length}',
+                s.memorizedCounter(doneCount, _phrases!.length),
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: allMemorized ? Colors.green : theme.colorScheme.primary,
@@ -274,7 +276,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   leading: Tooltip(
-                    message: phrase.memorized ? 'Undo' : 'Memorize',
+                    message: phrase.memorized
+                        ? (s.locale == 'de' ? 'Rückgängig' : 'Undo')
+                        : (s.locale == 'de' ? 'Merken' : 'Memorize'),
                     child: GestureDetector(
                       onTap: () => _toggleMemorized(index),
                       child: AnimatedContainer(
@@ -303,7 +307,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                             color: phrase.memorized
                                 ? Colors.grey[400]
                                 : theme.colorScheme.primary),
-                        tooltip: 'Listen',
+                        tooltip: s.listenWord,
                         onPressed: phrase.memorized
                             ? null
                             : () => _tts.speak(phrase.phrase, language: _lang),
@@ -330,9 +334,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 📌 Save to My Words
                       Tooltip(
-                        message: 'Save to My Words',
+                        message: s.saveToWords,
                         child: IconButton(
                           icon: const Icon(Icons.bookmark_add_outlined, size: 20),
                           onPressed: () => _saveToMyWords(index),
@@ -344,7 +347,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                       ),
                       if (phrase.memorized)
                         Tooltip(
-                          message: 'Memorized',
+                          message: s.locale == 'de' ? 'Gemerkt' : 'Memorized',
                           child: Icon(Icons.check_circle,
                               color: Colors.green[400], size: 20),
                         ),
