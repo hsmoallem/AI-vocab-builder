@@ -1,17 +1,16 @@
 /// ─── Firebase Service ────────────────────────────────────────────────
 ///
-/// Handles Firebase initialization, Google Sign-In authentication,
-/// and Firestore cloud backup/restore of vocabulary words.
+/// Handles Firebase initialization, all authentication methods
+/// (Google, Email/Password, Anonymous), and Firestore cloud backup/restore.
 ///
-/// ## Architecture
-/// - **Auth:** Google Sign-In → Firebase Auth credential → signed-in user
-/// - **Backup:** Each user's words stored under `users/{uid}/words/{wordId}`
-/// - **Restore:** Reads all words from Firestore, returns them for local merge
+/// ## Auth Methods
+/// - **Google:** One-tap sign-in with Google account
+/// - **Email/Password:** Traditional email + password with registration support
+/// - **Anonymous:** Temporary account, no credentials needed
 ///
-/// ## Security note
+/// ## Security
 /// Firestore security rules should restrict read/write to the authenticated
-/// user's own data only. The `google-services.json` file is NOT committed
-/// to git — it's provided by the developer via Firebase Console.
+/// user's own data only. `google-services.json` is NOT committed to git.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,8 +25,7 @@ class FirebaseService {
   FirebaseAuth get auth => FirebaseAuth.instance;
   FirebaseFirestore get firestore => FirebaseFirestore.instance;
 
-  /// Initialize Firebase. Must be called before any other Firebase operation.
-  /// Call once at app startup (in main.dart).
+  /// Initialize Firebase. Call once at app startup.
   Future<void> init() async {
     await Firebase.initializeApp();
   }
@@ -35,44 +33,92 @@ class FirebaseService {
   /// Get the currently signed-in user, or null if not signed in.
   User? get currentUser => auth.currentUser;
 
-  /// Whether the user is currently signed in.
+  /// Whether the user is currently signed in (any method).
   bool get isSignedIn => currentUser != null;
+
+  /// Whether the current user is anonymous (signed in with signInAnonymously).
+  bool get isAnonymous => currentUser?.isAnonymous ?? false;
 
   /// Stream of auth state changes. Emits null when signed out.
   Stream<User?> authStateChanges() => auth.authStateChanges();
 
-  /// Sign in with Google.
-  /// Returns the signed-in [User], or null if the user cancelled.
+  // ═════════════════════════════════════════════════════════════════════
+  // Google Sign-In
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// Sign in with Google. Returns the signed-in [User], or null if cancelled.
   Future<User?> signInWithGoogle() async {
     try {
-      // Trigger Google Sign-In flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return null;
 
-      if (googleUser == null) {
-        // User cancelled the sign-in dialog
-        return null;
-      }
-
-      // Get auth details from the request
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create a Firebase credential from the Google token
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the credential
       final userCredential = await auth.signInWithCredential(credential);
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
-      // Re-throw so the UI can show a meaningful error
       throw Exception('Sign-in failed: ${e.message}');
     }
   }
 
-  /// Sign out of both Firebase and Google.
+  // ═════════════════════════════════════════════════════════════════════
+  // Email/Password
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// Sign in with email and password.
+  /// Throws [FirebaseAuthException] if credentials are wrong.
+  Future<User> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    return credential.user!;
+  }
+
+  /// Register a new account with email and password.
+  /// Throws [FirebaseAuthException] if email already in use or password too weak.
+  Future<User> registerWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await auth.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    return credential.user!;
+  }
+
+  /// Send a password reset email to the given address.
+  Future<void> sendPasswordResetEmail(String email) async {
+    await auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // Anonymous Sign-In
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// Sign in anonymously — no credentials needed.
+  /// Creates a temporary account. Data is lost if the user signs out
+  /// or uninstalls the app without linking to a permanent account.
+  Future<User> signInAnonymously() async {
+    final credential = await auth.signInAnonymously();
+    return credential.user!;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // Sign Out
+  // ═════════════════════════════════════════════════════════════════════
+
+  /// Sign out of all providers.
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await auth.signOut();
@@ -82,8 +128,7 @@ class FirebaseService {
   // Firestore Cloud Backup
   // ═════════════════════════════════════════════════════════════════════
 
-  /// Upload all words to Firestore under the current user's collection.
-  /// Overwrites existing words with the same ID.
+  /// Upload all words to Firestore under the current user.
   Future<void> backupWords(List<Word> words) async {
     final uid = currentUser?.uid;
     if (uid == null) throw Exception('Not signed in');
@@ -92,7 +137,9 @@ class FirebaseService {
     final wordsRef = firestore.collection('users').doc(uid).collection('words');
 
     for (final word in words) {
-      final docRef = wordsRef.doc(word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString());
+      final docRef = wordsRef.doc(
+        word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      );
       batch.set(docRef, _wordToFirestore(word));
     }
 
@@ -100,7 +147,6 @@ class FirebaseService {
   }
 
   /// Restore all words from Firestore for the current user.
-  /// Returns an empty list if the user has no backed-up words.
   Future<List<Word>> restoreWords() async {
     final uid = currentUser?.uid;
     if (uid == null) throw Exception('Not signed in');
@@ -112,7 +158,7 @@ class FirebaseService {
         .get();
 
     return snapshot.docs.map((doc) {
-      return _wordFromFirestore(doc.id, doc.data());
+      return _wordFromFirestore(doc.data());
     }).toList();
   }
 
@@ -150,7 +196,7 @@ class FirebaseService {
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  // Firestore ↔ Word conversion helpers
+  // Firestore ↔ Word conversion
   // ═════════════════════════════════════════════════════════════════════
 
   Map<String, dynamic> _wordToFirestore(Word word) {
@@ -167,7 +213,7 @@ class FirebaseService {
     };
   }
 
-  Word _wordFromFirestore(String docId, Map<String, dynamic> data) {
+  Word _wordFromFirestore(Map<String, dynamic> data) {
     DateTime parseDate(String? val) {
       if (val == null) return DateTime.now();
       try {
@@ -178,7 +224,6 @@ class FirebaseService {
     }
 
     return Word(
-      // Firestore doc ID is stored but local SQLite will assign its own
       word: (data['word'] as String?) ?? '',
       translation: (data['translation'] as String?) ?? '',
       exampleSource: (data['example_source'] as String?) ?? '',

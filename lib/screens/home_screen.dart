@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vocab Builder'),
+        title: const Text('AI Vocab Builder'),
         actions: [
           IconButton(
             icon: const Icon(Icons.style_outlined),
@@ -52,18 +52,24 @@ class _HomeScreenState extends State<HomeScreen> {
           if (auth.isSignedIn)
             PopupMenuButton<String>(
               tooltip: 'Account',
-              icon: CircleAvatar(
-                radius: 16,
-                backgroundImage: auth.photoUrl != null
-                    ? NetworkImage(auth.photoUrl!)
-                    : null,
-                child: auth.photoUrl == null
-                    ? Text(
-                        (auth.displayName ?? auth.email ?? '?')[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 14),
-                      )
-                    : null,
-              ),
+              icon: auth.isAnonymous
+                  ? CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.orange.shade100,
+                      child: const Icon(Icons.person_off, size: 18, color: Colors.orange),
+                    )
+                  : CircleAvatar(
+                      radius: 16,
+                      backgroundImage: auth.photoUrl != null
+                          ? NetworkImage(auth.photoUrl!)
+                          : null,
+                      child: auth.photoUrl == null
+                          ? Text(
+                              (auth.displayName ?? auth.email ?? '?')[0].toUpperCase(),
+                              style: const TextStyle(fontSize: 14),
+                            )
+                          : null,
+                    ),
               onSelected: (value) => _handleMenuAction(value, context),
               itemBuilder: (context) => [
                 PopupMenuItem(
@@ -71,36 +77,69 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        auth.displayName ?? 'Signed in',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      if (auth.email != null)
+                      if (auth.isAnonymous) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                size: 18, color: Colors.orange.shade700),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Anonymous user',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
                         Text(
-                          auth.email!,
+                          'Cloud backup not available',
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
+                      ] else ...[
+                        Text(
+                          auth.displayName ?? 'Signed in',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if (auth.email != null)
+                          Text(
+                            auth.email!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem(
+                PopupMenuItem(
+                  enabled: !auth.isAnonymous,
                   value: 'backup',
-                  child: ListTile(
-                    leading: Icon(Icons.cloud_upload_outlined),
-                    title: Text('Backup now'),
-                    contentPadding: EdgeInsets.zero,
+                  child: Opacity(
+                    opacity: auth.isAnonymous ? 0.4 : 1.0,
+                    child: const ListTile(
+                      leading: Icon(Icons.cloud_upload_outlined),
+                      title: Text('Backup now'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
+                  enabled: !auth.isAnonymous,
                   value: 'restore',
-                  child: ListTile(
-                    leading: Icon(Icons.cloud_download_outlined),
-                    title: Text('Restore from cloud'),
-                    contentPadding: EdgeInsets.zero,
+                  child: Opacity(
+                    opacity: auth.isAnonymous ? 0.4 : 1.0,
+                    child: const ListTile(
+                      leading: Icon(Icons.cloud_download_outlined),
+                      title: Text('Restore from cloud'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
                 const PopupMenuDivider(),
@@ -116,7 +155,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: Column(
+        children: [
+          // Anonymous warning banner
+          if (auth.isSignedIn && auth.isAnonymous) _buildAnonymousBanner(),
+          // Main content
+          Expanded(child: _screens[_currentIndex]),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
@@ -148,6 +194,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildAnonymousBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Colors.orange.shade50,
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 20, color: Colors.orange.shade800),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Using anonymously — your words are only on this device. '
+              'Sign in to back up to the cloud.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.orange.shade900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddWordDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -176,6 +246,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _backupNow(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cloud backup not available for anonymous accounts. Sign in first.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isBackingUp = true);
 
     try {
@@ -205,7 +285,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _restoreFromCloud(BuildContext context) async {
-    // Confirm before overwriting local data
+    final auth = context.read<AuthProvider>();
+    if (auth.isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cloud restore not available for anonymous accounts. Sign in first.'),
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -241,7 +330,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Merge: add cloud words that don't already exist locally
       final provider = context.read<WordProvider>();
       final existingWords = provider.words.map((w) => w.word.toLowerCase()).toSet();
       int added = 0;

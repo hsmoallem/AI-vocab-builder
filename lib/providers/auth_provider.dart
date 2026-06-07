@@ -1,13 +1,7 @@
 /// ─── Auth Provider ───────────────────────────────────────────────────
 ///
-/// ChangeNotifier that wraps Firebase Auth state.
-/// Widgets rebuild when the user signs in or out.
-///
-/// ## Usage
-/// ```dart
-/// final auth = context.watch<AuthProvider>();
-/// if (auth.isSignedIn) { ... }
-/// ```
+/// ChangeNotifier wrapping Firebase Auth state.
+/// Widgets rebuild when the user signs in, switches accounts, or signs out.
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -20,19 +14,6 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
 
   AuthProvider() {
-    _init();
-  }
-
-  User? get user => _user;
-  bool get isSignedIn => _user != null;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  String? get email => _user?.email;
-  String? get displayName => _user?.displayName;
-  String? get photoUrl => _user?.photoURL;
-
-  /// Listen to Firebase auth state and update accordingly.
-  void _init() {
     _firebase.authStateChanges().listen((User? user) {
       _user = user;
       _isLoading = false;
@@ -41,37 +22,102 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  /// Sign in with Google.
-  /// Returns true on success, false if user cancelled.
-  Future<bool> signIn() async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
+  User? get user => _user;
+  bool get isSignedIn => _user != null;
+  bool get isAnonymous => _firebase.isAnonymous;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  String? get email => _user?.email;
+  String? get displayName => _user?.displayName;
+  String? get photoUrl => _user?.photoURL;
 
-      final user = await _firebase.signInWithGoogle();
-      _user = user;
-      _isLoading = false;
-      notifyListeners();
-      return user != null;
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // ── Google ──────────────────────────────────────────────────────────
+
+  Future<bool> signInWithGoogle() => _guard(() => _firebase.signInWithGoogle());
+
+  // ── Email/Password ──────────────────────────────────────────────────
+
+  Future<bool> signInWithEmail(String email, String password) async {
+    return _guard(() => _firebase.signInWithEmail(email: email, password: password));
+  }
+
+  Future<bool> registerWithEmail(String email, String password) async {
+    return _guard(() => _firebase.registerWithEmail(email: email, password: password));
+  }
+
+  Future<bool> sendPasswordResetEmail(String email) async {
+    try {
+      await _firebase.sendPasswordResetEmail(email);
+      return true;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
       notifyListeners();
       return false;
     }
   }
 
-  /// Sign out.
+  // ── Anonymous ───────────────────────────────────────────────────────
+
+  Future<bool> signInAnonymously() => _guard(() => _firebase.signInAnonymously());
+
+  // ── Sign Out ────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     await _firebase.signOut();
     _user = null;
     notifyListeners();
   }
 
-  /// Clear any displayed error.
-  void clearError() {
-    _error = null;
-    notifyListeners();
+  // ── Internal ────────────────────────────────────────────────────────
+
+  /// Wrap any auth call that returns a User? or User.
+  /// Sets loading/error state and returns true on success.
+  Future<bool> _guard(Future<User?> Function() fn) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final user = await fn();
+      _isLoading = false;
+      notifyListeners();
+      return user != null;
+    } catch (e) {
+      _isLoading = false;
+      _error = _friendlyError(e.toString());
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Translate Firebase error codes into user-friendly German messages
+  /// (since the app's target audience is German speakers).
+  String _friendlyError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('invalid-credential') || lower.contains('wrong-password') || lower.contains('user-not-found')) {
+      return 'Wrong email or password.';
+    }
+    if (lower.contains('email-already-in-use')) {
+      return 'This email is already registered.';
+    }
+    if (lower.contains('weak-password')) {
+      return 'Password must be at least 6 characters.';
+    }
+    if (lower.contains('invalid-email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (lower.contains('network-request-failed')) {
+      return 'No internet connection. Check your Wi-Fi.';
+    }
+    if (lower.contains('too-many-requests')) {
+      return 'Too many attempts. Please try again later.';
+    }
+    // Fallback: strip the "Exception: " prefix and Firebase domain
+    return raw.replaceFirst('Exception: ', '').replaceFirst(RegExp(r'\[.*\] '), '');
   }
 }
