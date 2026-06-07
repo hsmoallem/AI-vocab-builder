@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../widgets/word_card.dart';
-import '../widgets/add_word_dialog.dart';
 
 class WordListScreen extends StatefulWidget {
   const WordListScreen({super.key});
@@ -188,15 +187,6 @@ class _WordListScreenState extends State<WordListScreen> {
                       ),
               ),
             ],
-          ),
-
-          // FAB
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => const AddWordDialog(),
-            ),
-            child: const Icon(Icons.add),
           ),
         );
       },
