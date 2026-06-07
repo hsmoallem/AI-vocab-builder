@@ -5,10 +5,12 @@ import 'pdf_reader_screen.dart';
 import 'flashcard_screen.dart';
 import 'daily_phrases_screen.dart';
 import 'login_screen.dart';
+import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
+import '../config/app_strings.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,14 +32,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final s = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Vocab Builder'),
+        title: Text(s.appName),
         actions: [
           IconButton(
             icon: const Icon(Icons.style_outlined),
-            tooltip: 'Flashcards',
+            tooltip: s.flashcards,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FlashcardScreen()),
@@ -45,13 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add Word',
+            tooltip: s.addWord,
             onPressed: () => _showAddWordDialog(context),
           ),
           // User menu — shows when signed in
           if (auth.isSignedIn)
             PopupMenuButton<String>(
-              tooltip: 'Account',
+              tooltip: s.account,
               icon: auth.isAnonymous
                   ? CircleAvatar(
                       radius: 16,
@@ -84,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 size: 18, color: Colors.orange.shade700),
                             const SizedBox(width: 6),
                             Text(
-                              'Anonymous user',
+                              s.anonymousUser,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.orange.shade700,
@@ -94,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Cloud backup not available',
+                          s.cloudBackupNotAvailable,
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -119,13 +122,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const PopupMenuDivider(),
                 PopupMenuItem(
+                  value: 'settings',
+                  child: ListTile(
+                    leading: const Icon(Icons.settings),
+                    title: Text(s.settings),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
                   enabled: !auth.isAnonymous,
                   value: 'backup',
                   child: Opacity(
                     opacity: auth.isAnonymous ? 0.4 : 1.0,
-                    child: const ListTile(
-                      leading: Icon(Icons.cloud_upload_outlined),
-                      title: Text('Backup now'),
+                    child: ListTile(
+                      leading: const Icon(Icons.cloud_upload_outlined),
+                      title: Text(s.backupNow),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -135,19 +146,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: 'restore',
                   child: Opacity(
                     opacity: auth.isAnonymous ? 0.4 : 1.0,
-                    child: const ListTile(
-                      leading: Icon(Icons.cloud_download_outlined),
-                      title: Text('Restore from cloud'),
+                    child: ListTile(
+                      leading: const Icon(Icons.cloud_download_outlined),
+                      title: Text(s.restoreFromCloud),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'signout',
                   child: ListTile(
-                    leading: Icon(Icons.logout),
-                    title: Text('Sign out'),
+                    leading: const Icon(Icons.logout),
+                    title: Text(s.signOut),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -157,37 +168,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Anonymous warning banner
           if (auth.isSignedIn && auth.isAnonymous) _buildAnonymousBanner(),
-          // Main content
           Expanded(child: _screens[_currentIndex]),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: 'Reader',
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book),
+            label: s.tabReader,
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'Daily',
+            icon: const Icon(Icons.auto_awesome_outlined),
+            selectedIcon: const Icon(Icons.auto_awesome),
+            label: s.tabDaily,
           ),
           NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: 'My Words',
+            icon: const Icon(Icons.list_alt_outlined),
+            selectedIcon: const Icon(Icons.list_alt),
+            label: s.tabMyWords,
           ),
         ],
       ),
       floatingActionButton: _currentIndex == 2
           ? FloatingActionButton(
               onPressed: () => _showAddWordDialog(context),
-              tooltip: 'Add Word',
+              tooltip: s.addWord,
               child: const Icon(Icons.add),
             )
           : null,
@@ -195,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAnonymousBanner() {
+    final s = AppStrings.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -205,12 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Using anonymously — your words are only on this device. '
-              'Sign in to back up to the cloud.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.orange.shade900,
-              ),
+              s.anonymousBanner,
+              style: TextStyle(fontSize: 13, color: Colors.orange.shade900),
             ),
           ),
         ],
@@ -227,6 +233,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleMenuAction(String value, BuildContext context) async {
     switch (value) {
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
       case 'backup':
         await _backupNow(context);
         break;
@@ -249,9 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cloud backup not available for anonymous accounts. Sign in first.'),
-        ),
+        SnackBar(content: Text('Cloud backup not available for anonymous accounts. Sign in first.')),
       );
       return;
     }
@@ -273,10 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Backup failed: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Backup failed: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -288,9 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cloud restore not available for anonymous accounts. Sign in first.'),
-        ),
+        const SnackBar(content: Text('Cloud restore not available for anonymous accounts. Sign in first.')),
       );
       return;
     }
@@ -304,14 +309,8 @@ class _HomeScreenState extends State<HomeScreen> {
           'Duplicate words (same word text) will be skipped.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Restore'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
         ],
       ),
     );
@@ -320,7 +319,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final cloudWords = await FirebaseService.instance.restoreWords();
-
       if (cloudWords.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -344,9 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Restored $added new words (${cloudWords.length - added} duplicates skipped)',
-            ),
+            content: Text('Restored $added new words (${cloudWords.length - added} duplicates skipped)'),
             backgroundColor: Colors.green,
           ),
         );
@@ -354,10 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Restore failed: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Restore failed: $e'), backgroundColor: Colors.red),
         );
       }
     }
