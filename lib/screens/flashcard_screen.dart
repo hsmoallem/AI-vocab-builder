@@ -125,8 +125,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                     // Flip button
                     Tooltip(
                       message: _isFlipped
-                          ? 'Tap to flip back'
-                          : 'Tap to reveal translation',
+                          ? 'Flip back'
+                          : 'Show translation',
                       child: FilledButton.icon(
                         onPressed: _flip,
                         icon: const Icon(Icons.flip),

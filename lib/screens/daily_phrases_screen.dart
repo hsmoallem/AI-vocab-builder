@@ -179,7 +179,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   leading: Tooltip(
-                    message: phrase.memorized ? 'Mark as not memorized' : 'Mark as memorized',
+                    message: phrase.memorized ? 'Undo' : 'Memorize',
                     child: GestureDetector(
                     onTap: () => _toggleMemorized(index),
                     child: AnimatedContainer(
