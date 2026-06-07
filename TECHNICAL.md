@@ -220,6 +220,8 @@ users/
 - **Restore:** Downloads all words, merges with local DB (dedup by word text)
 - **Anonymous users:** Backup/restore disabled with explanation
 
+**Without these rules, any authenticated user can read/write any other user's data.** They are enforced at Firebase's server level — no APK modification can bypass them.
+
 ---
 
 ## 7. Daily Phrases

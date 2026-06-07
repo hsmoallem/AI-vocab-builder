@@ -118,6 +118,16 @@ All auth providers enabled in Firebase Console:
 
 Firestore database created in `eur3` (Europe) region.
 
+### ⚠️ Firestore Security Rules — DEPLOY NOW
+
+**Without these rules, any authenticated user can read/write any other user's data.**
+
+1. Go to [Firebase Console → Firestore → Rules](https://console.firebase.google.com/project/project-794490258159/firestore)
+2. Replace the default rules with the content of `firestore.rules` (in this repo)
+3. Click **Publish**
+
+Rules enforce: `you can only access users/{your-uid}/words/` — locked at Firebase server level.
+
 ---
 
 ## 7. DeepSeek API (Already Done ✅)
