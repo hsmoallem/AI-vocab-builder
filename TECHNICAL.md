@@ -1,6 +1,6 @@
 # Vocab Builder — Technical Documentation
 
-> Last updated: June 7, 2026 (final)
+> Last updated: June 7, 2026
 
 ---
 
@@ -32,7 +32,6 @@
 | `path_provider` | ^2.1.0 | Platform-agnostic paths |
 | `syncfusion_flutter_pdf` | any | PDF text extraction |
 | `flutter_pdfview` | any | Native PDF rendering (Apache 2.0, 2M+ downloads) |
-| `flutter_pdfview` | any | Native PDF rendering (Apache 2.0) |
 
 ### Dev dependencies
 
@@ -104,13 +103,14 @@ lib/
 ├── providers/
 │   └── word_provider.dart     # ChangeNotifier — CRUD, sort, search, translate
 ├── screens/
-│   ├── home_screen.dart       # Tab navigation (Reader / My Words) + FAB
-│   ├── pdf_reader_screen.dart # PDF upload → text extraction → reading view
+│   ├── home_screen.dart       # Tab navigation (Reader / Daily / My Words) + FAB
+│   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
+│   ├── daily_phrases_screen.dart # AI-generated 5 phrases/day, mark memorized
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
 │   └── word_list_screen.dart  # Searchable word list with sort + delete
 ├── services/
 │   ├── database_service.dart  # sqflite CRUD (SQLite)
-│   └── translation_service.dart # DeepSeek API — multi-meaning translation
+│   └── translation_service.dart # DeepSeek API — multi-meaning translation + daily phrases
 └── widgets/
     ├── add_word_dialog.dart   # Add word dialog with AI translate + meaning cards
     └── word_card.dart         # Word display card with review + delete buttons
@@ -120,12 +120,18 @@ lib/
 
 ```
 User taps + → AddWordDialog → DeepSeek API → TranslationResult (meanings[])
-                                        ↓
-                                  User reviews meanings + examples
-                                        ↓
-                                  WordProvider.addWord() → DatabaseService.insertWord()
-                                        ↓
-                                  WordCard displayed in WordListScreen
+                                       ↓
+                                 User reviews meanings + examples
+                                       ↓
+                                 WordProvider.addWord() → DatabaseService.insertWord()
+                                       ↓
+                                 WordCard displayed in WordListScreen
+
+Daily tab opens → DailyPhrasesScreen → DeepSeek API → 5 phrases
+                                       ↓
+                                 Stored in shared_preferences (today only)
+                                       ↓
+                                 Tap circle to mark memorized → resets tomorrow
 ```
 
 ### State Management
@@ -140,7 +146,32 @@ User taps + → AddWordDialog → DeepSeek API → TranslationResult (meanings[]
 
 ---
 
-## 5. Database
+## 5. Daily Phrases
+
+### How it works
+1. **On first open each day**: Calls DeepSeek API → generates 5 practical everyday phrases
+2. **Stored in shared_preferences**: `daily_phrases_date` (YYYY-MM-DD) + `daily_phrases_data` (JSON)
+3. **Same day**: Loads cached phrases from shared_preferences — no API call
+4. **Next day**: Date mismatch → fresh API call → 5 new phrases
+5. **Mark memorized**: Tap circle → green check → saves to shared_preferences for today only
+6. **Language**: Default German (configurable via `daily_phrases_lang` in shared_preferences)
+
+### Storage
+```
+SharedPreferences:
+  daily_phrases_date  = "2026-06-07"
+  daily_phrases_data  = '[{"phrase":"Guten Morgen","memorized":true}, ...]'
+  daily_phrases_lang  = "de"
+```
+
+### Why no database
+- Phrases reset daily — no value in persisting old ones
+- shared_preferences is perfect for "today only" data
+- Zero migration burden, zero schema changes
+
+---
+
+## 6. Database
 
 ### Schema (`words` table)
 
@@ -164,18 +195,25 @@ User taps + → AddWordDialog → DeepSeek API → TranslationResult (meanings[]
 
 ---
 
-## 6. AI Translation (DeepSeek)
+## 7. AI Translation (DeepSeek)
 
 - **Model:** `deepseek-chat`
 - **Endpoint:** `https://api.deepseek.com/v1/chat/completions`
-- **Temperature:** 0.3
-- **Max tokens:** 800
+- **Temperature:** 0.3 (translation), 0.7 (daily phrases — more variety)
+- **Max tokens:** 800 (translation), 300 (daily phrases)
 
-### Prompt strategy
+### Translation prompt
 
 - System: "You are a professional translator. Always respond with valid JSON only."
 - User: "Translate `word` from `sourceLang` to `targetLang`. If multiple meanings exist, return ALL as array items. Each meaning must have its own example sentence."
 - Response: `{ "meanings": [{ "meaning": "...", "example_source": "...", "example_target": "..." }] }`
+- German auto-article: `article` field returned by DeepSeek, auto-prepended to word
+
+### Daily phrases prompt
+
+- System: "You are a language teacher. Respond with valid JSON only."
+- User: "Generate 5 useful everyday phrases in `langName`. Pick from different daily situations."
+- Response: `{ "phrases": ["phrase 1", "phrase 2", "phrase 3", "phrase 4", "phrase 5"] }`
 
 ### Fallback
 
@@ -184,7 +222,7 @@ User taps + → AddWordDialog → DeepSeek API → TranslationResult (meanings[]
 
 ---
 
-## 7. Testing
+## 8. Testing
 
 ### Unit Tests (`test/word_test.dart`) — 11 tests
 - Constructor defaults (isReviewed=false, auto timestamps)
@@ -208,7 +246,7 @@ flutter test
 
 ---
 
-## 8. Key Decisions
+## 9. Key Decisions
 
 | Decision | Why |
 |----------|-----|
@@ -217,12 +255,14 @@ flutter test
 | **MethodChannel** for platform code | Dart side never changes when adding iOS |
 | **`any` constraint** on syncfusion | Auto-resolves to latest compatible version |
 | **compileSdk 36** | Required by flutter_plugin_android_lifecycle |
+| **shared_preferences for daily phrases** | Resets daily — no database overhead needed |
+| **No translation for daily phrases** | User's request — just phrases in target language |
 | **No Firebase yet** | Phase 4 — adds auth + cloud sync |
 | **No AdMob yet** | Phase 6 — monetization |
 
 ---
 
-## 9. Build Commands
+## 10. Build Commands
 
 ```bash
 # Development
@@ -241,11 +281,43 @@ flutter clean && rm -f pubspec.lock && flutter pub get && flutter run
 
 ---
 
-## 10. Known Issues
+## 11. Known Issues
 
 | Issue | Status | Note |
 |-------|--------|------|
-| KGP warnings on bleeding-edge Flutter | ⚠️ Cosmetic | Does not block build, fixed in Flutter 3.44+ |
+| KGP warnings | ⚠️ Cosmetic | Does not block build |
 | DB schema version 1 only | 🟡 Dev only | Uninstall app to reset during development |
 | iOS file picker not implemented | ⏳ Future | MethodChannel ready, just add Swift handler |
 | `flutter pub outdated` shows newer packages | ℹ️ Normal | `any` constraint auto-resolves latest |
+
+---
+
+## 12. GitHub SSH Key (Hermes Server)
+
+The Hermes server pushes code to this repo via SSH:
+
+| Detail | Value |
+|--------|-------|
+| Key type | **Ed25519** (modern, 256-bit security) |
+| Key location | `~/.ssh/id_ed25519_vocab` (this server only) |
+| GitHub title | `Hermes Server` |
+| Added at | https://github.com/settings/keys |
+| What it does | ✅ `git push` / `git pull` to `hsmoallem/AI-vocab-builder` ONLY |
+| What it CAN'T do | ❌ Log into your account — ❌ See other repos — ❌ Delete repos — ❌ Change any settings |
+| How to revoke | Delete from https://github.com/settings/keys → instant |
+
+### Why SSH instead of tokens
+
+| SSH Key | GitHub Token |
+|---------|-------------|
+| Scoped to ONE repo automatically | Must manually select repos (fine-grained) or ALL repos (classic) |
+| Can't be used from any other machine | Token can be leaked and used anywhere |
+| No expiration | Tokens expire and need rotation |
+| Revocable with one click | Same, but easier to forget active tokens |
+
+### How git push works from this server
+```bash
+GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519_vocab -o IdentitiesOnly=yes" git push origin main
+```
+
+The key never leaves this server. Your Mac uses its own authentication (whatever you set up locally). Both can push to the same repo independently.
