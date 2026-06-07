@@ -32,8 +32,8 @@ class _WordListScreenState extends State<WordListScreen> {
       final q = query.toLowerCase();
       setState(() {
         _filteredWords = provider.words.where((w) {
-          return w.text.toLowerCase().contains(q) ||
-              (w.translation?.toLowerCase().contains(q) ?? false);
+          return w.word.toLowerCase().contains(q) ||
+              w.translation.toLowerCase().contains(q);
         }).toList();
       });
     }
@@ -44,7 +44,7 @@ class _WordListScreenState extends State<WordListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Word'),
-        content: Text('Delete "${word.text}"?'),
+        content: Text('Delete "${word.word}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -63,7 +63,7 @@ class _WordListScreenState extends State<WordListScreen> {
       await context.read<WordProvider>().deleteWord(word.id!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${word.text}" deleted')),
+          SnackBar(content: Text('"${word.word}" deleted')),
         );
       }
     }
@@ -73,7 +73,6 @@ class _WordListScreenState extends State<WordListScreen> {
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
       builder: (context, provider, _) {
-        // Keep filtered list in sync
         if (_searchController.text.isEmpty) {
           _filteredWords = provider.words;
         } else {
@@ -114,9 +113,8 @@ class _WordListScreenState extends State<WordListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Row(
                   children: [
-                    // Sort toggle button
                     _SortChip(
-                      label: 'A–Z',
+                      label: 'A-Z',
                       icon: Icons.sort_by_alpha,
                       selected: provider.sortMode == SortMode.alphabetical,
                       onTap: () => provider.setSortMode(SortMode.alphabetical),
@@ -176,7 +174,7 @@ class _WordListScreenState extends State<WordListScreen> {
                             ),
                             confirmDismiss: (_) async {
                               _deleteWord(context, word);
-                              return false; // we handle delete ourselves
+                              return false;
                             },
                             child: WordCard(
                               word: word,

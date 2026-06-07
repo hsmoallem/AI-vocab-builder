@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/word_provider.dart';
-import 'services/database_service.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize sqflite database
-  await DatabaseService.instance.init();
+  // Database auto-initializes on first access — no explicit init needed
 
   runApp(const VocabBuilderApp());
 }

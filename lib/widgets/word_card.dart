@@ -22,12 +22,12 @@ class WordCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: word + delete button
+            // Word + delete button
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    word.text,
+                    word.word,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -47,9 +47,9 @@ class WordCard extends StatelessWidget {
             const SizedBox(height: 6),
 
             // Translation
-            if (word.translation != null && word.translation!.isNotEmpty)
+            if (word.translation.isNotEmpty)
               Text(
-                word.translation!,
+                word.translation,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade700,
@@ -57,20 +57,20 @@ class WordCard extends StatelessWidget {
               ),
             const SizedBox(height: 8),
 
-            // Language pair badge
+            // Language pair badges
             Row(
               children: [
-                _buildBadge(word.sourceLang ?? '?', Colors.blue),
+                _buildBadge(word.sourceLang, Colors.blue),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 6),
                   child: Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
                 ),
-                _buildBadge(word.targetLang ?? '?', Colors.green),
+                _buildBadge(word.targetLang, Colors.green),
               ],
             ),
 
-            // Example sentence
-            if (word.exampleSentence != null && word.exampleSentence!.isNotEmpty) ...[
+            // Example (source)
+            if (word.exampleSource.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -79,7 +79,7 @@ class WordCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  word.exampleSentence!,
+                  word.exampleSource,
                   style: const TextStyle(
                     fontStyle: FontStyle.italic,
                     fontSize: 14,
@@ -88,14 +88,20 @@ class WordCard extends StatelessWidget {
               ),
             ],
 
-            // Notes
-            if (word.notes != null && word.notes!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                word.notes!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
+            // Example (target)
+            if (word.exampleTarget.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  word.exampleTarget,
+                  style: const TextStyle(
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -113,7 +119,7 @@ class WordCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        text,
+        text.toUpperCase(),
         style: TextStyle(
           fontSize: 12,
           color: color,
