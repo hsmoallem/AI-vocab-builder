@@ -1,6 +1,6 @@
 # Vocab Builder — Technical Documentation
 
-> Last updated: June 7, 2026
+> Last updated: June 7, 2026 (final)
 
 ---
 
@@ -31,6 +31,8 @@
 | `shared_preferences` | ^2.3.0 | Key-value settings storage |
 | `path_provider` | ^2.1.0 | Platform-agnostic paths |
 | `syncfusion_flutter_pdf` | any | PDF text extraction |
+| `flutter_pdfview` | any | Native PDF rendering (Apache 2.0, 2M+ downloads) |
+| `flutter_pdfview` | any | Native PDF rendering (Apache 2.0) |
 
 ### Dev dependencies
 
@@ -44,6 +46,10 @@
 ## 3. File Picker — Native (No Package)
 
 **We do NOT use the `file_picker` package.** Instead we use Android's native `ACTION_OPEN_DOCUMENT` intent via a Flutter `MethodChannel`.
+
+### Tap-to-Add
+
+In **Text view**, select any word → Add Word dialog opens pre-filled → auto-translation triggers.
 
 ### Why
 - `file_picker` caused persistent Gradle/AGP version conflicts
