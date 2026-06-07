@@ -24,7 +24,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
       );
