@@ -13,29 +13,20 @@ class WordListScreen extends StatefulWidget {
 
 class _WordListScreenState extends State<WordListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<Word> _filteredWords = [];
 
   @override
-  void initState() {
-    super.initState();
-    final provider = context.read<WordProvider>();
-    _filteredWords = provider.words;
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  void _filterWords(String query, WordProvider provider) {
-    if (query.isEmpty) {
-      setState(() {
-        _filteredWords = provider.words;
-      });
-    } else {
-      final q = query.toLowerCase();
-      setState(() {
-        _filteredWords = provider.words.where((w) {
-          return w.word.toLowerCase().contains(q) ||
-              w.translation.toLowerCase().contains(q);
-        }).toList();
-      });
-    }
+  List<Word> _filter(List<Word> words, String query) {
+    if (query.isEmpty) return words;
+    final q = query.toLowerCase();
+    return words.where((w) {
+      return w.word.toLowerCase().contains(q) ||
+          w.translation.toLowerCase().contains(q);
+    }).toList();
   }
 
   Future<void> _deleteWord(BuildContext context, Word word) async {
@@ -59,11 +50,19 @@ class _WordListScreenState extends State<WordListScreen> {
     );
 
     if (confirm == true && context.mounted) {
-      await context.read<WordProvider>().deleteWord(word.id!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${word.word}" deleted')),
-        );
+      try {
+        await context.read<WordProvider>().deleteWord(word.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('"${word.word}" deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Delete failed: $e')),
+          );
+        }
       }
     }
   }
@@ -72,122 +71,117 @@ class _WordListScreenState extends State<WordListScreen> {
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
       builder: (context, provider, _) {
-        if (_searchController.text.isEmpty) {
-          _filteredWords = provider.words;
-        } else {
-          _filterWords(_searchController.text, provider);
-        }
+        // Compute filtered list on every build — no stale state
+        final filtered = _filter(provider.words, _searchController.text);
 
-        return Scaffold(
-          body: Column(
-            children: [
-              // Search bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (q) => _filterWords(q, provider),
-                  decoration: InputDecoration(
-                    hintText: 'Search words...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterWords('', provider);
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        return Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}), // trigger rebuild for filter
+                decoration: InputDecoration(
+                  hintText: 'Search words...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
+            ),
 
-              // Sort toggle + count
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    _SortChip(
-                      label: 'A-Z',
-                      icon: Icons.sort_by_alpha,
-                      selected: provider.sortMode == SortMode.alphabetical,
-                      onTap: () => provider.setSortMode(SortMode.alphabetical),
-                    ),
-                    const SizedBox(width: 8),
-                    _SortChip(
-                      label: 'Newest',
-                      icon: Icons.access_time,
-                      selected: provider.sortMode == SortMode.newestFirst,
-                      onTap: () => provider.setSortMode(SortMode.newestFirst),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${_filteredWords.length} word${_filteredWords.length == 1 ? '' : 's'}',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
+            // Sort toggle + count
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  _SortChip(
+                    label: 'A-Z',
+                    icon: Icons.sort_by_alpha,
+                    selected: provider.sortMode == SortMode.alphabetical,
+                    onTap: () => provider.setSortMode(SortMode.alphabetical),
+                  ),
+                  const SizedBox(width: 8),
+                  _SortChip(
+                    label: 'Newest',
+                    icon: Icons.access_time,
+                    selected: provider.sortMode == SortMode.newestFirst,
+                    onTap: () => provider.setSortMode(SortMode.newestFirst),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${filtered.length} word${filtered.length == 1 ? '' : 's'}',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
               ),
+            ),
 
-              // Word list
-              Expanded(
-                child: _filteredWords.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.menu_book_outlined,
-                                size: 64, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              _searchController.text.isNotEmpty
-                                  ? 'No matching words'
-                                  : 'No words yet.\nTap + to add one!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade500,
-                              ),
+            // Word list
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.menu_book_outlined,
+                              size: 64, color: Colors.grey.shade400),
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchController.text.isNotEmpty
+                                ? 'No matching words'
+                                : 'No words yet.\nTap + to add one!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade500,
                             ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 4, bottom: 80),
-                        itemCount: _filteredWords.length,
-                        itemBuilder: (context, index) {
-                          final word = _filteredWords[index];
-                          return Dismissible(
-                            key: Key('word-${word.id}'),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 24),
-                              color: Colors.red,
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            confirmDismiss: (_) async {
-                              _deleteWord(context, word);
-                              return false;
-                            },
-                            child: WordCard(
-                              word: word,
-                              onDelete: () => _deleteWord(context, word),
-                              onToggleReview: () {
-                                context.read<WordProvider>().toggleReview(word);
-                              },
-                            ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-              ),
-            ],
-          ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(top: 4, bottom: 80),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final word = filtered[index];
+                        return Dismissible(
+                          key: Key('word-${word.id}'),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 24),
+                            color: Colors.red,
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          confirmDismiss: (_) async {
+                            _deleteWord(context, word);
+                            return false;
+                          },
+                          child: WordCard(
+                            word: word,
+                            onDelete: () => _deleteWord(context, word),
+                            onToggleReview: () {
+                              context.read<WordProvider>().toggleReview(word);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

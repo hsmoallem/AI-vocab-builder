@@ -4,24 +4,41 @@ import '../services/database_service.dart';
 import '../services/translation_service.dart';
 
 enum SortMode { newestFirst, alphabetical }
+enum LoadState { idle, loading, loaded, error }
 
 class WordProvider extends ChangeNotifier {
   List<Word> _words = [];
   SortMode _sortMode = SortMode.newestFirst;
+  LoadState _state = LoadState.idle;
+  String? _error;
   final TranslationService _translationService = TranslationService();
 
   List<Word> get words => _words;
   SortMode get sortMode => _sortMode;
+  LoadState get state => _state;
+  String? get error => _error;
+  bool get isLoading => _state == LoadState.loading;
 
   WordProvider() {
     loadWords();
   }
 
   Future<void> loadWords() async {
-    String orderBy = _sortMode == SortMode.alphabetical
-        ? 'LOWER(word) ASC'
-        : 'created_at DESC';
-    _words = await DatabaseService.getWords(orderBy: orderBy);
+    _state = LoadState.loading;
+    notifyListeners();
+
+    try {
+      String orderBy = _sortMode == SortMode.alphabetical
+          ? 'LOWER(word) ASC'
+          : 'created_at DESC';
+      _words = await DatabaseService.getWords(orderBy: orderBy);
+      _state = LoadState.loaded;
+      _error = null;
+    } catch (e) {
+      _state = LoadState.error;
+      _error = e.toString();
+    }
+
     notifyListeners();
   }
 

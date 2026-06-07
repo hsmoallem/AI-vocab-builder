@@ -26,17 +26,26 @@ class Word {
 
   /// Create from a database row map.
   factory Word.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(String? val) {
+      if (val == null) return DateTime.now();
+      try {
+        return DateTime.parse(val);
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+
     return Word(
       id: map['id'] as int?,
-      word: map['word'] as String,
-      translation: map['translation'] as String,
+      word: (map['word'] as String?) ?? '',
+      translation: (map['translation'] as String?) ?? '',
       exampleSource: (map['example_source'] as String?) ?? '',
       exampleTarget: (map['example_target'] as String?) ?? '',
-      sourceLang: map['source_lang'] as String,
-      targetLang: map['target_lang'] as String,
+      sourceLang: (map['source_lang'] as String?) ?? '',
+      targetLang: (map['target_lang'] as String?) ?? '',
       isReviewed: (map['is_reviewed'] as int?) == 1,
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
+      createdAt: parseDate(map['created_at'] as String?),
+      updatedAt: parseDate(map['updated_at'] as String?),
     );
   }
 
