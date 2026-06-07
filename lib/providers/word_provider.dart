@@ -41,7 +41,7 @@ class WordProvider extends ChangeNotifier {
     required String targetLang,
   }) async {
     try {
-      final w = Word.create(
+      final w = Word(
         word: word,
         translation: translation,
         exampleSource: exampleSource,

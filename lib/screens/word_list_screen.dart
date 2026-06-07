@@ -170,7 +170,7 @@ class _WordListScreenState extends State<WordListScreen> {
                                   ),
                                 );
                               },
-                              onDismissed: (_) => provider.deleteWord(word.id),
+                              onDismissed: (_) => provider.deleteWord(word.id!),
                               child: WordCard(word: word),
                             );
                           },
