@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
+import '../services/translation_service.dart';
 
 class AddWordDialog extends StatefulWidget {
   const AddWordDialog({super.key});
@@ -11,9 +12,7 @@ class AddWordDialog extends StatefulWidget {
 
 class _AddWordDialogState extends State<AddWordDialog> {
   final _wordController = TextEditingController();
-  final _translationController = TextEditingController();
-  final _exampleSourceController = TextEditingController();
-  final _exampleTargetController = TextEditingController();
+  List<_MeaningEntry> _meanings = [];
 
   String _sourceLang = 'de';
   String _targetLang = 'en';
@@ -24,9 +23,9 @@ class _AddWordDialogState extends State<AddWordDialog> {
   @override
   void dispose() {
     _wordController.dispose();
-    _translationController.dispose();
-    _exampleSourceController.dispose();
-    _exampleTargetController.dispose();
+    for (final m in _meanings) {
+      m.dispose();
+    }
     super.dispose();
   }
 
@@ -37,9 +36,15 @@ class _AddWordDialogState extends State<AddWordDialog> {
       return;
     }
 
+    // Dispose old meaning controllers
+    for (final m in _meanings) {
+      m.dispose();
+    }
+
     setState(() {
       _isTranslating = true;
       _error = null;
+      _meanings = [];
     });
 
     try {
@@ -50,9 +55,13 @@ class _AddWordDialogState extends State<AddWordDialog> {
         to: _targetLang,
       );
 
-      _translationController.text = result.translation;
-      _exampleSourceController.text = result.exampleSource;
-      _exampleTargetController.text = result.exampleTarget;
+      setState(() {
+        _meanings = result.meanings.map((m) => _MeaningEntry(
+          meaning: TextEditingController(text: m.text),
+          exampleSource: TextEditingController(text: m.exampleSource),
+          exampleTarget: TextEditingController(text: m.exampleTarget),
+        )).toList();
+      });
     } catch (e) {
       setState(() => _error = 'Translation failed: $e');
     }
@@ -67,6 +76,21 @@ class _AddWordDialogState extends State<AddWordDialog> {
       return;
     }
 
+    final translation = _meanings
+        .where((m) => m.meaning.text.trim().isNotEmpty)
+        .map((m) => m.meaning.text.trim())
+        .join(', ');
+
+    final exampleSource = _meanings
+        .where((m) => m.exampleSource.text.trim().isNotEmpty)
+        .map((m) => '• ${m.exampleSource.text.trim()}')
+        .join('\n');
+
+    final exampleTarget = _meanings
+        .where((m) => m.exampleTarget.text.trim().isNotEmpty)
+        .map((m) => '• ${m.exampleTarget.text.trim()}')
+        .join('\n');
+
     setState(() {
       _isSaving = true;
       _error = null;
@@ -76,9 +100,9 @@ class _AddWordDialogState extends State<AddWordDialog> {
       final provider = context.read<WordProvider>();
       final success = await provider.addWord(
         word: word,
-        translation: _translationController.text.trim(),
-        exampleSource: _exampleSourceController.text.trim(),
-        exampleTarget: _exampleTargetController.text.trim(),
+        translation: translation,
+        exampleSource: exampleSource,
+        exampleTarget: exampleTarget,
         sourceLang: _sourceLang,
         targetLang: _targetLang,
       );
@@ -213,54 +237,166 @@ class _AddWordDialogState extends State<AddWordDialog> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
-              const SizedBox(height: 16),
 
-              // Translation fields
-              TextField(
-                controller: _translationController,
-                decoration: const InputDecoration(
-                  labelText: 'Translation',
-                  prefixIcon: Icon(Icons.language),
+              // Meanings (shown after translation)
+              if (_meanings.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  '${_meanings.length} meaning${_meanings.length > 1 ? 's' : ''} found:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _exampleSourceController,
-                decoration: const InputDecoration(
-                  labelText: 'Example (original language)',
-                  prefixIcon: Icon(Icons.format_quote),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _exampleTargetController,
-                decoration: const InputDecoration(
-                  labelText: 'Example (translated)',
-                  prefixIcon: Icon(Icons.format_quote_outlined),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                ..._meanings.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final m = entry.value;
+                  return _MeaningCard(
+                    index: i,
+                    total: _meanings.length,
+                    meaning: m.meaning,
+                    exampleSource: m.exampleSource,
+                    exampleTarget: m.exampleTarget,
+                  );
+                }),
+              ],
 
-              // Save button
-              FilledButton.icon(
-                onPressed: _isSaving ? null : _save,
-                icon: _isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(_isSaving ? 'Saving...' : 'Save Word'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              // Save button (only show after translation)
+              if (_meanings.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(_isSaving ? 'Saving...' : 'Save Word'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Holds controllers for one meaning entry
+class _MeaningEntry {
+  final TextEditingController meaning;
+  final TextEditingController exampleSource;
+  final TextEditingController exampleTarget;
+
+  _MeaningEntry({
+    required this.meaning,
+    required this.exampleSource,
+    required this.exampleTarget,
+  });
+
+  void dispose() {
+    meaning.dispose();
+    exampleSource.dispose();
+    exampleTarget.dispose();
+  }
+}
+
+/// Card showing one meaning with its example
+class _MeaningCard extends StatelessWidget {
+  final int index;
+  final int total;
+  final TextEditingController meaning;
+  final TextEditingController exampleSource;
+  final TextEditingController exampleTarget;
+
+  const _MeaningCard({
+    required this.index,
+    required this.total,
+    required this.meaning,
+    required this.exampleSource,
+    required this.exampleTarget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 1,
+      color: Colors.grey.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Meaning header
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: meaning,
+                    decoration: const InputDecoration(
+                      labelText: 'Meaning',
+                      isDense: true,
+                      border: UnderlineInputBorder(),
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Examples
+            TextField(
+              controller: exampleSource,
+              decoration: const InputDecoration(
+                labelText: 'Example (original)',
+                prefixIcon: Icon(Icons.format_quote, size: 18),
+                isDense: true,
+                border: UnderlineInputBorder(),
+              ),
+              style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: exampleTarget,
+              decoration: const InputDecoration(
+                labelText: 'Example (translated)',
+                prefixIcon: Icon(Icons.format_quote_outlined, size: 18),
+                isDense: true,
+                border: UnderlineInputBorder(),
+              ),
+              style: const TextStyle(fontSize: 13),
+              maxLines: 2,
+            ),
+          ],
         ),
       ),
     );

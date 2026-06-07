@@ -61,7 +61,7 @@ class TranslationService {
           },
         ],
         'temperature': 0.3,
-        'max_tokens': 500,
+        'max_tokens': 800,
       }),
     );
 
@@ -72,7 +72,7 @@ class TranslationService {
     final data = jsonDecode(response.body);
     final content = data['choices'][0]['message']['content'] as String;
 
-    return TranslationResult.fromJson(content.trim(), word);
+    return TranslationResult.fromJson(content.trim());
   }
 
   String _buildPrompt(String word, String sourceLang, String targetLang) {
@@ -81,13 +81,22 @@ class TranslationService {
 
     return '''Translate the word/phrase "$word" from $sourceName to $targetName.
 
-IMPORTANT: If this word has MULTIPLE distinct meanings, list ALL of them separated by commas (e.g., "money, bar/pub, cash"). Do NOT pick only one meaning — include every common meaning.
+IMPORTANT: If this word has MULTIPLE distinct meanings, include ALL of them as separate items in the array. Each meaning MUST have its own example sentence that demonstrates THAT specific meaning.
 
-Return ONLY a JSON object (no other text) with these fields:
+Return ONLY a JSON object (no other text) with this format:
 {
-  "translation": "ALL meanings, comma-separated (e.g. 'money, bar, cash, counter')",
-  "example_sentence_source": "a natural example sentence using '$word' in $sourceName",
-  "example_sentence_target": "the natural $targetName translation of the example sentence"
+  "meanings": [
+    {
+      "meaning": "first meaning in $targetName",
+      "example_source": "example sentence using '$word' with this specific meaning in $sourceName",
+      "example_target": "natural $targetName translation of the example"
+    },
+    {
+      "meaning": "second meaning in $targetName",
+      "example_source": "example sentence using '$word' with this specific meaning in $sourceName",
+      "example_target": "natural $targetName translation of the example"
+    }
+  ]
 }''';
   }
 
@@ -106,18 +115,45 @@ Return ONLY a JSON object (no other text) with these fields:
   }
 }
 
-class TranslationResult {
-  final String translation;
+/// A single meaning with its own example
+class Meaning {
+  final String text;
   final String exampleSource;
   final String exampleTarget;
 
-  TranslationResult({
-    required this.translation,
+  Meaning({
+    required this.text,
     required this.exampleSource,
     required this.exampleTarget,
   });
+}
 
-  factory TranslationResult.fromJson(String rawJson, String word) {
+/// Result from DeepSeek translation
+class TranslationResult {
+  final List<Meaning> meanings;
+
+  TranslationResult({required this.meanings});
+
+  /// Combined translation string (all meanings joined)
+  String get translation => meanings.map((m) => m.text).join(', ');
+
+  /// Combined examples (source)
+  String get exampleSource {
+    if (meanings.length == 1) return meanings.first.exampleSource;
+    return meanings.asMap().entries.map((e) =>
+        '${e.key + 1}. ${e.value.exampleSource}'
+    ).join('\n');
+  }
+
+  /// Combined examples (target)
+  String get exampleTarget {
+    if (meanings.length == 1) return meanings.first.exampleTarget;
+    return meanings.asMap().entries.map((e) =>
+        '${e.key + 1}. ${e.value.exampleTarget}'
+    ).join('\n');
+  }
+
+  factory TranslationResult.fromJson(String rawJson) {
     try {
       String jsonStr = rawJson.trim();
       if (jsonStr.startsWith('```')) {
@@ -126,17 +162,32 @@ class TranslationResult {
       }
 
       final map = jsonDecode(jsonStr);
-      return TranslationResult(
-        translation: map['translation'] ?? '',
-        exampleSource: map['example_sentence_source'] ?? '',
-        exampleTarget: map['example_sentence_target'] ?? '',
+
+      if (map['meanings'] is List) {
+        final meanings = (map['meanings'] as List).map((m) {
+          return Meaning(
+            text: m['meaning']?.toString() ?? '',
+            exampleSource: m['example_source']?.toString() ?? '',
+            exampleTarget: m['example_target']?.toString() ?? '',
+          );
+        }).toList();
+
+        if (meanings.isNotEmpty) {
+          return TranslationResult(meanings: meanings);
+        }
+      }
+
+      // Fallback: single meaning from old format
+      final single = Meaning(
+        text: map['translation']?.toString() ?? rawJson,
+        exampleSource: map['example_sentence_source']?.toString() ?? '',
+        exampleTarget: map['example_sentence_target']?.toString() ?? '',
       );
+      return TranslationResult(meanings: [single]);
     } catch (e) {
-      return TranslationResult(
-        translation: rawJson,
-        exampleSource: '',
-        exampleTarget: '',
-      );
+      return TranslationResult(meanings: [
+        Meaning(text: rawJson, exampleSource: '', exampleTarget: ''),
+      ]);
     }
   }
 }
