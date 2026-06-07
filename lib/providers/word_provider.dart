@@ -82,6 +82,22 @@ class WordProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Add a word from a [Word] object (used by cloud restore).
+  Future<bool> addWordObject(Word word) async {
+    // Don't carry over the old ID — let SQLite assign a new one.
+    final w = Word(
+      word: word.word,
+      translation: word.translation,
+      exampleSource: word.exampleSource,
+      exampleTarget: word.exampleTarget,
+      sourceLang: word.sourceLang,
+      targetLang: word.targetLang,
+    );
+    await DatabaseService.insertWord(w);
+    await loadWords();
+    return true;
+  }
+
   Future<void> deleteWord(int id) async {
     await DatabaseService.deleteWord(id);
     await loadWords();

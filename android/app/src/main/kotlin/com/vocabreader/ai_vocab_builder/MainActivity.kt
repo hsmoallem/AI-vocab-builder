@@ -1,4 +1,4 @@
-package com.aivocabbuilder.ai_vocab_builder
+package com.vocabreader.ai_vocab_builder
 
 import android.app.Activity
 import android.content.Intent
