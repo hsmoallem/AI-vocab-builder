@@ -40,7 +40,7 @@ class VocabBuilderApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WordProvider()..loadWords()),
       ],
       child: MaterialApp(
-        title: 'Vocab Builder',
+        title: 'AI Vocab Builder',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
