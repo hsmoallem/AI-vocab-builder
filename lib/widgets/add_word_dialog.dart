@@ -4,7 +4,9 @@ import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 
 class AddWordDialog extends StatefulWidget {
-  const AddWordDialog({super.key});
+  final String? initialWord;
+
+  const AddWordDialog({super.key, this.initialWord});
 
   @override
   State<AddWordDialog> createState() => _AddWordDialogState();
@@ -19,6 +21,16 @@ class _AddWordDialogState extends State<AddWordDialog> {
   bool _isTranslating = false;
   bool _isSaving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialWord != null && widget.initialWord!.isNotEmpty) {
+      _wordController.text = widget.initialWord!;
+      // Auto-translate after the first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) => _translate());
+    }
+  }
 
   @override
   void dispose() {

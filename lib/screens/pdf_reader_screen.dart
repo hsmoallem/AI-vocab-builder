@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sync;
+import '../widgets/add_word_dialog.dart';
 
 class PdfReaderScreen extends StatefulWidget {
   const PdfReaderScreen({super.key});
@@ -144,12 +145,31 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     if (_extractedText.isEmpty) {
       return const Center(child: Text('No text extracted'));
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: SelectableText(
-        _extractedText,
-        style: const TextStyle(fontSize: 14, height: 1.6),
-      ),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: SelectableText(
+            _extractedText,
+            style: const TextStyle(fontSize: 14, height: 1.6),
+            onSelectionChanged: (selection, _) {
+              if (selection != null && selection.start != selection.end) {
+                final selected = _extractedText.substring(selection.start, selection.end).trim();
+                if (selected.isNotEmpty && selected.split(RegExp(r'\s+')).length <= 5) {
+                  _addWordFromSelection(selected);
+                }
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _addWordFromSelection(String word) {
+    showDialog(
+      context: context,
+      builder: (_) => AddWordDialog(initialWord: word),
     );
   }
 
