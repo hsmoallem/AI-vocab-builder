@@ -4,30 +4,66 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.speech.tts.TextToSpeech
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.vocabreader/picker"
+    private val PICKER_CHANNEL = "com.vocabreader/picker"
+    private val TTS_CHANNEL = "com.vocabreader/tts"
     private var pendingResult: MethodChannel.Result? = null
+    private var tts: TextToSpeech? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "pickPdf") {
-                pendingResult = result
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "application/pdf"
+
+        // ── PDF File Picker Channel ───────────────────────────
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PICKER_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "pickPdf") {
+                    pendingResult = result
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/pdf"
+                    }
+                    startActivityForResult(intent, 1001)
+                } else {
+                    result.notImplemented()
                 }
-                startActivityForResult(intent, 1001)
-            } else {
-                result.notImplemented()
             }
+
+        // ── Text-to-Speech Channel ─────────────────────────────
+        // Uses Android's built-in TextToSpeech engine — works offline.
+        // No external package needed. Zero Kotlin Gradle Plugin warnings.
+        tts = TextToSpeech(this) { status ->
+            // TTS engine initialized (or failed — handled gracefully)
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TTS_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "speak" -> {
+                        val text = call.argument<String>("text") ?: ""
+                        val language = call.argument<String>("language") ?: "de"
+                        if (text.isNotEmpty()) {
+                            val locale = Locale.forLanguageTag(language)
+                            tts?.language = locale
+                            // QUEUE_FLUSH = stop current speech, start new one
+                            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+                        }
+                        result.success(true)
+                    }
+                    "stop" -> {
+                        tts?.stop()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -68,5 +104,11 @@ class MainActivity : FlutterActivity() {
             pendingResult?.success(null) // User cancelled
         }
         pendingResult = null
+    }
+
+    override fun onDestroy() {
+        tts?.stop()
+        tts?.shutdown()
+        super.onDestroy()
     }
 }

@@ -19,7 +19,6 @@ class _WordListScreenState extends State<WordListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _tts.dispose();
     super.dispose();
   }
 

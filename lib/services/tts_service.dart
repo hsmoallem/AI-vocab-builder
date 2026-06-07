@@ -1,15 +1,14 @@
 /// ─── Text-to-Speech Service ─────────────────────────────────────────
 ///
-/// Thin wrapper around flutter_tts. Uses Android's built-in Google TTS
-/// engine — works offline, no API keys, no network. German, English,
-/// and all major languages supported out of the box.
+/// Uses Android's built-in TextToSpeech engine via MethodChannel —
+/// same pattern as the file picker. Zero external dependencies.
 ///
-/// ## Why flutter_tts
-///   - Most popular Flutter TTS (3K+ likes on pub.dev)
-///   - Uses Android's system TTS engine (already on every phone)
-///   - Works offline — no network call
-///   - Language switching is instant — no model downloads
-///   - Zero configuration needed
+/// ## Why native MethodChannel (not flutter_tts package)
+///   - `flutter_tts` applies Kotlin Gradle Plugin directly, which causes
+///     "Future versions of Flutter will fail to build" warnings
+///   - `flutter_tts` doesn't support Swift Package Manager for iOS
+///   - Native TTS is ~30 lines of Kotlin, trivial to maintain
+///   - Same architecture as our file picker — consistent approach
 ///
 /// ## Usage
 ///   ```dart
@@ -18,41 +17,27 @@
 ///   await tts.speak('Good morning', language: 'en');
 ///   ```
 
-import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/services.dart';
 
 class TtsService {
-  final FlutterTts _tts = FlutterTts();
+  static const _channel = MethodChannel('com.vocabreader/tts');
 
   /// Speak the given text in the specified language.
   ///
   /// [language] is a 2-letter ISO code (e.g., 'de', 'en', 'fr').
-  /// The method sets the language before speaking — this adds
-  /// ~50ms but ensures correct pronunciation every time.
+  /// Android's TextToSpeech engine matches the best available voice.
+  /// Works offline — no network call, no API key.
   Future<void> speak(String text, {required String language}) async {
     if (text.trim().isEmpty) return;
 
-    // Stop any current speech before starting new one.
-    // This prevents overlapping audio when user taps quickly.
-    await _tts.stop();
-
-    // Configure voice for this language.
-    // Android matches the best available voice automatically.
-    await _tts.setLanguage(language);
-
-    // Speak with moderate speed — clear and natural.
-    await _tts.setSpeechRate(0.5);   // 0.0=slowest, 1.0=normal
-    await _tts.setPitch(1.0);        // 1.0=normal
-
-    await _tts.speak(text);
+    await _channel.invokeMethod('speak', {
+      'text': text.trim(),
+      'language': language,
+    });
   }
 
   /// Stop any currently playing speech.
   Future<void> stop() async {
-    await _tts.stop();
-  }
-
-  /// Release TTS resources. Call when the app is disposed.
-  Future<void> dispose() async {
-    await _tts.stop();
+    await _channel.invokeMethod('stop');
   }
 }

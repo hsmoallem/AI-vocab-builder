@@ -35,12 +35,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     _loadPhrases();
   }
 
-  @override
-  void dispose() {
-    _tts.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadPhrases() async {
     setState(() {
       _isLoading = true;

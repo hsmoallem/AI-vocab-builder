@@ -32,9 +32,6 @@ dependencies:
   flutter_pdfview: any
   syncfusion_flutter_pdf: any
 
-  # Text-to-speech (Android built-in TTS, works offline)
-  flutter_tts: ^4.2.0
-
   # Phase 4 — Firebase (add when needed)
   # firebase_core: ^3.0.0
   # firebase_auth: ^5.0.0
