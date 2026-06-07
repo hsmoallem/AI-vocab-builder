@@ -38,6 +38,15 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(s.appName),
         actions: [
+          // Settings gear — always visible
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: s.settings,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.style_outlined),
             tooltip: s.flashcards,
