@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash screen background — matches app icon blue gradient base -->
+    <color name="splash_background">#FF4585C5</color>
+</resources>
