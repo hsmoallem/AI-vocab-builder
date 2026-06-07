@@ -1,6 +1,7 @@
 /// ─── Login Screen ────────────────────────────────────────────────────
 ///
-/// Two options: Google Sign-In (one tap) or Anonymous (no credentials).
+/// Two options: Continue with Google (signs up or signs in automatically)
+/// or Anonymous (no credentials).
 /// Anonymous users see a warning dialog first.
 
 import 'package:flutter/material.dart';
@@ -70,7 +71,7 @@ class LoginScreen extends StatelessWidget {
                             onPressed: () => _handleGoogleSignIn(context),
                             icon: const Icon(Icons.login),
                             label: const Text(
-                              'Sign in with Google',
+                              'Continue with Google',
                               style: TextStyle(fontSize: 16),
                             ),
                           ),
