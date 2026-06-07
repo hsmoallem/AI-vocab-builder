@@ -26,25 +26,23 @@ dependencies:
   # Settings storage
   shared_preferences: ^2.3.0
 
-  # File picker (PDF selection)
+  # File picker (Phase 2 — PDF selection)
   file_picker: ^8.0.0
 
-  # PDF text extraction
+  # PDF (Phase 2)
   syncfusion_flutter_pdf: ^27.0.0
-
-  # PDF viewer (render original PDF)
   flutter_pdfview: ^1.3.0
-
-  # Firebase (Phase 4)
-  firebase_core: ^3.0.0
-  firebase_auth: ^5.0.0
-  cloud_firestore: ^5.0.0
-
-  # AdMob (Phase 6)
-  google_mobile_ads: ^5.0.0
 
   # Path utilities
   path_provider: ^2.1.0
+
+  # Firebase (Phase 4 — add later)
+  # firebase_core: ^3.0.0
+  # firebase_auth: ^5.0.0
+  # cloud_firestore: ^5.0.0
+
+  # AdMob (Phase 6 — add later)
+  # google_mobile_ads: ^5.0.0
 
 dev_dependencies:
   flutter_test:
