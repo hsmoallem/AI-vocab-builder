@@ -142,16 +142,22 @@ Return ONLY a JSON object (no other text) with this format:
   /// Used by the Daily Phrases screen. Phrases are practical,
   /// everyday expressions from different situations.
   /// Temperature 0.7 adds variety — each day feels fresh.
-  Future<List<DailyPhrase>> generateDailyPhrases({String lang = 'de'}) async {
+  Future<List<DailyPhrase>> generateDailyPhrases({
+    String lang = 'de',
+    String? theme,
+  }) async {
     final apiKey = await getApiKey();
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('DeepSeek API key not configured.');
     }
 
     final langName = _langName(lang);
+    final themeLine = (theme != null && theme.trim().isNotEmpty)
+        ? 'Focus ALL 5 phrases on the theme: "${theme.trim()}". '
+        : '';
 
     final prompt = '''Generate 5 useful everyday phrases in $langName that a learner should memorize.
-Pick phrases from different daily situations (greetings, shopping, dining, directions, small talk, emergencies, transport, etc.).
+${themeLine}Pick phrases from different daily situations (greetings, shopping, dining, directions, small talk, emergencies, transport, etc.).
 Choose phrases that are practical and commonly needed — not textbook clichés.
 Return ONLY a JSON object (no other text):
 {

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/word.dart';
+import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
 
@@ -14,11 +17,13 @@ class DailyPhrasesScreen extends StatefulWidget {
 class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   final TranslationService _translator = TranslationService();
   final TtsService _tts = TtsService();
+  final _themeCtrl = TextEditingController();
 
   List<DailyPhrase>? _phrases;
   bool _isLoading = true;
   String? _error;
-  String _lang = 'de'; // Default German, loaded from prefs
+  String _lang = 'de';
+  String? _lastTheme; // Remember the last theme used
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -35,7 +40,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     _loadPhrases();
   }
 
-  Future<void> _loadPhrases() async {
+  @override
+  void dispose() {
+    _themeCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPhrases({String? theme}) async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -47,7 +58,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       final lang = prefs.getString(_langKey) ?? 'de';
       _lang = lang;
 
-      if (savedDate == _today()) {
+      // Only use cache if no theme is specified and it's still today
+      if (theme == null && savedDate == _today()) {
         final jsonStr = prefs.getString(_phrasesKey);
         if (jsonStr != null) {
           final list = jsonDecode(jsonStr) as List;
@@ -58,9 +70,14 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         }
       }
 
-      final phrases = await _translator.generateDailyPhrases(lang: lang);
+      // Generate fresh phrases (with optional theme)
+      final phrases = await _translator.generateDailyPhrases(
+        lang: lang,
+        theme: theme,
+      );
       _phrases = phrases;
       _isLoading = false;
+      _lastTheme = theme;
       setState(() {});
 
       await _saveToPrefs(prefs);
@@ -70,6 +87,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  /// Generate a completely new batch (ignores today's cache).
+  void _generateNew() {
+    final theme = _themeCtrl.text.trim();
+    _loadPhrases(theme: theme.isNotEmpty ? theme : null);
   }
 
   Future<void> _saveToPrefs(SharedPreferences prefs) async {
@@ -87,6 +110,41 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await _saveToPrefs(prefs);
+  }
+
+  /// Save a phrase to My Words so the user can review it later.
+  void _saveToMyWords(int index) async {
+    final phrase = _phrases![index];
+    final provider = context.read<WordProvider>();
+
+    // Check if already saved
+    final exists = provider.words.any((w) => w.word == phrase.phrase);
+    if (exists) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Already in My Words')),
+        );
+      }
+      return;
+    }
+
+    final success = await provider.addWord(
+      word: phrase.phrase,
+      translation: '', // User can translate later from My Words
+      exampleSource: '',
+      exampleTarget: '',
+      sourceLang: _lang,
+      targetLang: 'en',
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Saved to My Words' : 'Failed to save'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -107,7 +165,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               Icon(Icons.cloud_off, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(_error!, textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600])),
+                  style: TextStyle(color: Colors.grey[600])),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _loadPhrases,
@@ -124,6 +182,43 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
     return Column(
       children: [
+        // Theme input + Refresh row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _themeCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Theme (e.g. "at the restaurant")',
+                    prefixIcon: const Icon(Icons.topic, size: 20),
+                    isDense: true,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  onSubmitted: (_) => _generateNew(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Generate new phrases',
+                child: IconButton.filled(
+                  onPressed: _generateNew,
+                  icon: const Icon(Icons.refresh, size: 20),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(42, 42),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Header card
         Container(
           width: double.infinity,
@@ -145,7 +240,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               Expanded(
                 child: Text(
                   allMemorized
-                      ? 'All done! 🎉\nCheck back tomorrow for 5 new phrases.'
+                      ? 'All done! 🎉\nGenerate new phrases or check back tomorrow.'
                       : 'Memorize these 5 phrases today',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
@@ -181,28 +276,27 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                   leading: Tooltip(
                     message: phrase.memorized ? 'Undo' : 'Memorize',
                     child: GestureDetector(
-                    onTap: () => _toggleMemorized(index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: phrase.memorized
-                            ? Colors.green
-                            : Colors.grey.shade300,
-                      ),
-                      child: Icon(
-                        phrase.memorized ? Icons.check : Icons.circle_outlined,
-                        color: Colors.white,
-                        size: 20,
+                      onTap: () => _toggleMemorized(index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: phrase.memorized
+                              ? Colors.green
+                              : Colors.grey.shade300,
+                        ),
+                        child: Icon(
+                          phrase.memorized ? Icons.check : Icons.circle_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                title: Row(
+                  title: Row(
                     children: [
-                      // 🔊 Speak phrase in the daily phrases language
                       IconButton(
                         icon: Icon(Icons.volume_up,
                             size: 18,
@@ -233,12 +327,29 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                       ),
                     ],
                   ),
-                  trailing: phrase.memorized
-                      ? Tooltip(
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 📌 Save to My Words
+                      Tooltip(
+                        message: 'Save to My Words',
+                        child: IconButton(
+                          icon: const Icon(Icons.bookmark_add_outlined, size: 20),
+                          onPressed: () => _saveToMyWords(index),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ),
+                      if (phrase.memorized)
+                        Tooltip(
                           message: 'Memorized',
-                          child: Icon(Icons.check_circle, color: Colors.green[400]),
-                        )
-                      : null,
+                          child: Icon(Icons.check_circle,
+                              color: Colors.green[400], size: 20),
+                        ),
+                    ],
+                  ),
                 ),
               );
             },
