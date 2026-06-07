@@ -8,7 +8,7 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize database
+  // Initialize sqflite database
   await DatabaseService.instance.init();
 
   runApp(const VocabBuilderApp());

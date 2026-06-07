@@ -1,10 +1,10 @@
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 import '../models/word.dart';
 
 class DatabaseService {
   static DatabaseService? _instance;
-  late Isar _isar;
+  late Database _db;
 
   DatabaseService._();
 
@@ -13,13 +13,36 @@ class DatabaseService {
     return _instance!;
   }
 
-  Isar get isar => _isar;
+  Database get db => _db;
 
   Future<void> init() async {
-    final dir = await getApplicationDocumentsDirectory();
-    _isar = await Isar.open(
-      [WordSchema],
-      directory: dir.path,
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'vocab_builder.db');
+
+    _db = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE words (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT NOT NULL,
+            translation TEXT NOT NULL DEFAULT '',
+            example_source TEXT NOT NULL DEFAULT '',
+            example_target TEXT NOT NULL DEFAULT '',
+            source_lang TEXT NOT NULL DEFAULT 'de',
+            target_lang TEXT NOT NULL DEFAULT 'en',
+            is_reviewed INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+        // Index for fast search
+        await db.execute(
+            'CREATE INDEX idx_words_word ON words(word)');
+        await db.execute(
+            'CREATE INDEX idx_words_translation ON words(translation)');
+      },
     );
   }
 
@@ -27,48 +50,67 @@ class DatabaseService {
 
   Future<int> addWord(Word word) async {
     word.updatedAt = DateTime.now();
-    return _isar.writeTxn(() => _isar.words.put(word));
+    word.createdAt = DateTime.now();
+    return _db.insert('words', word.toMap());
   }
 
   Future<List<Word>> getAllWords({String? searchQuery}) async {
-    final query = _isar.words.where();
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      final q = searchQuery.toLowerCase();
-      query.filter().wordContains(q).or().translationContains(q);
+      final q = '%${searchQuery.toLowerCase()}%';
+      final rows = await _db.query(
+        'words',
+        where: 'LOWER(word) LIKE ? OR LOWER(translation) LIKE ? OR LOWER(example_source) LIKE ?',
+        whereArgs: [q, q, q],
+        orderBy: 'created_at DESC',
+      );
+      return rows.map((row) => Word.fromMap(row)).toList();
     }
-    return query.sortByCreatedAtDesc().findAll();
+
+    final rows = await _db.query('words', orderBy: 'created_at DESC');
+    return rows.map((row) => Word.fromMap(row)).toList();
   }
 
   Future<Word?> getWord(int id) async {
-    return _isar.words.get(id);
+    final rows = await _db.query('words', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return Word.fromMap(rows.first);
   }
 
   Future<void> updateWord(Word word) async {
     word.updatedAt = DateTime.now();
-    await _isar.writeTxn(() => _isar.words.put(word));
+    await _db.update(
+      'words',
+      word.toMap(),
+      where: 'id = ?',
+      whereArgs: [word.id],
+    );
   }
 
   Future<void> deleteWord(int id) async {
-    await _isar.writeTxn(() => _isar.words.delete(id));
+    await _db.delete('words', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Word>> getUnreviewedWords() async {
-    return _isar.words
-        .filter()
-        .isReviewedEqualTo(false)
-        .sortByCreatedAtDesc()
-        .findAll();
+    final rows = await _db.query(
+      'words',
+      where: 'is_reviewed = 0',
+      orderBy: 'created_at DESC',
+    );
+    return rows.map((row) => Word.fromMap(row)).toList();
   }
 
   Future<int> getUnreviewedCount() async {
-    return _isar.words.filter().isReviewedEqualTo(false).count();
+    final result = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM words WHERE is_reviewed = 0');
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> getWordCount() async {
-    return _isar.words.count();
+    final result = await _db.rawQuery('SELECT COUNT(*) as count FROM words');
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> close() async {
-    await _isar.close();
+    await _db.close();
   }
 }
