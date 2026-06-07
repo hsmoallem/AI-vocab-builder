@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class TranslationService {
   static const String _apiKeyKey = 'deepseek_api_key';
@@ -20,6 +21,8 @@ class TranslationService {
     if (_apiKey != null) return _apiKey;
     final prefs = await SharedPreferences.getInstance();
     _apiKey = prefs.getString(_apiKeyKey);
+    // Fall back to the embedded key from config
+    _apiKey ??= AppConfig.deepseekApiKey;
     return _apiKey;
   }
 
