@@ -29,7 +29,7 @@ dependencies:
   path_provider: ^2.1.0
 
   # PDF — render natively + extract text
-  pdfx: any
+  flutter_pdfview: any
   syncfusion_flutter_pdf: any
 
   # Phase 4 — Firebase (add when needed)

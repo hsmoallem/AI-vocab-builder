@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pdfx/pdfx.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class PdfReaderScreen extends StatefulWidget {
@@ -15,24 +15,13 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   static const _channel = MethodChannel('com.vocabreader/picker');
 
   File? _pdfFile;
-  PdfDocument? _pdfDocument;
   String _pdfName = '';
   String _extractedText = '';
   bool _isLoading = false;
   bool _showText = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _pdfDocument?.dispose();
-    super.dispose();
-  }
-
   Future<void> _pickAndLoad() async {
-    // Dispose previous document
-    _pdfDocument?.dispose();
-    _pdfDocument = null;
-
     setState(() {
       _isLoading = true;
       _error = null;
@@ -50,10 +39,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       final name = result['name'] as String? ?? 'document.pdf';
       final file = File(path);
 
-      // Open for native rendering
-      _pdfDocument = await PdfDocument.openFile(path);
-
-      // Extract text in background for the text view
       _extractTextInBackground(file);
 
       setState(() {
@@ -84,7 +69,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_pdfFile == null || _pdfDocument == null) {
+    if (_pdfFile == null) {
       return _buildEmptyState();
     }
 
@@ -143,8 +128,15 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   }
 
   Widget _buildPdfView() {
-    return PdfViewPinch(
-      document: _pdfDocument!,
+    return PDFView(
+      filePath: _pdfFile!.absolute.path,
+      enableSwipe: true,
+      swipeHorizontal: false,
+      autoSpacing: true,
+      pageFling: true,
+      onError: (error) {
+        setState(() => _error = error.toString());
+      },
     );
   }
 
