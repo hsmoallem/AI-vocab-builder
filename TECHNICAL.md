@@ -265,8 +265,11 @@ flutter test
 ## 10. Build Commands
 
 ```bash
-# Development
+# Development (code-only changes — most common)
 flutter run
+
+# Development (package added/removed — pubspec.yaml changed)
+flutter clean && flutter pub get && flutter run
 
 # Build APK for sharing
 flutter build apk --debug
@@ -275,8 +278,8 @@ flutter build apk --debug
 # Run tests
 flutter test
 
-# Nuclear clean (if build issues)
-flutter clean && rm -f pubspec.lock && flutter pub get && flutter run
+# Nuclear clean (only if builds are broken — clears all caches)
+flutter clean && rm -f pubspec.lock && rm -rf ~/.pub-cache/hosted/pub.dev/* && flutter pub get && flutter run
 ```
 
 ---
