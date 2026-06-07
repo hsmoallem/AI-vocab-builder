@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class PdfReaderScreen extends StatefulWidget {
@@ -11,6 +11,8 @@ class PdfReaderScreen extends StatefulWidget {
 }
 
 class _PdfReaderScreenState extends State<PdfReaderScreen> {
+  static const _channel = MethodChannel('com.vocabreader/picker');
+
   File? _pdfFile;
   String _pdfName = '';
   String _extractedText = '';
@@ -24,17 +26,17 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     });
 
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-      );
+      final result = await _channel.invokeMapMethod<String, dynamic>('pickPdf');
 
-      if (result == null || result.files.isEmpty) {
+      if (result == null) {
+        // User cancelled
         setState(() => _isLoading = false);
-        return; // User cancelled
+        return;
       }
 
-      final file = File(result.files.single.path!);
+      final path = result['path'] as String;
+      final name = result['name'] as String? ?? 'document.pdf';
+      final file = File(path);
       final bytes = await file.readAsBytes();
 
       // Extract text from PDF
@@ -45,7 +47,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
       setState(() {
         _pdfFile = file;
-        _pdfName = result.files.single.name;
+        _pdfName = name;
         _extractedText = text.trim().isNotEmpty ? text : '(No text found in PDF)';
         _isLoading = false;
       });
@@ -60,10 +62,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   @override
   Widget build(BuildContext context) {
     if (_pdfFile == null) {
-      // No PDF loaded — show picker
       return _buildEmptyState();
     }
-
     return _buildReader();
   }
 

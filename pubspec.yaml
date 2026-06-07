@@ -28,8 +28,7 @@ dependencies:
   # Path utilities
   path_provider: ^2.1.0
 
-  # PDF — pick files and extract text
-  file_picker: ^11.0.0
+  # PDF — extract text
   syncfusion_flutter_pdf: any
 
   # Phase 4 — Firebase (add when needed)
