@@ -2,6 +2,15 @@
 
 Turn any PDF into a personal language lesson. Add words while you read, AI translates instantly.
 
+## Features
+
+- 📖 **PDF Reader** — native rendering + text extraction, tap any word to translate
+- 🤖 **AI Translation** — DeepSeek-powered multi-meaning translations with examples
+- 🃏 **Flashcards** — tap to flip, swipe to navigate, progress tracking
+- 📅 **Daily Phrases** — 5 AI phrases/day, theme-based generation, save to My Words
+- 🔊 **Text-to-Speech** — native Android pronunciation
+- ☁️ **Cloud Backup** — Google sign-in → Firestore backup/restore
+
 ## Project Info
 
 | Key | Value |
@@ -10,14 +19,14 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder) |
-| **DeepSeek API Key** | `sk-b7f...b6d8` in `lib/config/app_config.dart` |
+| **DeepSeek API Key** | `sk-f425...48ba` in `lib/config/app_config.dart` |
 | **Firebase Config** | `android/app/google-services.json` (gitignored, never committed) |
+| **App Icon** | Blue circuit-board "A" on blue gradient |
 
 ## Authentication
 
 - **Google Sign-In** — one tap, zero setup for users
-- **Email/Password** — register + login + forgot password
-- **Anonymous** — temporary account, no cloud backup (orange warning shown)
+- **Anonymous** — skip login, warning about no cloud backup (orange banner shown)
 
 ## Stack
 
@@ -27,4 +36,5 @@ Flutter 3.44.1 · Dart ≥3.5.0 · SQLite (sqflite) · DeepSeek API · Android n
 
 - Full architecture: [`TECHNICAL.md`](TECHNICAL.md)
 - Setup guide: [`SETUP.md`](SETUP.md)
+- Product requirements: [`PRD.md`](PRD.md)
 - Release notes: [`release-notes/v1.0.0.md`](release-notes/v1.0.0.md)

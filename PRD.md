@@ -14,7 +14,7 @@
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | `github.com/hsmoallem/AI-vocab-builder` |
-| **DeepSeek API Key** | `sk-b7f...b6d8` in `lib/config/app_config.dart` |
+| **DeepSeek API Key** | `sk-f425...48ba` in `lib/config/app_config.dart` |
 | **Platform** | Android (iOS planned) |
 | **Tech Stack** | Flutter 3.44.1, Dart ≥3.5.0, SQLite, Firebase, DeepSeek AI |
 
@@ -51,17 +51,19 @@
 - Flashcards with flip animation and swipe navigation
 - Daily Phrases: 5 AI-generated phrases per day
 - Mark phrases as memorized, progress counter, trophy on completion
+- **Save phrases to My Words (📌)** — pin any phrase to word database for flashcard review
+- **Regenerate phrases (🔄)** — get 5 fresh AI phrases on demand (ignores daily cache)
+- **Theme-based generation** — type a topic (e.g. "at the restaurant") → AI generates context phrases
 - Native Text-to-Speech (Android TextToSpeech via MethodChannel)
 - Tooltips on all icons
 - Review toggle on word cards
 
 ### Phase 4 — Authentication & Cloud (✅ Complete)
 - Google Sign-In (one tap)
-- Email/Password (register + login + forgot password)
 - Anonymous sign-in (with data loss warning)
 - Firestore cloud backup/restore for authenticated users
 - Anonymous user restrictions (no cloud backup, orange warning banner)
-- User-friendly error messages for auth failures
+- Graceful fallback when Firebase unavailable (app never bricks)
 
 ### Phase 5 — Settings & Preferences (⬜ Planned)
 - Language pair picker (source → target)

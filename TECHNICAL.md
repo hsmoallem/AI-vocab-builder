@@ -287,7 +287,7 @@ SharedPreferences:
 
 - **Model:** `deepseek-chat`
 - **Endpoint:** `https://api.deepseek.com/v1/chat/completions`
-- **API Key:** `sk-b7f...b6d8` in `lib/config/app_config.dart`
+- **API Key:** `sk-f425...48ba` in `lib/config/app_config.dart`
 - **Temperature:** 0.3 (translation), 0.7 (daily phrases — more variety)
 - **Max tokens:** 800 (translation), 300 (daily phrases)
 
@@ -302,7 +302,13 @@ SharedPreferences:
 
 - System: "You are a language teacher. Respond with valid JSON only."
 - User: "Generate 5 useful everyday phrases in `langName`. Pick from different daily situations."
+- **Theme mode:** If user enters a theme (e.g. "at the doctor"), adds: "Focus on the theme: {theme}."
 - Response: `{ "phrases": ["phrase 1", "phrase 2", "phrase 3", "phrase 4", "phrase 5"] }`
+
+### New Daily Phrases features (June 2026)
+- **Save to My Words (📌):** Each phrase has a pin icon → tap to save as a word in SQLite → appears in My Words tab for flashcard review
+- **Regenerate (🔄):** Top-right button → fresh AI call → 5 new phrases (ignores today's cache)
+- **Theme input:** Text field above phrases → type a topic → AI generates context-specific phrases
 
 ### Fallback
 
@@ -345,7 +351,7 @@ flutter test
 | **`any` constraint** on syncfusion | Auto-resolves to latest compatible version |
 | **compileSdk 36** | Required by flutter_plugin_android_lifecycle |
 | **shared_preferences for daily phrases** | Resets daily — no database overhead needed |
-| **Firebase Auth (3 methods)** | Google for zero-friction, Email for flexibility, Anonymous for skips |
+|| **Firebase Auth (2 methods)** | Google for zero-friction, Anonymous for quick access |
 | **Firestore per-user structure** | `users/{uid}/words/` — standard Firebase security model |
 | **Anonymous restrictions** | No cloud backup — data loss risk clearly warned |
 

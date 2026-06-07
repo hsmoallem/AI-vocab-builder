@@ -4,7 +4,7 @@
 > **App ID:** `com.vocabreader.ai_vocab_builder`  
 > **Firebase:** `project-794490258159` (AI Vocab Builder)  
 > **GitHub:** [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder)  
-> **DeepSeek Key:** `sk-b7f...b6d8` in `lib/config/app_config.dart`  
+> **DeepSeek Key:** `sk-f425...48ba` in `lib/config/app_config.dart`  
 > **Team:** Houssam (Mac) + Hermes (code)  
 > **Workflow:** You create project → GitHub → I write code → you run  
 > **Tech:** Flutter + Dart (Android now, iOS later)  
@@ -34,12 +34,12 @@
 
 | Phase | What | Status |
 |-------|------|--------|
-| **Phase 0** | Environment setup (Flutter, Android Studio, GitHub) | ✅ Complete |
+| **Phase 0** | Environment setup (Flutter, Android Studio, GitHub, Firebase, DeepSeek) | ✅ Complete |
 | **Phase 1** | sqflite DB, Add Word + DeepSeek, Word List, sort, delete | ✅ Complete |
 | **Phase 2** | PDF picker (native), native rendering (flutter_pdfview), text extraction, tap-word | ✅ Complete |
-| **Phase 3** | Flashcards + review flow + Daily Phrases + TTS | ✅ Complete |
-| **Phase 4** | Firebase Auth (Google + Email + Anonymous) + Firestore cloud backup | ✅ Complete |
-| **Phase 5** | Settings, language picker, theme toggle | ⬜ |
+| **Phase 3** | Flashcards + review flow + Daily Phrases + TTS + Save to My Words + Theme | ✅ Complete |
+| **Phase 4** | Firebase Auth (Google + Anonymous) + Firestore cloud backup | ✅ Complete |
+| **Phase 5** | Settings, language picker, theme toggle | ⬜ Next |
 | **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ |
 
 ---
@@ -48,8 +48,8 @@
 
 ### Auth (Phase 4 — ✅ Complete)
 - **Google Sign-In** — one tap, uses phone's Google account
-- **Email/Password** — register, login, forgot password
-- **Anonymous** — skip login, warning about no cloud backup
+- **Anonymous** — skip login, warning about no cloud backup (orange banner)
+- **Cloud Backup:** One-tap backup/restore all words to Firestore
 
 ### Core (Phases 1-3 — ✅ Complete)
 - **3-tab navigation:** Reader · Daily Phrases · My Words
@@ -60,9 +60,8 @@
 - **Swipe-to-delete:** With confirmation dialog
 - **Flashcards:** Tap to flip, swipe to navigate, progress bar
 - **PDF Reader:** Native rendering + text extraction, tap-to-add
-- **Daily Phrases:** AI generates 5 phrases/day, mark as memorized
+- **Daily Phrases:** AI generates 5 phrases/day, mark as memorized, **save to My Words**, **theme-based generation** (e.g. "at the restaurant"), **regenerate new 5** button
 - **Text-to-Speech:** Native Android TTS (no external package)
-- **Cloud Backup:** Save/restore words to Firestore
 
 ### Current Technical Stack
 
@@ -72,11 +71,10 @@
 | File picker | **Native Android** (MethodChannel) |
 | PDF | **flutter_pdfview** (render) + **syncfusion_flutter_pdf** (text) |
 | State | **Provider** |
-| AI | **DeepSeek** (multi-meaning + daily phrases) |
-| Auth | **Firebase** (Google, Email, Anonymous) |
+| AI | **DeepSeek** (multi-meaning + daily phrases + theme prompts) |
+| Auth | **Firebase** (Google + Anonymous) |
 | Cloud DB | **Firestore** (backup/restore) |
 | TTS | **Native Android** TextToSpeech (MethodChannel) |
-| Tests | **22 tests** (11 model + 11 widget) |
 
 > Full details: [`TECHNICAL.md`](TECHNICAL.md)
 
@@ -95,10 +93,7 @@ flutter run       # run on phone
 | Command | When |
 |---------|------|
 | `git pull && flutter run` | **Most updates** — code changes only, no new packages |
-| `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) |
-
-> **Simple rule:** If I add/remove a package, I'll tell you to use the long command.  
-> If I say "(No flutter clean needed — no packages changed)", just pull and run.
+| `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) or **Android resources changed** (icons, splash) |
 
 ---
 
@@ -106,7 +101,7 @@ flutter run       # run on phone
 
 | Token / File | Where | Notes |
 |-------------|-------|-------|
-| **DeepSeek API Key** | `lib/config/app_config.dart` | `sk-b7f...b6d8` — $5 = ~50k translations |
+| **DeepSeek API Key** | `lib/config/app_config.dart` | `sk-f425...48ba` — $5 = ~50k translations |
 | **google-services.json** | `android/app/` | Firebase config — **gitignored**, never committed |
 | **Firebase Project** | [console.firebase.google.com](https://console.firebase.google.com) | `project-794490258159` |
 | **SSH Key (server)** | `~/.ssh/id_ed25519_vocab` | Hermes server pushes to GitHub |
@@ -115,10 +110,11 @@ flutter run       # run on phone
 
 ## 6. Firebase Setup (Already Done ✅)
 
-All three auth providers enabled in Firebase Console:
-- **Google** — OAuth client for `com.vocabreader.ai_vocab_builder`
-- **Email/Password** — email enumeration protection enabled
+All auth providers enabled in Firebase Console:
+- **Google** — OAuth client for `com.vocabreader.ai_vocab_builder`  
+  SHA-1: `CB:A0:03:8B:B5:E9:65:BB:FA:A3:99:D3:B9:C2:F2:21:BE:C0:AF:22`
 - **Anonymous** — temporary accounts
+- ~~Email/Password~~ — removed (simplified to Google + Anonymous)
 
 Firestore database created in `eur3` (Europe) region.
 
@@ -130,6 +126,7 @@ Firestore database created in `eur3` (Europe) region.
 2. Stored in `lib/config/app_config.dart` as `deepseekApiKey`
 3. Translation endpoint: `https://api.deepseek.com/v1/chat/completions`
 4. Model: `deepseek-chat`
+5. Also used for: daily phrases, theme-based phrase generation
 
 ---
 
