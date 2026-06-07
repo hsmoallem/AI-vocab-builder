@@ -46,3 +46,6 @@ app.*.map.json
 
 # Firebase — contains API keys, do NOT commit
 /android/app/google-services.json
+
+# Secrets — API keys, do NOT commit
+/lib/config/secrets.dart

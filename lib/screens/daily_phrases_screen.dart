@@ -25,6 +25,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   String? _error;
   String _lang = 'de';
   String? _lastTheme;
+  SharedPreferences? _prefs;  // cached to avoid getInstance() on every tap
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -54,13 +55,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedDate = prefs.getString(_dateKey);
-      final lang = prefs.getString(_langKey) ?? 'de';
+      _prefs = await SharedPreferences.getInstance();
+      final savedDate = _prefs!.getString(_dateKey);
+      final lang = _prefs!.getString(_langKey) ?? 'de';
       _lang = lang;
 
       if (theme == null && savedDate == _today()) {
-        final jsonStr = prefs.getString(_phrasesKey);
+        final jsonStr = _prefs!.getString(_phrasesKey);
         if (jsonStr != null) {
           final list = jsonDecode(jsonStr) as List;
           _phrases = list.map((j) => DailyPhrase.fromJson(j)).toList();
@@ -79,7 +80,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       _lastTheme = theme;
       setState(() {});
 
-      await _saveToPrefs(prefs);
+      await _saveToPrefs();
     } catch (e) {
       setState(() {
         _error = 'Failed to load phrases: $e';
@@ -93,7 +94,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     _loadPhrases(theme: theme.isNotEmpty ? theme : null);
   }
 
-  Future<void> _saveToPrefs(SharedPreferences prefs) async {
+  Future<void> _saveToPrefs() async {
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setString(_dateKey, _today());
     await prefs.setString(
       _phrasesKey,
@@ -101,13 +104,11 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     );
   }
 
-  void _toggleMemorized(int index) async {
+  void _toggleMemorized(int index) {
     setState(() {
       _phrases![index].memorized = !_phrases![index].memorized;
     });
-
-    final prefs = await SharedPreferences.getInstance();
-    await _saveToPrefs(prefs);
+    _saveToPrefs();  // uses cached _prefs, no need for getInstance()
   }
 
   void _saveToMyWords(int index) async {
