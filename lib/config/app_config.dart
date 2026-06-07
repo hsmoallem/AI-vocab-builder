@@ -18,7 +18,7 @@
 class AppConfig {
   // DeepSeek API
   // [REDACTED] — replace with your own key from https://platform.deepseek.com
-  static const String deepseekApiKey = 'sk-b7f...b6d8';
+  static const String deepseekApiKey = 'sk-f425348b6d034531bd7e86d113f348ba';
 
   // Default languages for the Add Word dialog
   static const String defaultSourceLang = 'de';
