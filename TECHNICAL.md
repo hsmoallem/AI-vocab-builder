@@ -1,10 +1,23 @@
-# Vocab Builder — Technical Documentation
+# AI Vocab Builder — Technical Documentation
 
 > Last updated: June 7, 2026
 
 ---
 
-## 1. Environment
+## 1. Project Tokens & IDs
+
+| Token / ID | Value | Location |
+|------------|-------|----------|
+| **DeepSeek API Key** | `sk-b7f...b6d8` | `lib/config/app_config.dart` |
+| **Firebase Project ID** | `project-794490258159` | Firebase Console |
+| **Firebase Config** | `google-services.json` | `android/app/` (gitignored) |
+| **Android App ID** | `com.vocabreader.ai_vocab_builder` | `build.gradle.kts`, `AndroidManifest.xml` |
+| **GitHub Repo** | `hsmoallem/AI-vocab-builder` | `github.com/hsmoallem/AI-vocab-builder` |
+| **SSH Deploy Key** | `~/.ssh/id_ed25519_vocab` (Ed25519) | Hermes server only |
+
+---
+
+## 2. Environment
 
 | Tool | Version |
 |------|---------|
@@ -14,11 +27,13 @@
 | Kotlin | 2.3.20 |
 | Gradle | AGP 9.0.1 |
 | Java | JDK 17 |
+| Firebase | firebase_core ^3.0.0, firebase_auth ^5.0.0, cloud_firestore ^5.0.0 |
+| Google Sign-In | google_sign_in ^6.2.0 |
 | IDE | Android Studio + Flutter plugin |
 
 ---
 
-## 2. Packages (pubspec.yaml)
+## 3. Packages (pubspec.yaml)
 
 ### Runtime dependencies
 
@@ -32,6 +47,10 @@
 | `path_provider` | ^2.1.0 | Platform-agnostic paths |
 | `syncfusion_flutter_pdf` | any | PDF text extraction |
 | `flutter_pdfview` | any | Native PDF rendering (Apache 2.0, 2M+ downloads) |
+| `firebase_core` | ^3.0.0 | Firebase initialization |
+| `firebase_auth` | ^5.0.0 | Firebase Authentication |
+| `cloud_firestore` | ^5.0.0 | Firestore cloud database |
+| `google_sign_in` | ^6.2.0 | Google Sign-In |
 
 ### Dev dependencies
 
@@ -42,7 +61,7 @@
 
 ---
 
-## 3. File Picker — Native (No Package)
+## 4. File Picker — Native (No Package)
 
 **We do NOT use the `file_picker` package.** Instead we use Android's native `ACTION_OPEN_DOCUMENT` intent via a Flutter `MethodChannel`.
 
@@ -91,7 +110,7 @@ In **Text view**, select any word → Add Word dialog opens pre-filled → auto-
 
 ---
 
-## 4. Architecture
+## 5. Architecture
 
 ```
 lib/
@@ -101,15 +120,20 @@ lib/
 ├── models/
 │   └── word.dart              # Word data model (id, word, translation, examples, etc.)
 ├── providers/
+│   ├── auth_provider.dart     # ChangeNotifier — Firebase auth state (Google/Email/Anon)
 │   └── word_provider.dart     # ChangeNotifier — CRUD, sort, search, translate
 ├── screens/
-│   ├── home_screen.dart       # Tab navigation (Reader / Daily / My Words) + FAB
+│   ├── home_screen.dart       # Tab nav (Reader / Daily / My Words) + account menu
+│   ├── login_screen.dart      # Google + Email + Anonymous + Register link
+│   ├── email_login_screen.dart # Email + password + forgot password
+│   ├── register_screen.dart   # Create account (email + password + confirm)
 │   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
-│   ├── daily_phrases_screen.dart # AI-generated 5 phrases/day, mark memorized
+│   ├── daily_phrases_screen.dart # AI 5 phrases/day, mark memorized
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
 │   └── word_list_screen.dart  # Searchable word list with sort + delete
 ├── services/
 │   ├── database_service.dart  # sqflite CRUD (SQLite)
+│   ├── firebase_service.dart  # Firebase init, auth methods, Firestore backup/restore
 │   └── translation_service.dart # DeepSeek API — multi-meaning translation + daily phrases
 └── widgets/
     ├── add_word_dialog.dart   # Add word dialog with AI translate + meaning cards
@@ -119,34 +143,98 @@ lib/
 ### Data Flow
 
 ```
-User taps + → AddWordDialog → DeepSeek API → TranslationResult (meanings[])
-                                       ↓
-                                 User reviews meanings + examples
-                                       ↓
-                                 WordProvider.addWord() → DatabaseService.insertWord()
-                                       ↓
-                                 WordCard displayed in WordListScreen
+LoginScreen → [Google Sign-In / Email Password / Anonymous]
+       ↓
+  AuthGate checks Firebase auth state
+       ↓
+  HomeScreen (3 tabs: Reader · Daily · My Words)
+       ↓
+Reader → Native PDF view / Text extraction → Tap word → AddWordDialog
+                                                     ↓
+                                               DeepSeek API → meanings[]
+                                                     ↓
+                                               WordProvider → SQLite
+Daily → DeepSeek API → 5 phrases → shared_preferences (today only)
+My Words → SQLite → sort/search/delete
+Account menu → Backup words to Firestore / Restore from Firestore
+```
 
-Daily tab opens → DailyPhrasesScreen → DeepSeek API → 5 phrases
-                                       ↓
-                                 Stored in shared_preferences (today only)
-                                       ↓
-                                 Tap circle to mark memorized → resets tomorrow
+### Auth Flow
+
+```
+App start
+  │
+  ├─ Firebase init fails → local-only mode (fallback)
+  │
+  ├─ Firebase init OK → AuthProvider listens to authStateChanges()
+  │     │
+  │     ├─ No user → LoginScreen
+  │     │     ├─ Google → one-tap sign-in → HomeScreen
+  │     │     ├─ Email → EmailLoginScreen → HomeScreen
+  │     │     ├─ Anonymous → warning dialog → HomeScreen (orange banner)
+  │     │     └─ Register → RegisterScreen → HomeScreen
+  │     │
+  │     └─ User exists → HomeScreen
+  │           ├─ Email/Google user: cloud backup enabled
+  │           └─ Anonymous user: orange warning banner, no cloud backup
 ```
 
 ### State Management
 
 - **Provider** (ChangeNotifier pattern)
-- `WordProvider` holds:
-  - `words` — List<Word>
-  - `sortMode` — newestFirst / alphabetical
-  - `state` — idle / loading / loaded / error
-  - `error` — String? for error messages
-- Full lifecycle: loading indicator → loaded list → error display
+- `AuthProvider` holds: user, isSignedIn, isAnonymous, isLoading, error
+- `WordProvider` holds: words, sortMode, state (idle/loading/loaded/error), error
+- Full lifecycle: loading → loaded → error display
 
 ---
 
-## 5. Daily Phrases
+## 6. Firebase (Phase 4)
+
+### Authentication Providers
+
+| Provider | Status | Config |
+|----------|--------|--------|
+| Google | ✅ Enabled | OAuth 2.0, public name: "AI Vocab Builder" |
+| Email/Password | ✅ Enabled | Includes forgot password flow |
+| Anonymous | ✅ Enabled | Warning shown before sign-in |
+
+### Firestore Structure
+
+```
+users/
+  └── {uid}/
+      └── words/
+          └── {wordId}/
+              ├── word: string
+              ├── translation: string
+              ├── example_source: string
+              ├── example_target: string
+              ├── source_lang: string
+              ├── target_lang: string
+              ├── is_reviewed: boolean
+              ├── created_at: timestamp
+              └── updated_at: timestamp
+```
+
+### Backup/Restore
+- **Backup:** Uploads all local words to `users/{uid}/words/` on user tap
+- **Restore:** Downloads all words, merges with local DB (dedup by word text)
+- **Anonymous users:** Backup/restore disabled with explanation
+
+### Email Error Messages (User-Friendly)
+
+| Firebase Error | User Sees |
+|---------------|-----------|
+| `wrong-password` / `user-not-found` | "Wrong email or password." |
+| `email-already-in-use` | "This email is already registered." |
+| `weak-password` | "Password must be at least 6 characters." |
+| `invalid-email` | "Please enter a valid email address." |
+| `network-request-failed` | "No internet connection. Check your Wi-Fi." |
+| `too-many-requests` | "Too many attempts. Please try again later." |
+
+---
+
+## 7. Daily Phrases
 
 ### How it works
 1. **On first open each day**: Calls DeepSeek API → generates 5 practical everyday phrases
@@ -171,7 +259,7 @@ SharedPreferences:
 
 ---
 
-## 6. Database
+## 8. Database
 
 ### Schema (`words` table)
 
@@ -195,10 +283,11 @@ SharedPreferences:
 
 ---
 
-## 7. AI Translation (DeepSeek)
+## 9. AI Translation (DeepSeek)
 
 - **Model:** `deepseek-chat`
 - **Endpoint:** `https://api.deepseek.com/v1/chat/completions`
+- **API Key:** `sk-b7f...b6d8` in `lib/config/app_config.dart`
 - **Temperature:** 0.3 (translation), 0.7 (daily phrases — more variety)
 - **Max tokens:** 800 (translation), 300 (daily phrases)
 
@@ -222,7 +311,7 @@ SharedPreferences:
 
 ---
 
-## 8. Testing
+## 10. Testing
 
 ### Unit Tests (`test/word_test.dart`) — 11 tests
 - Constructor defaults (isReviewed=false, auto timestamps)
@@ -246,7 +335,7 @@ flutter test
 
 ---
 
-## 9. Key Decisions
+## 11. Key Decisions
 
 | Decision | Why |
 |----------|-----|
@@ -256,13 +345,13 @@ flutter test
 | **`any` constraint** on syncfusion | Auto-resolves to latest compatible version |
 | **compileSdk 36** | Required by flutter_plugin_android_lifecycle |
 | **shared_preferences for daily phrases** | Resets daily — no database overhead needed |
-| **No translation for daily phrases** | User's request — just phrases in target language |
-| **No Firebase yet** | Phase 4 — adds auth + cloud sync |
-| **No AdMob yet** | Phase 6 — monetization |
+| **Firebase Auth (3 methods)** | Google for zero-friction, Email for flexibility, Anonymous for skips |
+| **Firestore per-user structure** | `users/{uid}/words/` — standard Firebase security model |
+| **Anonymous restrictions** | No cloud backup — data loss risk clearly warned |
 
 ---
 
-## 10. Build Commands
+## 12. Build Commands
 
 ```bash
 # Development (code-only changes — most common)
@@ -284,7 +373,7 @@ flutter clean && rm -f pubspec.lock && rm -rf ~/.pub-cache/hosted/pub.dev/* && f
 
 ---
 
-## 11. Known Issues
+## 13. Known Issues
 
 | Issue | Status | Note |
 |-------|--------|------|
@@ -295,7 +384,7 @@ flutter clean && rm -f pubspec.lock && rm -rf ~/.pub-cache/hosted/pub.dev/* && f
 
 ---
 
-## 12. GitHub SSH Key (Hermes Server)
+## 14. GitHub SSH Key (Hermes Server)
 
 The Hermes server pushes code to this repo via SSH:
 
