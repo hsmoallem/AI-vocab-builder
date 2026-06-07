@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'word_list_screen.dart';
+import 'flashcard_screen.dart';
 import '../widgets/add_word_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,6 +24,14 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Vocab Builder'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.style_outlined),
+            tooltip: 'Flashcards',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add Word',
