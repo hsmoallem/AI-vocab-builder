@@ -104,6 +104,67 @@ Return ONLY a JSON object (no other text) with this format:
 }''';
   }
 
+  /// Generate 5 daily-life phrases in the given language.
+  /// Returns a list of {phrase, memorized: false}.
+  Future<List<DailyPhrase>> generateDailyPhrases({String lang = 'de'}) async {
+    final apiKey = await getApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('DeepSeek API key not configured.');
+    }
+
+    final langName = _langName(lang);
+
+    final prompt = '''Generate 5 useful everyday phrases in $langName that a learner should memorize.
+Pick phrases from different daily situations (greetings, shopping, dining, directions, small talk, emergencies, transport, etc.).
+Choose phrases that are practical and commonly needed — not textbook clichés.
+Return ONLY a JSON object (no other text):
+{
+  "phrases": ["phrase 1", "phrase 2", "phrase 3", "phrase 4", "phrase 5"]
+}''';
+
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      },
+      body: jsonEncode({
+        'model': 'deepseek-chat',
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are a language teacher. Respond with valid JSON only.',
+          },
+          {
+            'role': 'user',
+            'content': prompt,
+          },
+        ],
+        'temperature': 0.7,
+        'max_tokens': 300,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('DeepSeek API error: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body);
+    final content = data['choices'][0]['message']['content'] as String;
+
+    // Parse JSON — clean markdown fences if present
+    String jsonStr = content.trim();
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
+      jsonStr = jsonStr.replaceFirst('```', '');
+    }
+
+    final map = jsonDecode(jsonStr);
+    final phrases = List<String>.from(map['phrases'] ?? []);
+
+    return phrases.map((p) => DailyPhrase(phrase: p)).toList();
+  }
+
   String _langName(String code) {
     const names = {
       'de': 'German', 'en': 'English', 'fr': 'French', 'es': 'Spanish',
@@ -198,4 +259,16 @@ class TranslationResult {
       ]);
     }
   }
+}
+
+/// Daily phrase — generated fresh each day
+class DailyPhrase {
+  final String phrase;
+  bool memorized;
+
+  DailyPhrase({required this.phrase, this.memorized = false});
+
+  Map<String, dynamic> toJson() => {'phrase': phrase, 'memorized': memorized};
+  factory DailyPhrase.fromJson(Map<String, dynamic> json) =>
+      DailyPhrase(phrase: json['phrase'] as String, memorized: json['memorized'] == true);
 }

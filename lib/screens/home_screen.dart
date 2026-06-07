@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'word_list_screen.dart';
 import 'pdf_reader_screen.dart';
 import 'flashcard_screen.dart';
+import 'daily_phrases_screen.dart';
 import '../widgets/add_word_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _screens = const [
     PdfReaderScreen(),
+    DailyPhrasesScreen(),
     WordListScreen(),
   ];
 
@@ -51,17 +53,24 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Reader',
           ),
           NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'Daily',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt),
             label: 'My Words',
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddWordDialog(context),
-        tooltip: 'Add Word',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _currentIndex == 2
+          ? FloatingActionButton(
+              onPressed: () => _showAddWordDialog(context),
+              tooltip: 'Add Word',
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
