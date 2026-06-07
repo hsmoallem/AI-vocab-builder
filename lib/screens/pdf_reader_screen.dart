@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sync;
 
 class PdfReaderScreen extends StatefulWidget {
   const PdfReaderScreen({super.key});
@@ -57,8 +57,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   void _extractTextInBackground(File file) {
     try {
       final bytes = file.readAsBytesSync();
-      final document = PdfDocument(inputBytes: bytes);
-      final extractor = PdfTextExtractor(document);
+      final document = sync.PdfDocument(inputBytes: bytes);
+      final extractor = sync.PdfTextExtractor(document);
       final text = extractor.extractText();
       document.dispose();
       _extractedText = text.trim();
