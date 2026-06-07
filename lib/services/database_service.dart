@@ -3,82 +3,70 @@ import 'package:path/path.dart';
 import '../models/word.dart';
 
 class DatabaseService {
-  static DatabaseService? _instance;
-  late Database _db;
+  static Database? _database;
 
-  DatabaseService._();
-
-  static DatabaseService get instance {
-    _instance ??= DatabaseService._();
-    return _instance!;
+  static Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    return _database!;
   }
 
-  Database get db => _db;
-
-  Future<void> init() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'vocab_builder.db');
-
-    _db = await openDatabase(
+  static Future<Database> _initDatabase() async {
+    String path = join(await getDatabasesPath(), 'vocab_builder.db');
+    return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE words (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word TEXT NOT NULL,
-            translation TEXT NOT NULL DEFAULT '',
-            example_source TEXT NOT NULL DEFAULT '',
-            example_target TEXT NOT NULL DEFAULT '',
-            source_lang TEXT NOT NULL DEFAULT 'de',
-            target_lang TEXT NOT NULL DEFAULT 'en',
-            is_reviewed INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            text TEXT NOT NULL,
+            translation TEXT,
+            source_lang TEXT,
+            target_lang TEXT,
+            example_sentence TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL
           )
         ''');
-        // Index for fast search
-        await db.execute(
-            'CREATE INDEX idx_words_word ON words(word)');
-        await db.execute(
-            'CREATE INDEX idx_words_translation ON words(translation)');
       },
     );
   }
 
-  // ── Word CRUD ──
-
-  Future<int> addWord(Word word) async {
-    word.updatedAt = DateTime.now();
-    word.createdAt = DateTime.now();
-    return _db.insert('words', word.toMap());
+  // CREATE
+  static Future<int> insertWord(Word word) async {
+    final db = await database;
+    return await db.insert('words', word.toMap());
   }
 
-  Future<List<Word>> getAllWords({String? searchQuery}) async {
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      final q = '%${searchQuery.toLowerCase()}%';
-      final rows = await _db.query(
-        'words',
-        where: 'LOWER(word) LIKE ? OR LOWER(translation) LIKE ? OR LOWER(example_source) LIKE ?',
-        whereArgs: [q, q, q],
-        orderBy: 'created_at DESC',
-      );
-      return rows.map((row) => Word.fromMap(row)).toList();
+  // READ all
+  static Future<List<Word>> getWords({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'words',
+      orderBy: orderBy,
+    );
+    return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
+  }
+
+  // READ single
+  static Future<Word?> getWord(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'words',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return Word.fromMap(maps.first);
     }
-
-    final rows = await _db.query('words', orderBy: 'created_at DESC');
-    return rows.map((row) => Word.fromMap(row)).toList();
+    return null;
   }
 
-  Future<Word?> getWord(int id) async {
-    final rows = await _db.query('words', where: 'id = ?', whereArgs: [id]);
-    if (rows.isEmpty) return null;
-    return Word.fromMap(rows.first);
-  }
-
-  Future<void> updateWord(Word word) async {
-    word.updatedAt = DateTime.now();
-    await _db.update(
+  // UPDATE
+  static Future<int> updateWord(Word word) async {
+    final db = await database;
+    return await db.update(
       'words',
       word.toMap(),
       where: 'id = ?',
@@ -86,31 +74,25 @@ class DatabaseService {
     );
   }
 
-  Future<void> deleteWord(int id) async {
-    await _db.delete('words', where: 'id = ?', whereArgs: [id]);
+  // DELETE
+  static Future<int> deleteWord(int id) async {
+    final db = await database;
+    return await db.delete(
+      'words',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
-  Future<List<Word>> getUnreviewedWords() async {
-    final rows = await _db.query(
+  // SEARCH
+  static Future<List<Word>> searchWords(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'words',
-      where: 'is_reviewed = 0',
+      where: 'text LIKE ? OR translation LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
       orderBy: 'created_at DESC',
     );
-    return rows.map((row) => Word.fromMap(row)).toList();
-  }
-
-  Future<int> getUnreviewedCount() async {
-    final result = await _db.rawQuery(
-        'SELECT COUNT(*) as count FROM words WHERE is_reviewed = 0');
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<int> getWordCount() async {
-    final result = await _db.rawQuery('SELECT COUNT(*) as count FROM words');
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<void> close() async {
-    await _db.close();
+    return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
   }
 }

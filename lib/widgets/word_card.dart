@@ -1,158 +1,124 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/word.dart';
-import '../providers/word_provider.dart';
 
 class WordCard extends StatelessWidget {
   final Word word;
+  final VoidCallback? onDelete;
 
-  const WordCard({super.key, required this.word});
+  const WordCard({
+    super.key,
+    required this.word,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showEditDialog(context),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top row: word + translation + review dot
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          word.word,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          word.translation,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: word + delete button
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    word.text,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  // Review indicator
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: word.isReviewed
-                          ? Colors.green
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Reviewed toggle
-                  IconButton(
-                    icon: Icon(
-                      word.isReviewed ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: word.isReviewed ? Colors.green : Colors.grey,
-                    ),
-                    tooltip: word.isReviewed ? 'Mark as learning' : 'Mark as reviewed',
-                    onPressed: () {
-                      context.read<WordProvider>().toggleReviewed(word);
-                    },
-                  ),
-                ],
-              ),
-
-              // Example sentences
-              if (word.exampleSource.isNotEmpty) ...[
-                const Divider(height: 20),
-                Text(
-                  word.exampleSource,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey.shade700,
                   ),
                 ),
-                if (word.exampleTarget.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    word.exampleTarget,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade500,
-                    ),
+                if (onDelete != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    tooltip: 'Delete word',
+                    onPressed: onDelete,
+                    iconSize: 22,
+                    visualDensity: VisualDensity.compact,
                   ),
-                ],
               ],
+            ),
+            const SizedBox(height: 6),
+
+            // Translation
+            if (word.translation != null && word.translation!.isNotEmpty)
+              Text(
+                word.translation!,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            const SizedBox(height: 8),
+
+            // Language pair badge
+            Row(
+              children: [
+                _buildBadge(word.sourceLang ?? '?', Colors.blue),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
+                ),
+                _buildBadge(word.targetLang ?? '?', Colors.green),
+              ],
+            ),
+
+            // Example sentence
+            if (word.exampleSentence != null && word.exampleSentence!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  word.exampleSentence!,
+                  style: const TextStyle(
+                    fontStyle: FontStyle.italic,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             ],
-          ),
+
+            // Notes
+            if (word.notes != null && word.notes!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                word.notes!,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  void _showEditDialog(BuildContext context) {
-    final wordController = TextEditingController(text: word.word);
-    final translationController = TextEditingController(text: word.translation);
-    final exampleSourceController = TextEditingController(text: word.exampleSource);
-    final exampleTargetController = TextEditingController(text: word.exampleTarget);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Word'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: wordController,
-                decoration: const InputDecoration(labelText: 'Word'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: translationController,
-                decoration: const InputDecoration(labelText: 'Translation'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: exampleSourceController,
-                decoration: const InputDecoration(labelText: 'Example (original)'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: exampleTargetController,
-                decoration: const InputDecoration(labelText: 'Example (translated)'),
-                maxLines: 2,
-              ),
-            ],
-          ),
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(30),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w500,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              word.word = wordController.text.trim();
-              word.translation = translationController.text.trim();
-              word.exampleSource = exampleSourceController.text.trim();
-              word.exampleTarget = exampleTargetController.text.trim();
-              context.read<WordProvider>().updateWord(word);
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

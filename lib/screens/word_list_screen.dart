@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../widgets/word_card.dart';
+import '../widgets/add_word_dialog.dart';
 
 class WordListScreen extends StatefulWidget {
   const WordListScreen({super.key});
@@ -11,174 +13,241 @@ class WordListScreen extends StatefulWidget {
 }
 
 class _WordListScreenState extends State<WordListScreen> {
-  final _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  List<Word> _filteredWords = [];
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    final provider = context.read<WordProvider>();
+    _filteredWords = provider.words;
+  }
+
+  void _filterWords(String query, WordProvider provider) {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredWords = provider.words;
+      });
+    } else {
+      final q = query.toLowerCase();
+      setState(() {
+        _filteredWords = provider.words.where((w) {
+          return w.text.toLowerCase().contains(q) ||
+              (w.translation?.toLowerCase().contains(q) ?? false);
+        }).toList();
+      });
+    }
+  }
+
+  Future<void> _deleteWord(BuildContext context, Word word) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Word'),
+        content: Text('Delete "${word.text}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      await context.read<WordProvider>().deleteWord(word.id!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"${word.text}" deleted')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
       builder: (context, provider, _) {
-        return Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search words...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            provider.loadWords();
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                ),
-                onChanged: (query) {
-                  setState(() {});
-                  provider.loadWords(searchQuery: query);
-                },
-              ),
-            ),
+        // Keep filtered list in sync
+        if (_searchController.text.isEmpty) {
+          _filteredWords = provider.words;
+        } else {
+          _filterWords(_searchController.text, provider);
+        }
 
-            // Stats row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text(
-                    '${provider.wordCount} words',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
+        return Scaffold(
+          body: Column(
+            children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (q) => _filterWords(q, provider),
+                  decoration: InputDecoration(
+                    hintText: 'Search words...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _filterWords('', provider);
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      '${provider.unreviewedCount} to review',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade800,
-                      ),
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  const Spacer(),
-                  if (provider.unreviewedCount > 0)
-                    TextButton.icon(
-                      onPressed: () {
-                        // Flashcard review — Phase 3
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Flashcards coming in Phase 3!'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.play_arrow, size: 18),
-                      label: const Text('Review'),
-                    ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
 
-            // Word list
-            Expanded(
-              child: provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.words.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.book_outlined,
-                                size: 64,
-                                color: Colors.grey.shade300,
+              // Sort toggle + count
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    // Sort toggle button
+                    _SortChip(
+                      label: 'A–Z',
+                      icon: Icons.sort_by_alpha,
+                      selected: provider.sortMode == SortMode.alphabetical,
+                      onTap: () => provider.setSortMode(SortMode.alphabetical),
+                    ),
+                    const SizedBox(width: 8),
+                    _SortChip(
+                      label: 'Newest',
+                      icon: Icons.access_time,
+                      selected: provider.sortMode == SortMode.newestFirst,
+                      onTap: () => provider.setSortMode(SortMode.newestFirst),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_filteredWords.length} word${_filteredWords.length == 1 ? '' : 's'}',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Word list
+              Expanded(
+                child: _filteredWords.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.menu_book_outlined,
+                                size: 64, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              _searchController.text.isNotEmpty
+                                  ? 'No matching words'
+                                  : 'No words yet.\nTap + to add one!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade500,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No words yet',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.grey,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tap + to add your first word',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: provider.words.length,
-                          itemBuilder: (context, index) {
-                            final word = provider.words[index];
-                            return Dismissible(
-                              key: Key('word-${word.id}'),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 24),
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.delete, color: Colors.white),
-                              ),
-                              confirmDismiss: (direction) async {
-                                return await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Delete word?'),
-                                    content: Text(
-                                        'Delete "${word.word}"? This cannot be undone.'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(ctx).pop(false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () => Navigator.of(ctx).pop(true),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                        ),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              onDismissed: (_) => provider.deleteWord(word.id!),
-                              child: WordCard(word: word),
-                            );
-                          },
+                            ),
+                          ],
                         ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(top: 4, bottom: 80),
+                        itemCount: _filteredWords.length,
+                        itemBuilder: (context, index) {
+                          final word = _filteredWords[index];
+                          return Dismissible(
+                            key: Key('word-${word.id}'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 24),
+                              color: Colors.red,
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            confirmDismiss: (_) async {
+                              _deleteWord(context, word);
+                              return false; // we handle delete ourselves
+                            },
+                            child: WordCard(
+                              word: word,
+                              onDelete: () => _deleteWord(context, word),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+
+          // FAB
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => const AddWordDialog(),
             ),
-          ],
+            child: const Icon(Icons.add),
+          ),
         );
       },
+    );
+  }
+}
+
+class _SortChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SortChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? Colors.white : Colors.grey.shade700,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
