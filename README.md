@@ -19,7 +19,7 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder) |
-| **DeepSeek API Key** | `sk-f425...48ba` in `lib/config/app_config.dart` |
+| **DeepSeek API Key** | In `lib/config/secrets.dart` (gitignored, never committed) |
 | **Firebase Config** | `android/app/google-services.json` (gitignored, never committed) |
 | **App Icon** | Blue circuit-board "A" on blue gradient |
 

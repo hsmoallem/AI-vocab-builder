@@ -4,7 +4,7 @@
 > **App ID:** `com.vocabreader.ai_vocab_builder`  
 > **Firebase:** `project-794490258159` (AI Vocab Builder)  
 > **GitHub:** [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder)  
-> **DeepSeek Key:** `sk-f425...48ba` in `lib/config/app_config.dart`  
+| **DeepSeek Key** | In `lib/config/secrets.dart` (gitignored, never committed) |
 > **Team:** Houssam (Mac) + Hermes (code)  
 > **Workflow:** You create project → GitHub → I write code → you run  
 > **Tech:** Flutter + Dart (Android now, iOS later)  
@@ -39,7 +39,7 @@
 | **Phase 2** | PDF picker (native), native rendering (flutter_pdfview), text extraction, tap-word | ✅ Complete |
 | **Phase 3** | Flashcards + review flow + Daily Phrases + TTS + Save to My Words + Theme | ✅ Complete |
 | **Phase 4** | Firebase Auth (Google + Anonymous) + Firestore cloud backup | ✅ Complete |
-| **Phase 5** | Settings, language picker, theme toggle | ⬜ Next |
+| **Phase 5** | Settings, language picker, export | ✅ Complete |
 | **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ |
 
 ---
@@ -101,7 +101,7 @@ flutter run       # run on phone
 
 | Token / File | Where | Notes |
 |-------------|-------|-------|
-| **DeepSeek API Key** | `lib/config/app_config.dart` | `sk-f425...48ba` — $5 = ~50k translations |
+| **DeepSeek API Key** | `lib/config/secrets.dart` (gitignored) | `sk-f42...48ba` — $5 = ~50k translations |
 | **google-services.json** | `android/app/` | Firebase config — **gitignored**, never committed |
 | **Firebase Project** | [console.firebase.google.com](https://console.firebase.google.com) | `project-794490258159` |
 | **SSH Key (server)** | `~/.ssh/id_ed25519_vocab` | Hermes server pushes to GitHub |
@@ -123,10 +123,17 @@ Firestore database created in `eur3` (Europe) region.
 ## 7. DeepSeek API (Already Done ✅)
 
 1. Key created at [platform.deepseek.com](https://platform.deepseek.com)
-2. Stored in `lib/config/app_config.dart` as `deepseekApiKey`
+2. Stored in `lib/config/secrets.dart` (gitignored — **never committed to GitHub**)
 3. Translation endpoint: `https://api.deepseek.com/v1/chat/completions`
 4. Model: `deepseek-chat`
 5. Also used for: daily phrases, theme-based phrase generation
+
+> ⚠️ **CRITICAL:** `secrets.dart` is gitignored. When you clone/pull, this file won't exist!
+> You must create it manually:
+> ```dart
+> const String deepseekApiKeyReal = 'YOUR_REAL_KEY_HERE';
+> ```
+> `git pull` will NEVER overwrite this file again. The placeholder in GitHub doesn't have your real key.
 
 ---
 

@@ -14,7 +14,7 @@
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | `github.com/hsmoallem/AI-vocab-builder` |
-| **DeepSeek API Key** | `sk-f425...48ba` in `lib/config/app_config.dart` |
+| **DeepSeek API Key** | `sk-f42...48ba` | `lib/config/secrets.dart` (gitignored) |
 | **Platform** | Android (iOS planned) |
 | **Tech Stack** | Flutter 3.44.1, Dart ≥3.5.0, SQLite, Firebase, DeepSeek AI |
 
@@ -65,13 +65,11 @@
 - Anonymous user restrictions (no cloud backup, orange warning banner)
 - Graceful fallback when Firebase unavailable (app never bricks)
 
-### Phase 5 — Settings & Preferences (⬜ Planned)
-- Language pair picker (source → target)
-- DeepSeek API key override (Settings screen)
-- Theme toggle (light/dark/system)
-- Daily phrases language picker
-- Clear database
-- Export/import words as JSON
+### Phase 5 — Settings & Preferences (✅ Complete)
+- Language pair picker (UI language: English/Deutsch)
+- Target language for AI translation
+- Export words as JSON (in My Words tab)
+- Settings accessible from ⚙️ gear icon in AppBar
 
 ### Phase 6 — Monetization (⬜ Planned)
 - AdMob banner ads
@@ -103,7 +101,7 @@ User reads PDF → taps unknown word → DeepSeek translates → saved to SQLite
 - **Restore**: one-tap download + merge (dedup by word text)
 
 ### Authentication
-- Firebase Auth with three providers
+- Firebase Auth with two providers
 - Auth gate in main.dart routes to LoginScreen or HomeScreen
 - Anonymous users get orange warning banner and no cloud access
 
@@ -121,7 +119,6 @@ User reads PDF → taps unknown word → DeepSeek translates → saved to SQLite
 ```
 Open app → Login Screen
   ├─ "Sign in with Google" → one tap → Home Screen
-  ├─ "Sign in with Email" → register → Home Screen
   └─ "Continue without account" → warning → Home Screen (anonymous)
 ```
 
