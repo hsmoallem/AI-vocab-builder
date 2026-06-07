@@ -179,6 +179,9 @@ class _WordListScreenState extends State<WordListScreen> {
                             child: WordCard(
                               word: word,
                               onDelete: () => _deleteWord(context, word),
+                              onToggleReview: () {
+                                context.read<WordProvider>().toggleReview(word);
+                              },
                             ),
                           );
                         },

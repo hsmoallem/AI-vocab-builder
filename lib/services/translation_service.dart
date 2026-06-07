@@ -21,7 +21,6 @@ class TranslationService {
     if (_apiKey != null) return _apiKey;
     final prefs = await SharedPreferences.getInstance();
     _apiKey = prefs.getString(_apiKeyKey);
-    // Fall back to the embedded key from config
     _apiKey ??= AppConfig.deepseekApiKey;
     return _apiKey;
   }
@@ -62,7 +61,7 @@ class TranslationService {
           },
         ],
         'temperature': 0.3,
-        'max_tokens': 300,
+        'max_tokens': 500,
       }),
     );
 
@@ -73,7 +72,6 @@ class TranslationService {
     final data = jsonDecode(response.body);
     final content = data['choices'][0]['message']['content'] as String;
 
-    // Parse the JSON from DeepSeek's response
     return TranslationResult.fromJson(content.trim(), word);
   }
 
@@ -81,12 +79,15 @@ class TranslationService {
     final sourceName = _langName(sourceLang);
     final targetName = _langName(targetLang);
 
-    return '''Translate the word "$word" from $sourceName to $targetName.
+    return '''Translate the word/phrase "$word" from $sourceName to $targetName.
+
+IMPORTANT: If this word has MULTIPLE distinct meanings, list ALL of them separated by commas (e.g., "money, bar/pub, cash"). Do NOT pick only one meaning — include every common meaning.
+
 Return ONLY a JSON object (no other text) with these fields:
 {
-  "translation": "the translated word",
+  "translation": "ALL meanings, comma-separated (e.g. 'money, bar, cash, counter')",
   "example_sentence_source": "a natural example sentence using '$word' in $sourceName",
-  "example_sentence_target": "the natural English translation of the example sentence"
+  "example_sentence_target": "the natural $targetName translation of the example sentence"
 }''';
   }
 
@@ -118,7 +119,6 @@ class TranslationResult {
 
   factory TranslationResult.fromJson(String rawJson, String word) {
     try {
-      // Clean up: remove markdown code blocks if present
       String jsonStr = rawJson.trim();
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
@@ -132,7 +132,6 @@ class TranslationResult {
         exampleTarget: map['example_sentence_target'] ?? '',
       );
     } catch (e) {
-      // If JSON parsing fails, return whatever we got as translation
       return TranslationResult(
         translation: rawJson,
         exampleSource: '',

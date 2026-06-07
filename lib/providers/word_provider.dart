@@ -70,6 +70,12 @@ class WordProvider extends ChangeNotifier {
     await loadWords();
   }
 
+  Future<void> toggleReview(Word word) async {
+    final updated = word.copyWith(isReviewed: !word.isReviewed);
+    await DatabaseService.updateWord(updated);
+    await loadWords();
+  }
+
   Future<void> updateWord(Word word) async {
     await DatabaseService.updateWord(word);
     await loadWords();

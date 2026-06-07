@@ -107,7 +107,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
               Row(
                 children: [
                   const Text(
-                    'Add Word',
+                    'Add Word or Phrase',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -138,8 +138,8 @@ class _AddWordDialogState extends State<AddWordDialog> {
               TextField(
                 controller: _wordController,
                 decoration: const InputDecoration(
-                  labelText: 'Word',
-                  hintText: 'Enter a word to translate...',
+                  labelText: 'Word or Phrase',
+                  hintText: 'Enter a word or phrase to translate...',
                   prefixIcon: Icon(Icons.text_fields),
                 ),
                 textCapitalization: TextCapitalization.sentences,
@@ -222,6 +222,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
                   labelText: 'Translation',
                   prefixIcon: Icon(Icons.language),
                 ),
+                maxLines: 3,
               ),
               const SizedBox(height: 10),
               TextField(

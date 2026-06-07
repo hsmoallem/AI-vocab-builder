@@ -4,11 +4,13 @@ import '../models/word.dart';
 class WordCard extends StatelessWidget {
   final Word word;
   final VoidCallback? onDelete;
+  final VoidCallback? onToggleReview;
 
   const WordCard({
     super.key,
     required this.word,
     this.onDelete,
+    this.onToggleReview,
   });
 
   @override
@@ -22,7 +24,7 @@ class WordCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Word + delete button
+            // Word + review + delete
             Row(
               children: [
                 Expanded(
@@ -34,6 +36,20 @@ class WordCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Review / flashcard toggle
+                if (onToggleReview != null)
+                  IconButton(
+                    icon: Icon(
+                      word.isReviewed
+                          ? Icons.check_circle
+                          : Icons.check_circle_outline,
+                      color: word.isReviewed ? Colors.green : Colors.grey,
+                    ),
+                    tooltip: word.isReviewed ? 'Mark as unreviewed' : 'Mark as reviewed',
+                    onPressed: onToggleReview,
+                    iconSize: 22,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 if (onDelete != null)
                   IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
