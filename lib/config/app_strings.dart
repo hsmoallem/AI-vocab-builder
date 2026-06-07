@@ -168,10 +168,12 @@ class AppStrings {
       : 'Target language for AI translations';
   String get exportWords =>
       locale == 'de' ? 'Wörter exportieren' : 'Export Words';
+  String get exportWordsShort =>
+      locale == 'de' ? 'Export' : 'Export';
   String get exportWordsDesc => locale == 'de'
       ? 'Alle Wörter als JSON-Datei speichern'
       : 'Save all words as a JSON file';
-  String get exportSuccess(int count) => locale == 'de'
+  String exportSuccess({required int count}) => locale == 'de'
       ? '$count Wörter exportiert'
       : 'Exported $count words';
   String get exportFailed =>

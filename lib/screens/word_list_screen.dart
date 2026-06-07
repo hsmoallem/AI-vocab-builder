@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../config/app_strings.dart';
 import '../models/word.dart';
@@ -30,6 +34,39 @@ class _WordListScreenState extends State<WordListScreen> {
       return w.word.toLowerCase().contains(q) ||
           w.translation.toLowerCase().contains(q);
     }).toList();
+  }
+
+  Future<void> _exportWords(BuildContext context) async {
+    final s = AppStrings.of(context);
+    final words = context.read<WordProvider>().words;
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final file = File('${dir.path}/ai_vocab_builder_export_$timestamp.json');
+
+      final data = words.map((w) => w.toMap()).toList();
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${s.exportSuccess(count: words.length)}\n${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${s.exportFailed}: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _deleteWord(BuildContext context, Word word) async {
@@ -106,7 +143,7 @@ class _WordListScreenState extends State<WordListScreen> {
               ),
             ),
 
-            // Sort toggle + count
+            // Sort toggle + count + Export
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
@@ -125,6 +162,17 @@ class _WordListScreenState extends State<WordListScreen> {
                     onTap: () => provider.setSortMode(SortMode.newestFirst),
                   ),
                   const Spacer(),
+                  // Export button — only when there are words
+                  if (provider.words.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () => _exportWords(context),
+                      icon: const Icon(Icons.file_download_outlined, size: 18),
+                      label: Text(s.exportWordsShort),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  const SizedBox(width: 4),
                   Text(
                     '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
                     style: TextStyle(color: Colors.grey.shade600),

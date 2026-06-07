@@ -3,17 +3,11 @@
 /// User preferences:
 /// 1. App UI language (English / German)
 /// 2. Default translation target language (German default)
-/// 3. Export all words to a JSON file
-
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 
 import '../providers/locale_provider.dart';
-import '../providers/word_provider.dart';
 import '../config/app_strings.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -48,6 +42,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.translate,
             title: s.translateLanguage,
             subtitle: s.translateLanguageDesc,
+            last: true,
             child: DropdownButtonFormField<String>(
               value: locale.targetLang,
               decoration: const InputDecoration(
@@ -62,63 +57,12 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
-
-          // ── Export Words ────────────────────────────────────
-          _Section(
-            icon: Icons.file_download,
-            title: s.exportWords,
-            subtitle: s.exportWordsDesc,
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => _exportWords(context),
-                icon: const Icon(Icons.file_download),
-                label: Text(s.exportWords),
-              ),
-            ),
-            last: true,
-          ),
         ],
       ),
     );
   }
-
-  Future<void> _exportWords(BuildContext context) async {
-    final s = AppStrings.of(context);
-    final words = context.read<WordProvider>().words;
-
-    try {
-      final json = jsonEncode(
-        words.map((w) => w.toMap()).toList(),
-      );
-
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/ai_vocab_builder_export.json');
-      await file.writeAsString(json);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${s.exportSuccess(words.length)}\n${file.path}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${s.exportFailed}: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }
 
-/// Reusable section wrapper with icon, title, subtitle, and a child widget.
 class _Section extends StatelessWidget {
   final IconData icon;
   final String title;
