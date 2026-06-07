@@ -1,18 +1,12 @@
 /// ─── Login Screen ────────────────────────────────────────────────────
 ///
-/// Entry point for authentication. Three paths:
-/// 1. Google Sign-In (one tap)
-/// 2. Email + Password (navigates to EmailLoginScreen)
-/// 3. Anonymous (no credentials, warning shown first)
-///
-/// Also links to RegisterScreen for new email accounts.
+/// Two options: Google Sign-In (one tap) or Anonymous (no credentials).
+/// Anonymous users see a warning dialog first.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
-import 'email_login_screen.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -29,7 +23,6 @@ class LoginScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ── App icon ────────────────────────────────────
                 Container(
                   width: 100,
                   height: 100,
@@ -44,8 +37,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // ── App name ────────────────────────────────────
                 Text(
                   'AI Vocab Builder',
                   style: theme.textTheme.headlineSmall?.copyWith(
@@ -60,9 +51,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
-
-                // ── Buttons ─────────────────────────────────────
+                const SizedBox(height: 48),
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     if (auth.isLoading) {
@@ -74,7 +63,6 @@ class LoginScreen extends StatelessWidget {
 
                     return Column(
                       children: [
-                        // ── Google ──────────────────────────────
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -87,24 +75,7 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-
-                        // ── Email ───────────────────────────────
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _openEmailLogin(context),
-                            icon: const Icon(Icons.email_outlined),
-                            label: const Text(
-                              'Sign in with Email',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Divider ─────────────────────────────
+                        const SizedBox(height: 24),
                         Row(
                           children: [
                             const Expanded(child: Divider()),
@@ -120,9 +91,7 @@ class LoginScreen extends StatelessWidget {
                             const Expanded(child: Divider()),
                           ],
                         ),
-                        const SizedBox(height: 20),
-
-                        // ── Anonymous ───────────────────────────
+                        const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           height: 48,
@@ -132,31 +101,33 @@ class LoginScreen extends StatelessWidget {
                             label: const Text('Continue without account'),
                           ),
                         ),
-
-                        // ── Register link ───────────────────────
-                        const SizedBox(height: 4),
-                        TextButton(
-                          onPressed: () => _openRegister(context),
-                          child: Text.rich(
-                            TextSpan(
-                              text: "Don't have an account? ",
+                        if (auth.error != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
                               children: [
-                                TextSpan(
-                                  text: 'Register',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.primary,
+                                Icon(Icons.error_outline,
+                                    color: theme.colorScheme.onErrorContainer,
+                                    size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    auth.error!,
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onErrorContainer,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-
-                        // ── Error ───────────────────────────────
-                        if (auth.error != null) ...[
-                          const SizedBox(height: 16),
-                          _ErrorBanner(message: auth.error!),
                         ],
                       ],
                     );
@@ -170,32 +141,13 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // ── Handlers ────────────────────────────────────────────────────────
-
   Future<void> _handleGoogleSignIn(BuildContext context) async {
     final auth = context.read<AuthProvider>();
     final success = await auth.signInWithGoogle();
-    if (success && context.mounted) {
-      _goToHome(context);
-    }
-  }
-
-  void _openEmailLogin(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const EmailLoginScreen()),
-    );
-  }
-
-  void _openRegister(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-    );
+    if (success && context.mounted) _goToHome(context);
   }
 
   Future<void> _handleAnonymousSignIn(BuildContext context) async {
-    // Show warning dialog first
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -204,7 +156,7 @@ class LoginScreen extends StatelessWidget {
           'You can use the app, but your words will only be saved on this '
           'device. If you delete the app or get a new phone, your data will '
           'be lost.\n\n'
-          'Sign in with Google or Email to back up your words to the cloud.',
+          'Sign in with Google to back up your words to the cloud.',
         ),
         actions: [
           TextButton(
@@ -223,53 +175,13 @@ class LoginScreen extends StatelessWidget {
 
     final auth = context.read<AuthProvider>();
     final success = await auth.signInAnonymously();
-    if (success && context.mounted) {
-      _goToHome(context);
-    }
+    if (success && context.mounted) _goToHome(context);
   }
 
   void _goToHome(BuildContext context) {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
-  }
-}
-
-/// Inline error banner used on the login screen.
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-  const _ErrorBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.error_outline,
-            color: theme.colorScheme.onErrorContainer,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: theme.colorScheme.onErrorContainer,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
