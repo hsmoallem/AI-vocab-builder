@@ -114,6 +114,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                     // Previous
                     IconButton.filled(
                       icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Previous card',
                       onPressed: _currentIndex > 0
                           ? () => _pageController.previousPage(
                                 duration: const Duration(milliseconds: 300),
@@ -122,17 +123,24 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                           : null,
                     ),
                     // Flip button
-                    FilledButton.icon(
-                      onPressed: _flip,
-                      icon: const Icon(Icons.flip),
-                      label: Text(_isFlipped ? 'Hide' : 'Reveal'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    Tooltip(
+                      message: _isFlipped
+                          ? 'Tap to flip back'
+                          : 'Tap to reveal translation',
+                      child: FilledButton.icon(
+                        onPressed: _flip,
+                        icon: const Icon(Icons.flip),
+                        label: Text(_isFlipped ? 'Hide' : 'Reveal'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
+                        ),
                       ),
                     ),
                     // Next
                     IconButton.filled(
                       icon: const Icon(Icons.arrow_forward),
+                      tooltip: 'Next card',
                       onPressed: _currentIndex < words.length - 1
                           ? () => _pageController.nextPage(
                                 duration: const Duration(milliseconds: 300),

@@ -113,12 +113,15 @@ class WordCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (onSpeakExample != null)
-                      GestureDetector(
-                        onTap: onSpeakExample,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 6, top: 1),
-                          child: Icon(Icons.volume_up,
-                              size: 16, color: Colors.grey[600]),
+                      Tooltip(
+                        message: 'Listen to example',
+                        child: GestureDetector(
+                          onTap: onSpeakExample,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 6, top: 1),
+                            child: Icon(Icons.volume_up,
+                                size: 16, color: Colors.grey[600]),
+                          ),
                         ),
                       ),
                     Expanded(

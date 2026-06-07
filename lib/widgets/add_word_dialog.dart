@@ -159,6 +159,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

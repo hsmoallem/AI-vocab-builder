@@ -178,7 +178,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                 child: ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: GestureDetector(
+                  leading: Tooltip(
+                    message: phrase.memorized ? 'Mark as not memorized' : 'Mark as memorized',
+                    child: GestureDetector(
                     onTap: () => _toggleMemorized(index),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -197,7 +199,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                       ),
                     ),
                   ),
-                  title: Row(
+                ),
+                title: Row(
                     children: [
                       // 🔊 Speak phrase in the daily phrases language
                       IconButton(
@@ -231,7 +234,10 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                     ],
                   ),
                   trailing: phrase.memorized
-                      ? Icon(Icons.check_circle, color: Colors.green[400])
+                      ? Tooltip(
+                          message: 'Memorized',
+                          child: Icon(Icons.check_circle, color: Colors.green[400]),
+                        )
                       : null,
                 ),
               );
