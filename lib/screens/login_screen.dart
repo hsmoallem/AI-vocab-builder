@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/firebase_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -143,12 +144,24 @@ class LoginScreen extends StatelessWidget {
   }
 
   Future<void> _handleGoogleSignIn(BuildContext context) async {
+    if (!FirebaseService.instance.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google sign-in not available — Firebase not configured')),
+      );
+      return;
+    }
     final auth = context.read<AuthProvider>();
     final success = await auth.signInWithGoogle();
     if (success && context.mounted) _goToHome(context);
   }
 
   Future<void> _handleAnonymousSignIn(BuildContext context) async {
+    // If Firebase not available, skip auth entirely and go to HomeScreen.
+    if (!FirebaseService.instance.isInitialized) {
+      if (context.mounted) _goToHome(context);
+      return;
+    }
+
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

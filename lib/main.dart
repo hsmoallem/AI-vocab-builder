@@ -15,28 +15,30 @@ import 'services/firebase_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase (must happen before runApp).
-  // If google-services.json is missing or invalid, this will throw —
-  // the error screen shown below catches it gracefully.
-  try {
-    await FirebaseService.instance.init();
-  } catch (e) {
-    // Firebase init failed — likely missing google-services.json.
-    // Run without Firebase (local-only mode).
-    debugPrint('Firebase init failed: $e');
+  // Initialize Firebase.
+  // If google-services.json is missing → run in local-only mode
+  // (login screen still shows — Google sign-in just won't work).
+  final firebaseReady = await FirebaseService.instance.init();
+  if (!firebaseReady) {
+    // Firebase not available — app runs without auth/cloud features.
+    debugPrint('⚠ Firebase not initialized — running in local-only mode');
   }
 
-  runApp(const VocabBuilderApp());
+  runApp(VocabBuilderApp(firebaseReady: firebaseReady));
 }
 
 class VocabBuilderApp extends StatelessWidget {
-  const VocabBuilderApp({super.key});
+  final bool firebaseReady;
+
+  const VocabBuilderApp({super.key, required this.firebaseReady});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        // Only create AuthProvider if Firebase is available.
+        if (firebaseReady)
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => WordProvider()..loadWords()),
       ],
       child: MaterialApp(
@@ -61,23 +63,23 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // If Firebase isn't available, skip auth and go straight to LoginScreen.
+    // The user can still use "Continue without account" — just no Google sign-in.
+    final firebaseReady = FirebaseService.instance.isInitialized;
+    if (!firebaseReady) {
+      return const LoginScreen();
+    }
+
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        // Show loading spinner while Firebase checks auth state
         if (auth.isLoading) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-
-        // Signed in → main app
         if (auth.isSignedIn) {
           return const HomeScreen();
         }
-
-        // Not signed in → login screen
         return const LoginScreen();
       },
     );

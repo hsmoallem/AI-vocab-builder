@@ -6,6 +6,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/word.dart';
 
@@ -16,8 +17,20 @@ class FirebaseService {
   FirebaseAuth get auth => FirebaseAuth.instance;
   FirebaseFirestore get firestore => FirebaseFirestore.instance;
 
-  Future<void> init() async {
-    await Firebase.initializeApp();
+  /// Whether Firebase was successfully initialized.
+  bool _initialized = false;
+  bool get isInitialized => _initialized;
+
+  Future<bool> init() async {
+    try {
+      await Firebase.initializeApp();
+      _initialized = true;
+      return true;
+    } catch (e) {
+      debugPrint('Firebase init failed: $e');
+      _initialized = false;
+      return false;
+    }
   }
 
   User? get currentUser => auth.currentUser;
