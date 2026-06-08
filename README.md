@@ -5,11 +5,13 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 ## Features
 
 - 📖 **PDF Reader** — native rendering + text extraction, tap any word to translate
-- 🤖 **AI Translation** — DeepSeek-powered multi-meaning translations with examples
+- 🤖 **AI Translation** — DeepSeek-powered multi-meaning translations with examples (via secure proxy)
 - 🃏 **Flashcards** — tap to flip, swipe to navigate, progress tracking
-- 📅 **Daily Phrases** — 5 AI phrases/day, theme-based generation, save to My Words
+- 📅 **Daily Phrases** — 5 AI phrases/day, theme-based generation, configurable phrase language, save to My Words
 - 🔊 **Text-to-Speech** — native Android pronunciation
 - ☁️ **Cloud Backup** — Google sign-in → Firestore backup/restore
+- 🎨 **App Branding** — custom launcher icon, VocabView splash screen, login header logo
+- 🌍 **Multi-language UI** — English, Deutsch, العربية
 
 ## Project Info
 
@@ -19,9 +21,11 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder) |
-| **DeepSeek API Key** | In `lib/config/secrets.dart` (gitignored, never committed) |
+| **DeepSeek API** | Via secure proxy server (key never in APK) |
 | **Firebase Config** | `android/app/google-services.json` (gitignored, never committed) |
 | **App Icon** | Blue circuit-board "A" on blue gradient |
+| **Splash Screen** | VocabView logo (book + circuit "A") on dark background |
+| **Stable Tag** | `stable-2026-06-08` |
 
 ## Authentication
 
@@ -30,7 +34,14 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 
 ## Stack
 
-Flutter 3.44.1 · Dart ≥3.5.0 · SQLite (sqflite) · DeepSeek API · Android native · Firebase Auth · Firestore
+Flutter 3.44.1 · Dart ≥3.5.0 · SQLite (sqflite) · DeepSeek API (via proxy) · Android native · Firebase Auth · Firestore · Provider
+
+## Security
+
+- DeepSeek API key lives **only** on the proxy server — never in the repo, never in the APK
+- Proxy builds prompts server-side with `X-App-Token` auth + per-IP rate limiting
+- Firestore rules: per-user data isolation (`request.auth.uid == userId`)
+- Decompiling the APK yields only the proxy URL — zero secrets
 
 ## Quick Links
 

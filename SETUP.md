@@ -4,7 +4,7 @@
 > **App ID:** `com.vocabreader.ai_vocab_builder`  
 > **Firebase:** `project-794490258159` (AI Vocab Builder)  
 > **GitHub:** [github.com/hsmoallem/AI-vocab-builder](https://github.com/hsmoallem/AI-vocab-builder)  
-| **DeepSeek Key** | In `lib/config/secrets.dart` (gitignored, never committed) |
+> **DeepSeek Key:** On proxy server only — never in repo/APK  
 > **Team:** Houssam (Mac) + Hermes (code)  
 > **Workflow:** You create project → GitHub → I write code → you run  
 > **Tech:** Flutter + Dart (Android now, iOS later)  
@@ -39,8 +39,8 @@
 | **Phase 2** | PDF picker (native), native rendering (flutter_pdfview), text extraction, tap-word | ✅ Complete |
 | **Phase 3** | Flashcards + review flow + Daily Phrases + TTS + Save to My Words + Theme | ✅ Complete |
 | **Phase 4** | Firebase Auth (Google + Anonymous) + Firestore cloud backup | ✅ Complete |
-| **Phase 5** | Settings, language picker (EN/DE/AR) | ✅ Complete |
-| **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ |
+| **Phase 5** | Settings, language picker (EN/DE/AR), phrase language dropdown | ✅ Complete |
+| **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ Planned |
 
 ---
 
@@ -53,15 +53,21 @@
 
 ### Core (Phases 1-3 — ✅ Complete)
 - **3-tab navigation:** Reader · Daily Phrases · My Words
-- **Add word:** Enter any word → AI translates via DeepSeek
+- **Add word:** Enter any word → AI translates via proxy → DeepSeek
 - **Multi-meaning translation:** Separate entries with unique examples
 - **German article detection:** `der`/`die`/`das` auto-detected
 - **Sort & search:** Alphabetical or newest-first, live search
 - **Swipe-to-delete:** With confirmation dialog
 - **Flashcards:** Tap to flip, swipe to navigate, progress bar
 - **PDF Reader:** Native rendering + text extraction, tap-to-add
-- **Daily Phrases:** AI generates 5 phrases/day, mark as memorized, **save to My Words**, **theme-based generation** (e.g. "at the restaurant"), **regenerate new 5** button
+- **Daily Phrases:** AI generates 5 phrases/day, mark as memorized, save to My Words, theme-based generation, regenerate button
+- **Phrase Language Dropdown:** Pick language for phrase generation — separate from translate-to language
 - **Text-to-Speech:** Native Android TTS (no external package)
+
+### Branding (June 2026 — ✅ Complete)
+- **Launcher icon:** Blue circuit-board "A" on blue gradient
+- **Splash screen:** VocabView logo (book + circuit "A") on dark background
+- **Login header:** VocabView logo displayed above sign-in buttons
 
 ### Current Technical Stack
 
@@ -71,10 +77,12 @@
 | File picker | **Native Android** (MethodChannel) |
 | PDF | **flutter_pdfview** (render) + **syncfusion_flutter_pdf** (text) |
 | State | **Provider** |
-| AI | **DeepSeek** (multi-meaning + daily phrases + theme prompts) |
+| AI | **DeepSeek** via secure proxy (key never in APK) |
 | Auth | **Firebase** (Google + Anonymous) |
 | Cloud DB | **Firestore** (backup/restore) |
 | TTS | **Native Android** TextToSpeech (MethodChannel) |
+| Icons | **flutter_launcher_icons** |
+| Splash | **flutter_native_splash** |
 
 > Full details: [`TECHNICAL.md`](TECHNICAL.md)
 
@@ -88,12 +96,14 @@ git pull          # get latest code from GitHub
 flutter run       # run on phone
 ```
 
-**When to add `flutter clean`:**
+**When to add extra commands:**
 
 | Command | When |
 |---------|------|
-| `git pull && flutter run` | **Most updates** — code changes only, no new packages |
-| `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) or **Android resources changed** (icons, splash) |
+| `git pull && flutter run` | **Most updates** — code changes only |
+| `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) |
+| `git pull && dart run flutter_launcher_icons` | **App icon changed** |
+| `git pull && dart run flutter_native_splash:create` | **Splash screen changed** |
 
 ---
 
@@ -101,7 +111,8 @@ flutter run       # run on phone
 
 | Token / File | Where | Notes |
 |-------------|-------|-------|
-| **DeepSeek API Key** | `lib/config/secrets.dart` (gitignored) | `sk-f42...48ba` — $5 = ~50k translations |
+| **DeepSeek API Key** | Proxy server only | `/home/houssam/deepseek-proxy/proxy.py` on Contabo — never in repo |
+| **Proxy URL** | `lib/services/translation_service.dart` | `http://13.140.134.57:9000/translate` |
 | **google-services.json** | `android/app/` | Firebase config — **gitignored**, never committed |
 | **Firebase Project** | [console.firebase.google.com](https://console.firebase.google.com) | `project-794490258159` |
 | **SSH Key (server)** | `~/.ssh/id_ed25519_vocab` | Hermes server pushes to GitHub |
@@ -114,36 +125,34 @@ All auth providers enabled in Firebase Console:
 - **Google** — OAuth client for `com.vocabreader.ai_vocab_builder`  
   SHA-1: `CB:A0:03:8B:B5:E9:65:BB:FA:A3:99:D3:B9:C2:F2:21:BE:C0:AF:22`
 - **Anonymous** — temporary accounts
-- ~~Email/Password~~ — removed (simplified to Google + Anonymous)
 
 Firestore database created in `eur3` (Europe) region.
 
-### ⚠️ Firestore Security Rules — DEPLOY NOW
+### Firestore Security Rules — DEPLOYED ✅
 
-**Without these rules, any authenticated user can read/write any other user's data.**
-
-1. Go to [Firebase Console → Firestore → Rules](https://console.firebase.google.com/project/project-794490258159/firestore)
-2. Replace the default rules with the content of `firestore.rules` (in this repo)
-3. Click **Publish**
-
-Rules enforce: `you can only access users/{your-uid}/words/` — locked at Firebase server level.
+Per-user rules are active: each user can only access their own words (`users/{uid}/words/`).
 
 ---
 
-## 7. DeepSeek API (Already Done ✅)
+## 7. DeepSeek Proxy (Already Done ✅)
 
-1. Key created at [platform.deepseek.com](https://platform.deepseek.com)
-2. Stored in `lib/config/secrets.dart` (gitignored — **never committed to GitHub**)
-3. Translation endpoint: `https://api.deepseek.com/v1/chat/completions`
-4. Model: `deepseek-chat`
-5. Also used for: daily phrases, theme-based phrase generation
+The API key lives on a dedicated proxy server — never in the APK.
 
-> ⚠️ **CRITICAL:** `secrets.dart` is gitignored. When you clone/pull, this file won't exist!
-> You must create it manually:
-> ```dart
-> const String deepseekApiKeyReal = 'YOUR_REAL_KEY_HERE';
-> ```
-> `git pull` will NEVER overwrite this file again. The placeholder in GitHub doesn't have your real key.
+### How it works
+1. App sends `{word, sourceLang, targetLang, mode}` to `http://13.140.134.57:9000/translate`
+2. Proxy validates `X-App-Token`, enforces rate limiting (30 req/min)
+3. Proxy builds the AI prompt server-side, injects the real DeepSeek key
+4. DeepSeek response is parsed and returned to the app
+
+### Security
+- Decompiling the APK yields only the proxy URL + shared token
+- No API key anywhere in the code
+- Proxy is not an open LLM relay — app can't inject custom prompts
+
+### Proxy server
+- Location: Contabo VPS (`13.140.134.57`)
+- Port: 9000 (HTTP)
+- Auto-start: systemd service on boot
 
 ---
 

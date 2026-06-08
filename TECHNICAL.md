@@ -1,6 +1,6 @@
 # AI Vocab Builder — Technical Documentation
 
-> Last updated: June 8, 2026
+> Last updated: June 8, 2026 — stable-2026-06-08
 
 ---
 
@@ -8,7 +8,10 @@
 
 | Token / ID | Value | Location |
 |------------|-------|----------|
-| **DeepSeek API Key** | `sk-f42...48ba` | `lib/config/secrets.dart` (gitignored) |
+| **DeepSeek API Key** | `sk-f42...48ba` | **Proxy server only** (`/home/houssam/deepseek-proxy/proxy.py` on Contabo) — never in repo/APK |
+| **Proxy URL** | `http://13.140.134.57:9000/translate` | `lib/services/translation_service.dart` |
+| **Proxy Token** | `vocab-builder-shared-secret-2026` | App + proxy (shared secret, speed bump) |
+| **Rate Limit** | 30 req/min per IP | Flask-Limiter on proxy |
 | **Firebase Project ID** | `project-794490258159` | Firebase Console |
 | **Firebase Config** | `google-services.json` | `android/app/` (gitignored) |
 | **Android App ID** | `com.vocabreader.ai_vocab_builder` | `build.gradle.kts`, `AndroidManifest.xml` |
@@ -42,7 +45,7 @@
 | `sqflite` | ^2.4.0 | Local SQLite database |
 | `path` | ^1.9.0 | File path utilities |
 | `provider` | ^6.1.0 | State management |
-| `http` | ^1.2.0 | HTTP client (DeepSeek API) |
+| `http` | ^1.2.0 | HTTP client (proxy calls) |
 | `shared_preferences` | ^2.3.0 | Key-value settings storage |
 | `syncfusion_flutter_pdf` | any | PDF text extraction |
 | `flutter_pdfview` | any | Native PDF rendering (Apache 2.0, 2M+ downloads) |
@@ -57,6 +60,16 @@
 |---------|---------|---------|
 | `flutter_test` | SDK | Unit + widget testing |
 | `flutter_lints` | any | Code linting |
+| `flutter_launcher_icons` | ^0.14.4 | Generate Android launcher icon |
+| `flutter_native_splash` | ^2.4.1 | Generate Android native splash screen |
+
+### Assets
+
+| Asset | Purpose |
+|-------|---------|
+| `assets/icon/app_icon.png` | App launcher icon (blue circuit-board "A") |
+| `assets/splash_screen.png` | Native splash screen (VocabView logo on dark bg) |
+| `assets/login_header.png` | Login screen header image (VocabView logo) |
 
 ---
 
@@ -114,28 +127,28 @@ In **Text view**, select any word → Add Word dialog opens pre-filled → auto-
 ```
 lib/
 ├── config/
-│   ├── app_config.dart        # App constants (imports from secrets.dart)
-│   ├── app_strings.dart       # Localization strings (English + German)
-│   ├── secrets.dart           # DeepSeek API key — GITIGNORED, never committed
+│   ├── app_config.dart        # App constants (proxy URL, token — no API key)
+│   ├── app_strings.dart       # Localization strings (English + Deutsch + Arabic)
+│   ├── secrets.dart           # gitignored, NO LONGER IMPORTED by any code
 │   └── theme.dart             # Material 3 light + dark themes
 ├── models/
 │   └── word.dart              # Word data model (id, word, translation, examples, etc.)
 ├── providers/
 │   ├── auth_provider.dart     # ChangeNotifier — Firebase auth state (Google/Anon)
-│   ├── locale_provider.dart   # ChangeNotifier — UI language (English/Deutsch)
+│   ├── locale_provider.dart   # ChangeNotifier — UI language + translate-to language
 │   └── word_provider.dart     # ChangeNotifier — CRUD, sort, search, translate
 ├── screens/
 │   ├── home_screen.dart       # Tab nav (Reader / Daily / My Words) + settings gear + account menu
-│   ├── login_screen.dart      # Google + Anonymous (no email)
+│   ├── login_screen.dart      # Google + Anonymous (VocabView logo header)
 │   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
-│   ├── daily_phrases_screen.dart # AI 5 phrases/day, save to words, theme, regenerate
+│   ├── daily_phrases_screen.dart # AI 5 phrases/day, phrase language dropdown, save, theme, regenerate
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
-│   ├── settings_screen.dart   # App language + translate language picker
+│   ├── settings_screen.dart   # App language + translate-to language picker
 │   └── word_list_screen.dart  # Searchable word list with sort + delete
 ├── services/
 │   ├── database_service.dart  # sqflite CRUD (SQLite)
 │   ├── firebase_service.dart  # Firebase init, auth methods, Firestore backup/restore
-│   └── translation_service.dart # DeepSeek API — multi-meaning translation + daily phrases
+│   └── translation_service.dart # Proxy client — sends {word, lang, mode}, no prompts or keys
 └── widgets/
     ├── add_word_dialog.dart   # Add word dialog with AI translate + meaning cards
     └── word_card.dart         # Word display card with review + delete buttons
@@ -144,7 +157,7 @@ lib/
 ### Data Flow
 
 ```
-LoginScreen → [Google Sign-In / Email Password / Anonymous]
+LoginScreen → [Google Sign-In / Anonymous]
        ↓
   AuthGate checks Firebase auth state
        ↓
@@ -152,10 +165,11 @@ LoginScreen → [Google Sign-In / Email Password / Anonymous]
        ↓
 Reader → Native PDF view / Text extraction → Tap word → AddWordDialog
                                                      ↓
-                                               DeepSeek API → meanings[]
+                                               Proxy → DeepSeek → meanings[]
                                                      ↓
                                                WordProvider → SQLite
-Daily → DeepSeek API → 5 phrases → shared_preferences (today only)
+Daily → Proxy → DeepSeek → 5 phrases → shared_preferences (today only)
+        ↑ phrase language dropdown (persisted separately)
 My Words → SQLite → sort/search/delete
 Account menu → Backup words to Firestore / Restore from Firestore
 ```
@@ -183,6 +197,7 @@ App start
 - **Provider** (ChangeNotifier pattern)
 - `AuthProvider` holds: user, isSignedIn, isAnonymous, isLoading, error
 - `WordProvider` holds: words, sortMode, state (idle/loading/loaded/error), error
+- `LocaleProvider` holds: locale (UI language), targetLang (translate-to language)
 - Full lifecycle: loading → loaded → error display
 
 ---
@@ -219,26 +234,106 @@ users/
 - **Restore:** Downloads all words, merges with local DB (dedup by word text)
 - **Anonymous users:** Backup/restore disabled with explanation
 
+### Firestore Security Rules (DEPLOYED ✅)
+
+```
+match /users/{userId}/words/{wordId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
+
 **Without these rules, any authenticated user can read/write any other user's data.** They are enforced at Firebase's server level — no APK modification can bypass them.
 
 ---
 
-## 7. Daily Phrases
+## 7. AI Translation — Proxy Architecture
+
+The DeepSeek API key lives **only on the proxy server** — never in the repo, never in the APK.
+
+```
+┌──────────┐     HTTP POST      ┌─────────────────┐     HTTPS      ┌────────────┐
+│  App     │ ─── {word,lang, ──→│  Flask Proxy     │ ─── prompt + ─→│  DeepSeek  │
+│  (APK)   │     mode, token}   │  :9000 (Contabo) │    key        │  API       │
+│          │ ←── {meanings[]} ──│                  │ ←── JSON ─────│            │
+└──────────┘                    └─────────────────┘               └────────────┘
+```
+
+### What the app sends (mode: translate)
+```json
+{
+  "word": "Haus",
+  "sourceLang": "de",
+  "targetLang": "en",
+  "mode": "translate"
+}
+```
+
+### What the app sends (mode: phrases)
+```json
+{
+  "sourceLang": "de",
+  "targetLang": "de",
+  "mode": "phrases",
+  "theme": "at the doctor"
+}
+```
+
+### What the proxy does
+1. Validates `X-App-Token` shared secret
+2. Enforces per-IP rate limit (30 req/min via Flask-Limiter)
+3. Builds the prompt server-side with language names and formatting instructions
+4. Forwards to DeepSeek with the real API key
+5. Parses DeepSeek's raw JSON response
+6. Returns structured JSON to the app
+
+### Security properties
+- **Decompiling the APK** yields only: proxy URL + shared token
+- **No API key** anywhere in the codebase — `secrets.dart` is no longer imported
+- **No open LLM relay** — proxy builds prompts, app can't inject custom messages/models/temperature
+- **Rate limited** — one user can't abuse the API
+- **App token** is a speed bump (extractable) — real security is at the server level
+
+### Proxy server
+- Location: Contabo VPS (`13.140.134.57`)
+- File: `/home/houssam/deepseek-proxy/proxy.py`
+- Service: systemd (`deepseek-proxy.service`), auto-start on boot
+- Port: 9000 (HTTP, cleartext allowed via `network_security_config.xml`)
+- HTTPS: pending domain + Let's Encrypt (needed before Play Store submission)
+
+---
+
+## 8. Daily Phrases
 
 ### How it works
-1. **On first open each day**: Calls DeepSeek API → generates 5 practical everyday phrases
+1. **On first open each day**: Calls proxy → DeepSeek generates 5 practical everyday phrases
 2. **Stored in shared_preferences**: `daily_phrases_date` (YYYY-MM-DD) + `daily_phrases_data` (JSON)
 3. **Same day**: Loads cached phrases from shared_preferences — no API call
 4. **Next day**: Date mismatch → fresh API call → 5 new phrases
-5. **Mark memorized**: Tap circle → green check → saves to shared_preferences for today only
-6. **Language**: Default German (configurable via `daily_phrases_lang` in shared_preferences)
+5. **Mark memorized**: Tap circle → green check → persists for today only
+6. **Phrase language dropdown**: Choose which language phrases are generated in (default: German)
+7. **Same-language warning**: Shows warning when phrase language == translate-to language
+8. **Save to My Words (📌)**: Translates phrase from {phraseLang} → {targetLang}, saves to SQLite
+9. **Regenerate (🔄)**: Top-right button → fresh AI call → 5 new phrases (ignores today's cache)
+10. **Theme input**: Text field above phrases → type a topic → AI generates context-specific phrases
 
 ### Storage
 ```
 SharedPreferences:
-  daily_phrases_date  = "2026-06-07"
-  daily_phrases_data  = '[{"phrase":"Guten Morgen","memorized":true}, ...]'
-  daily_phrases_lang  = "de"
+  daily_phrases_date       = "2026-06-08"
+  daily_phrases_data       = '[{"phrase":"Guten Morgen","memorized":true}, ...]'
+  daily_phrase_language    = "de"     (NEW — separate from translate_target_lang)
+  daily_phrases_lang       = "de"     (legacy key, still read as fallback)
+```
+
+### Language flow
+```
+1. User picks phrase language in dropdown (e.g. Français)
+2. App sends {sourceLang: "fr", mode: "phrases"} to proxy
+3. Proxy builds prompt: "Generate 5 useful everyday phrases in French..."
+4. 5 French phrases appear on screen
+5. User taps 📌 → app sends {word: "Bonjour", sourceLang: "fr", targetLang: "en"}
+6. Translation appears with English meaning + example
+7. Word saved to SQLite with sourceLang=fr, targetLang=en
 ```
 
 ### Why no database
@@ -248,7 +343,7 @@ SharedPreferences:
 
 ---
 
-## 8. Database
+## 9. Database
 
 ### Schema (`words` table)
 
@@ -272,46 +367,22 @@ SharedPreferences:
 
 ---
 
-## 9. AI Translation (DeepSeek)
-
-- **Model:** `deepseek-chat`
-- **Endpoint:** `https://api.deepseek.com/v1/chat/completions`
-- **API Key:** `sk-f42...48ba` in `lib/config/secrets.dart` (gitignored)
-- **Temperature:** 0.3 (translation), 0.7 (daily phrases — more variety)
-- **Max tokens:** 800 (translation), 300 (daily phrases)
-
-### Translation prompt
-
-- System: "You are a professional translator. Always respond with valid JSON only."
-- User: "Translate `word` from `sourceLang` to `targetLang`. If multiple meanings exist, return ALL as array items. Each meaning must have its own example sentence."
-- Response: `{ "meanings": [{ "meaning": "...", "example_source": "...", "example_target": "..." }] }`
-- German auto-article: `article` field returned by DeepSeek, auto-prepended to word
-
-### Daily phrases prompt
-
-- System: "You are a language teacher. Respond with valid JSON only."
-- User: "Generate 5 useful everyday phrases in `langName`. Pick from different daily situations."
-- **Theme mode:** If user enters a theme (e.g. "at the doctor"), adds: "Focus on the theme: {theme}."
-- Response: `{ "phrases": ["phrase 1", "phrase 2", "phrase 3", "phrase 4", "phrase 5"] }`
-
-### New Daily Phrases features (June 2026)
-- **Save to My Words (📌):** Each phrase has a pin icon → tap to save as a word in SQLite → appears in My Words tab for flashcard review
-- **Regenerate (🔄):** Top-right button → fresh AI call → 5 new phrases (ignores today's cache)
-- **Theme input:** Text field above phrases → type a topic → AI generates context-specific phrases
-
-### Fallback
-
-- If `meanings` array not present → falls back to old `translation` + `example_sentence_*` format
-- If JSON parse fails → raw text returned as single meaning
-
----
-
 ## 10. Settings (Phase 5 — ✅ Complete)
 
 - **App UI Language:** English / Deutsch / العربية toggle — wraps all app strings via `AppStrings.of(context)`
-- **Translate To:** Target language dropdown for AI translation (default German)
+- **Translate To:** Target language dropdown for AI translation (default depends on UI language)
+- **Phrase Language:** Separate dropdown on Daily screen — language phrases are generated in
 - **Access:** ⚙️ gear icon in HomeScreen AppBar
-- **Storage:** Language preference saved to shared_preferences
+- **Storage:** All preferences saved to shared_preferences under separate keys
+
+### Persistence keys (all separate — never conflict)
+
+| Key | Purpose | Default |
+|-----|---------|---------|
+| `app_language` | UI language (en/de/ar) | `en` |
+| `translate_target_lang` | Translation target language | `en` |
+| `daily_phrase_language` | Daily phrase generation language | `de` |
+| `daily_phrases_lang` | Legacy phrase language key (fallback) | `de` |
 
 ---
 
@@ -349,13 +420,19 @@ flutter test
 | **`any` constraint** on syncfusion | Auto-resolves to latest compatible version |
 | **compileSdk 36** | Required by flutter_plugin_android_lifecycle |
 | **shared_preferences for daily phrases** | Resets daily — no database overhead needed |
-|| **Firebase Auth (2 methods)** | Google for zero-friction, Anonymous for quick access |
+| **Firebase Auth (2 methods)** | Google for zero-friction, Anonymous for quick access |
 | **Firestore per-user structure** | `users/{uid}/words/` — standard Firebase security model |
-| **secrets.dart gitignored** | `git pull` can never overwrite the real API key |
+| **Proxy for DeepSeek key** | Key never in APK — decompiling yields only proxy URL |
+| **Server-side prompt building** | Proxy is not an open LLM relay — app can't inject custom prompts |
+| **Per-IP rate limiting** | Prevents API abuse — 30 req/min per user |
+| **X-App-Token shared secret** | Speed bump — real security at server level |
+| **Separate persistence keys** | `daily_phrase_language` ≠ `translate_target_lang` — never overwrite |
+| **AppStrings.targetLanguages** | Single source of truth — dropdowns always in sync |
+| **Daily phrases save from DB** | Bug fix: `isSaved` queries SQLite, not stale SharedPreferences index |
+| **Export feature removed** | JSON export wrote to sandboxed directory — inaccessible to user |
+| **All colors via ColorScheme tokens** | Dark theme fully readable — no hardcoded `Colors.*` values |
 | **Anonymous restrictions** | No cloud backup — data loss risk clearly warned |
-| **Daily phrases save from DB** | Bug fix: `isSaved` now queries SQLite, not stale SharedPreferences index (June 8, 2026) |
-| **Export feature removed** | JSON export wrote to sandboxed directory — inaccessible to user. Removed entirely (June 8, 2026) |
-| **Stable checkpoint** | Commit `3eb6435` — export removed, daily save working. `git checkout 3eb6435` to revert here. |
+| **Stable checkpoint** | Tag `stable-2026-06-08` — commit `3639653`. `git checkout stable-2026-06-08` to revert here. |
 
 ---
 
@@ -368,7 +445,17 @@ flutter run
 # Development (package added/removed — pubspec.yaml changed)
 flutter clean && flutter pub get && flutter run
 
-# Build APK for sharing
+# Generate app launcher icon (after changing assets/icon/app_icon.png)
+dart run flutter_launcher_icons
+
+# Generate native splash screen (after changing assets/splash_screen.png)
+dart run flutter_native_splash:create
+
+# Build release APK
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+
+# Build debug APK for sharing
 flutter build apk --debug
 # Output: build/app/outputs/flutter-apk/app-debug.apk
 
@@ -381,35 +468,29 @@ flutter clean && rm -f pubspec.lock && rm -rf ~/.pub-cache/hosted/pub.dev/* && f
 
 ---
 
-## 14. Security Audit (June 8, 2026)
+## 14. Security
 
-Full audit of all 22 `.dart` source files.
+### Architecture
+| Layer | Protection |
+|-------|-----------|
+| **API key** | On proxy server only — never in repo, never in APK |
+| **Proxy** | Server-side prompt building — not an open LLM relay |
+| **Proxy auth** | `X-App-Token` shared secret |
+| **Rate limit** | 30 req/min per IP (Flask-Limiter) |
+| **Network** | `network_security_config.xml` — cleartext only to proxy IP |
+| **Firestore** | Per-user rules deployed — `request.auth.uid == userId` |
+| **Database** | All queries use `?` placeholders — SQL injection immune |
+| **UI** | All controllers disposed, no memory leaks, no dangling listeners |
 
-### ✅ All Clear
-| Area | Result |
-|------|--------|
-| **SQL Injection** | All 6 queries use `?` placeholders with `whereArgs` — immune |
-| **HTTPS** | All network calls use `https://` |
-| **Crash paths** | All `!` operators, null checks, and try/catch blocks reviewed — safe |
-| **Controller disposal** | All 12 `TextEditingController`s properly disposed in `dispose()` |
-| **Memory leaks** | No stream subscriptions without cancel, no dangling listeners |
-| **Flutter best practices** | Material 3, Provider pattern, animations, tooltips — clean |
+### What's in the APK (safe to share)
+- Proxy URL (`http://13.140.134.57:9000`)
+- Shared token (`vocab-builder-shared-secret-2026`)
+- No DeepSeek key, no Firebase admin credentials, no user data
 
-### 🔧 Fixes Applied
-| # | Issue | Fix |
-|---|-------|-----|
-| 1 | **API key lost on `git pull`** — real key in `app_config.dart` gets overwritten by GitHub's placeholder | Moved real key to gitignored `lib/config/secrets.dart` |
-| 2 | **`_toggleMemorized` compilation error** — called `_saveToPrefs(prefs)` but method takes no args | Removed dead code; method uses cached `_prefs` |
-| 3 | **`SharedPreferences.getInstance()` on every tap** — triggered disk I/O unnecessarily | Cached as `_prefs` field — one read, reused |
-
-### ⚠️ Noted (Low Priority)
-| # | Finding | Risk |
-|---|---------|------|
-| 1 | `_extractTextInBackground` uses synchronous `readAsBytesSync()` — could briefly freeze UI on very large PDFs (>50 MB) | Low — most PDFs are small text documents |
-| 2 | DeepSeek prompt includes raw user input | Low — single-user app, no shared content |
-
-### Verdict
-**Clean codebase.** No crash paths, no memory leaks, no injection vulnerabilities, no hardcoded credentials on GitHub. All 22 files follow consistent naming conventions.
+### What's NOT in the APK
+- DeepSeek API key (on server only)
+- Firebase service account credentials
+- Any user-specific data
 
 ---
 
@@ -421,6 +502,8 @@ Full audit of all 22 `.dart` source files.
 | DB schema version 1 only | 🟡 Dev only | Uninstall app to reset during development |
 | iOS file picker not implemented | ⏳ Future | MethodChannel ready, just add Swift handler |
 | `flutter pub outdated` shows newer packages | ℹ️ Normal | `any` constraint auto-resolves latest |
+| Proxy uses HTTP (no HTTPS) | 🟡 Pre-Prod | Add domain + Let's Encrypt before Play Store |
+| Hardcoded proxy IP | 🟡 Pre-Prod | Replace with domain before Play Store |
 
 ---
 

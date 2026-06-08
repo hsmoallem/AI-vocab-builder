@@ -1,8 +1,9 @@
 # AI Vocab Builder — Product Requirements Document
 
-> **Version:** 1.0.0  
-> **Date:** June 7, 2026  
-> **Status:** Phase 1-4 Complete, Phase 5-6 Planned  
+> **Version:** 1.1.0  
+> **Date:** June 8, 2026  
+> **Status:** Phases 1-5 Complete, Phase 6 Planned  
+> **Stable tag:** `stable-2026-06-08`
 
 ---
 
@@ -14,17 +15,17 @@
 | **App ID** | `com.vocabreader.ai_vocab_builder` |
 | **Firebase Project** | `project-794490258159` (AI Vocab Builder) |
 | **GitHub Repo** | `github.com/hsmoallem/AI-vocab-builder` |
-| **DeepSeek API Key** | `sk-f42...48ba` | `lib/config/secrets.dart` (gitignored) |
+| **DeepSeek API** | Via secure proxy server (key never in APK) |
 | **Platform** | Android (iOS planned) |
-| **Tech Stack** | Flutter 3.44.1, Dart ≥3.5.0, SQLite, Firebase, DeepSeek AI |
+| **Tech Stack** | Flutter 3.44.1, Dart ≥3.5.0, SQLite, Firebase, DeepSeek AI (proxy) |
 
 ---
 
 ## 1. Product Vision
 
-**AI Vocab Builder** turns any PDF into a personal language lesson. Users read German documents, tap words they don't know, and get instant AI-powered translations with multiple meanings, example sentences, and native pronunciation. Flashcards and daily phrases reinforce learning. Cloud backup keeps data safe across devices.
+**AI Vocab Builder** turns any PDF into a personal language lesson. Users read documents, tap words they don't know, and get instant AI-powered translations with multiple meanings, example sentences, and native pronunciation. Flashcards and daily phrases reinforce learning. Cloud backup keeps data safe across devices.
 
-**Target Audience:** German learners who read German content (news, books, manuals, work documents).
+**Target Audience:** Language learners who read content in their target language (news, books, manuals, work documents).
 
 **Core Value Proposition:** Learn vocabulary in context — from the documents you're already reading — instead of generic flashcard decks.
 
@@ -38,7 +39,7 @@
 - DeepSeek AI translation (multiple meanings + examples)
 - German article auto-detection (der/die/das)
 - Word list with search, sort, delete
-- Material 3 theme (light + dark)
+- Material 3 theme (light + dark, fully colorScheme-token based)
 
 ### Phase 2 — PDF Reading (✅ Complete)
 - Native Android file picker (Intent.ACTION_OPEN_DOCUMENT)
@@ -51,9 +52,9 @@
 - Flashcards with flip animation and swipe navigation
 - Daily Phrases: 5 AI-generated phrases per day
 - Mark phrases as memorized, progress counter, trophy on completion
-- **Save phrases to My Words (📌)** — pin any phrase to word database for flashcard review
-- **Regenerate phrases (🔄)** — get 5 fresh AI phrases on demand (ignores daily cache)
-- **Theme-based generation** — type a topic (e.g. "at the restaurant") → AI generates context phrases
+- Save phrases to My Words — translates from phrase language → target language
+- Regenerate phrases — get 5 fresh AI phrases on demand
+- Theme-based generation — type a topic (e.g. "at the restaurant")
 - Native Text-to-Speech (Android TextToSpeech via MethodChannel)
 - Tooltips on all icons
 - Review toggle on word cards
@@ -64,11 +65,23 @@
 - Firestore cloud backup/restore for authenticated users
 - Anonymous user restrictions (no cloud backup, orange warning banner)
 - Graceful fallback when Firebase unavailable (app never bricks)
+- Per-user Firestore security rules deployed
 
 ### Phase 5 — Settings & Preferences (✅ Complete)
-- Language pair picker (UI language: English/Deutsch/العربية)
-- Target language for AI translation
+- UI language picker (English / Deutsch / العربية)
+- Translate-to language picker for AI translation
+- Phrase language dropdown on Daily screen (separate from translate-to)
+- Same-language warning when phrase lang == translate lang
 - Settings accessible from ⚙️ gear icon in AppBar
+
+### Phase 5.5 — Security & Branding (✅ Complete)
+- DeepSeek API key moved to proxy server — never in APK
+- Server-side prompt building — proxy is not an open LLM relay
+- X-App-Token auth + per-IP rate limiting (30 req/min)
+- App launcher icon (blue circuit-board "A")
+- Native splash screen (VocabView logo on dark background)
+- Login screen header image (VocabView logo)
+- Network security config (cleartext HTTP to proxy IP only)
 
 ### Phase 6 — Monetization (⬜ Planned)
 - AdMob banner ads
@@ -81,9 +94,23 @@
 
 ## 3. Technical Architecture
 
+### Security Architecture
+```
+┌──────────┐     HTTP POST      ┌─────────────────┐     HTTPS      ┌────────────┐
+│  App     │ ─── {word,lang, ──→│  Flask Proxy     │ ─── prompt + ─→│  DeepSeek  │
+│  (APK)   │     mode, token}   │  :9000 (Contabo) │    key        │  API       │
+│          │ ←── {meanings[]} ──│                  │ ←── JSON ─────│            │
+└──────────┘                    └─────────────────┘               └────────────┘
+```
+
+- API key never in APK — decompiling yields only proxy URL
+- App sends structured data only (word, languages, mode) — cannot inject custom prompts
+- Rate limiting protects against abuse
+- Per-user Firestore isolation via security rules
+
 ### Data Flow
 ```
-User reads PDF → taps unknown word → DeepSeek translates → saved to SQLite
+User reads PDF → taps unknown word → Proxy → DeepSeek translates → saved to SQLite
                                                     ↓
                                           Flashcard review + TTS
                                                     ↓
@@ -93,6 +120,7 @@ User reads PDF → taps unknown word → DeepSeek translates → saved to SQLite
 ### Local Storage
 - **SQLite** (sqflite): words, translations, examples, review status
 - **SharedPreferences**: daily phrases (today only), settings, language preferences
+  - Keys: `app_language`, `translate_target_lang`, `daily_phrase_language` (all separate)
 
 ### Cloud Storage
 - **Firestore**: `users/{uid}/words/` — one document per word
@@ -104,19 +132,13 @@ User reads PDF → taps unknown word → DeepSeek translates → saved to SQLite
 - Auth gate in main.dart routes to LoginScreen or HomeScreen
 - Anonymous users get orange warning banner and no cloud access
 
-### AI Integration
-- **Provider:** DeepSeek (`deepseek-chat` model)
-- **Translation:** System prompt → returns structured JSON with meanings array
-- **Daily Phrases:** System prompt → returns 5 everyday phrases in target language
-- **Temperature:** 0.3 for translation (precision), 0.7 for phrases (variety)
-
 ---
 
 ## 4. User Flows
 
 ### First-Time User
 ```
-Open app → Login Screen
+Open app → Splash screen (VocabView logo) → Login Screen
   ├─ "Sign in with Google" → one tap → Home Screen
   └─ "Continue without account" → warning → Home Screen (anonymous)
 ```
@@ -125,7 +147,7 @@ Open app → Login Screen
 ```
 Home Screen (3 tabs)
   ├─ Reader tab → pick PDF → read → tap word → translate → save
-  ├─ Daily tab → view 5 phrases → tap to memorize → trophy
+  ├─ Daily tab → view 5 phrases → pick language → tap to memorize → save to words
   └─ My Words tab → search/sort/delete → tap for flashcard review
 ```
 
@@ -146,7 +168,9 @@ Open app → AuthGate checks Firebase → Home Screen
 | **Zero friction** | Google Sign-In = one tap; Anonymous = one warning click |
 | **Native feel** | Native file picker, native TTS, native PDF renderer — no web-like behavior |
 | **Data safety** | Anonymous users warned; cloud backup available to signed-in users |
+| **Security by design** | API key on proxy server, server-side prompt building, per-user DB isolation |
 | **Simple stack** | Provider (not BLoC/Riverpod), sqflite (not Isar), MethodChannel (not packages) |
+| **Dark theme** | All colors via Material 3 ColorScheme tokens — readable in both modes |
 
 ---
 
@@ -154,8 +178,9 @@ Open app → AuthGate checks Firebase → Home Screen
 
 - iOS file picker not yet implemented (MethodChannel ready, needs Swift handler)
 - DB migration not handled (uninstall to reset during development)
-- DeepSeek API key embedded in app config (backend proxy needed for Play Store)
-- No offline AI translation (requires internet for DeepSeek calls)
+- Proxy uses HTTP — HTTPS needed before Play Store submission (+ domain + Let's Encrypt)
+- Hardcoded proxy IP — replace with domain before Play Store
+- No offline AI translation (requires internet for proxy calls)
 - Single-user local database (Firebase sync is manual backup, not real-time)
 
 ---
@@ -164,10 +189,9 @@ Open app → AuthGate checks Firebase → Home Screen
 
 | Priority | Feature | Complexity |
 |----------|---------|------------|
-| P0 | Settings screen (Phase 5) | Low |
-| P1 | AdMob integration (Phase 6) | Medium |
-| P2 | iOS support | Medium |
-| P3 | Backend proxy for DeepSeek key | Medium |
-| P4 | Real-time Firestore sync | High |
-| P5 | Spaced repetition algorithm | High |
-| P6 | OCR (scan physical documents) | Very High |
+| P0 | AdMob integration (Phase 6) | Medium |
+| P1 | iOS support | Medium |
+| P2 | HTTPS proxy + custom domain | Medium |
+| P3 | Real-time Firestore sync | High |
+| P4 | Spaced repetition algorithm | High |
+| P5 | OCR (scan physical documents) | Very High |
