@@ -24,13 +24,14 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _error;
-  String _lang = 'de';
+  String _phraseLang = 'de';          // language phrases are generated in
   bool _showThemeWarning = false;
   SharedPreferences? _prefs;
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
-  static const _langKey = 'daily_phrases_lang';
+  static const _phraseLangKey = 'daily_phrase_language';  // new key
+  static const _legacyLangKey = 'daily_phrases_lang';     // old fallback key
   static const _savedKey = 'daily_phrases_saved';
 
   String _today() {
@@ -65,8 +66,10 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     try {
       _prefs = await SharedPreferences.getInstance();
       final savedDate = _prefs!.getString(_dateKey);
-      final lang = _prefs!.getString(_langKey) ?? 'de';
-      _lang = lang;
+      // Read phrase language — new key first, fall back to legacy key, default 'de'
+      _phraseLang = _prefs!.getString(_phraseLangKey)
+          ?? _prefs!.getString(_legacyLangKey)
+          ?? 'de';
 
       // Restore saved indices from persistent storage
       final savedJson = _prefs!.getString(_savedKey);
@@ -87,7 +90,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       }
 
       final phrases = await _translator.generateDailyPhrases(
-        lang: lang,
+        lang: _phraseLang,
         theme: theme,
       );
       _phrases = phrases;
@@ -121,6 +124,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     final prefs = _prefs ?? await SharedPreferences.getInstance();
     _prefs = prefs;
     await prefs.setString(_dateKey, _today());
+    await prefs.setString(_phraseLangKey, _phraseLang);
     await prefs.setString(
       _phrasesKey,
       jsonEncode(_phrases!.map((p) => p.toJson()).toList()),
@@ -169,7 +173,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     }
 
     try {
-      final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: targetLang);
+      final result = await _translator.translate(word: phrase.phrase, sourceLang: _phraseLang, targetLang: targetLang);
       final m = result.meanings.isNotEmpty ? result.meanings.first : Meaning(text: phrase.phrase, article: null, exampleSource: '', exampleTarget: '');
 
       await provider.addWord(
@@ -177,7 +181,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         translation: m.text,
         exampleSource: m.exampleSource,
         exampleTarget: m.exampleTarget,
-        sourceLang: _lang,
+        sourceLang: _phraseLang,
         targetLang: targetLang,
       );
 
@@ -195,6 +199,20 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
           SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red, duration: const Duration(seconds: 5)),
         );
       }
+    }
+  }
+
+  void _onPhraseLanguageChanged(String lang) async {
+    if (lang == _phraseLang) return;
+    _phraseLang = lang;
+    // Persist immediately even before regenerate
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    await prefs.setString(_phraseLangKey, lang);
+    // Force regenerate with the new language
+    if (mounted) {
+      setState(() => _isRefreshing = true);
+      _loadPhrases(forceRefresh: true);
     }
   }
 
@@ -241,6 +259,84 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
     return Column(
       children: [
+        // ── Phrase language dropdown ──────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: [
+              Icon(Icons.translate, size: 18,
+                  color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                s.locale == 'de' ? 'Phrasen-Sprache:' : s.locale == 'ar' ? 'لغة العبارات:' : 'Phrase language:',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: AppStrings.targetLanguages.containsKey(_phraseLang)
+                        ? _phraseLang
+                        : 'de',
+                    isDense: true,
+                    isExpanded: true,
+                    style: theme.textTheme.bodyMedium,
+                    items: AppStrings.targetLanguages.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value, style: const TextStyle(fontSize: 13)),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) _onPhraseLanguageChanged(v);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // ── Same-language warning ─────────────────────────────
+        // Watch the LocaleProvider so we redraw when the translate-to
+        // language changes and we need to show/hide the warning.
+        Builder(
+          builder: (context) {
+            final loc = context.watch<LocaleProvider>();
+            if (loc.targetLang == _phraseLang) {
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16,
+                        color: theme.colorScheme.onErrorContainer),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s.locale == 'de'
+                            ? 'Phrasen-Sprache und Übersetzungs-Sprache sind gleich — Übersetzung nicht sinnvoll.'
+                            : s.locale == 'ar'
+                                ? 'لغة العبارات ولغة الترجمة متطابقتان — الترجمة غير مفيدة.'
+                                : 'Phrase and translation language are the same — translation won\'t be useful.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
         // Theme input + Refresh row
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -423,7 +519,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                         tooltip: s.listenWord,
                         onPressed: phrase.memorized
                             ? null
-                            : () => _tts.speak(phrase.phrase, language: _lang),
+                            : () => _tts.speak(phrase.phrase, language: _phraseLang),
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints:
