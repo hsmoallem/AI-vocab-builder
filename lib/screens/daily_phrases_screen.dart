@@ -142,100 +142,51 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     final provider = context.read<WordProvider>();
     final s = AppStrings.of(context);
 
-    // Check if already saved (via persistent set)
-    if (_savedIndices.contains(index)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.locale == 'de' ? 'Bereits gespeichert' : s.locale == 'ar' ? 'تم الحفظ بالفعل' : 'Already saved'),
-            backgroundColor: Colors.green,
-          ),
-        );
+    // Check database directly — is this phrase already saved with a translation?
+    for (final w in provider.words) {
+      if (w.word == phrase.phrase && w.translation.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(s.locale == 'de' ? 'Bereits gespeichert' : 'Already saved'), backgroundColor: Colors.green),
+          );
+        }
+        setState(() => _savedIndices.add(index));
+        return;
       }
-      return;
     }
 
-    // Show that we're working
+    // Translate and save
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(s.locale == 'de' ? 'Übersetze und speichere...' : s.locale == 'ar' ? '...جار الترجمة والحفظ' : 'Translating & saving...'),
-          duration: const Duration(seconds: 3),
-        ),
+        const SnackBar(content: Text('Translating & saving...'), duration: Duration(seconds: 3)),
       );
     }
 
     try {
-      // 1. Get AI translation
-      final result = await _translator.translate(
+      final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: 'en');
+      final m = result.meanings.isNotEmpty ? result.meanings.first : Meaning(text: phrase.phrase, article: null, exampleSource: '', exampleTarget: '');
+
+      await provider.addWord(
         word: phrase.phrase,
+        translation: m.text,
+        exampleSource: m.exampleSource,
+        exampleTarget: m.exampleTarget,
         sourceLang: _lang,
         targetLang: 'en',
       );
 
-      final m = result.meanings.isNotEmpty
-          ? result.meanings.first
-          : Meaning(text: '', article: null, exampleSource: '', exampleTarget: '');
-
-      // 2. Check if word already exists in database
-      bool exists = false;
-      for (final w in provider.words) {
-        if (w.word == phrase.phrase) {
-          // Update with translation if it was empty
-          if (w.translation.isEmpty) {
-            final updated = w.copyWith(
-              translation: m.text,
-              exampleSource: m.exampleSource,
-              exampleTarget: m.exampleTarget,
-            );
-            await provider.updateWord(updated);
-          }
-          exists = true;
-          break;
-        }
-      }
-
-      // 3. If new, add to database
-      if (!exists) {
-        await provider.addWord(
-          word: phrase.phrase,
-          translation: m.text,
-          exampleSource: m.exampleSource,
-          exampleTarget: m.exampleTarget,
-          sourceLang: _lang,
-          targetLang: 'en',
-        );
-      }
-
-      // 4. Mark as saved → green icon (persistent)
       setState(() => _savedIndices.add(index));
       await _saveToPrefs();
 
-      // 5. Success feedback
       if (mounted) {
-        final msg = s.savedWordToMyWords.replaceAll('{word}', phrase.phrase);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green),
+          SnackBar(content: Text('✅ ${phrase.phrase} saved'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
-      // Show error in a dialog so the user can't miss it
       if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(s.locale == 'de' ? 'Fehler' : s.locale == 'ar' ? 'خطأ' : 'Error'),
-            content: Text(
-              s.locale == 'de'
-                  ? 'Konnte "${phrase.phrase}" nicht speichern.\n\n$e'
-                  : s.locale == 'ar'
-                      ? 'تعذر حفظ "${phrase.phrase}"\n\n$e'
-                      : 'Could not save "${phrase.phrase}".\n\n$e',
-            ),
-            actions: [
-              FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(s.locale == 'de' ? 'OK' : 'OK')),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red, duration: const Duration(seconds: 5)),
         );
       }
     }
