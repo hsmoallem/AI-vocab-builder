@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_strings.dart';
-import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
@@ -25,18 +24,22 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   bool _isRefreshing = false;
   String? _error;
   String _lang = 'de';
-  String? _lastTheme;
   bool _showThemeWarning = false;
-  SharedPreferences? _prefs;  // cached to avoid getInstance() on every tap
+  SharedPreferences? _prefs;
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
   static const _langKey = 'daily_phrases_lang';
+  static const _savedKey = 'daily_phrases_saved';
 
   String _today() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
+
+  /// Persistent set of phrase indices saved to My Words today.
+  /// Survives widget rebuilds and hot reloads.
+  final Set<int> _savedIndices = {};
 
   @override
   void initState() {
@@ -51,7 +54,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   }
 
   Future<void> _loadPhrases({String? theme, bool forceRefresh = false}) async {
-    // Only show full-screen spinner on initial load, not on refresh
     if (!forceRefresh) {
       setState(() {
         _isLoading = true;
@@ -64,6 +66,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       final savedDate = _prefs!.getString(_dateKey);
       final lang = _prefs!.getString(_langKey) ?? 'de';
       _lang = lang;
+
+      // Restore saved indices from persistent storage
+      final savedJson = _prefs!.getString(_savedKey);
+      if (savedJson != null) {
+        _savedIndices.clear();
+        _savedIndices.addAll((jsonDecode(savedJson) as List).cast<int>());
+      }
 
       if (!forceRefresh && theme == null && savedDate == _today()) {
         final jsonStr = _prefs!.getString(_phrasesKey);
@@ -83,7 +92,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       _phrases = phrases;
       _isLoading = false;
       _isRefreshing = false;
-      _lastTheme = theme;
       setState(() {});
 
       await _saveToPrefs();
@@ -104,7 +112,6 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         if (mounted) setState(() => _showThemeWarning = false);
       });
     }
-    // Keep existing phrases visible while refreshing
     setState(() => _isRefreshing = true);
     _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
@@ -117,103 +124,124 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       _phrasesKey,
       jsonEncode(_phrases!.map((p) => p.toJson()).toList()),
     );
+    // Persist saved indices so they survive app restarts
+    await prefs.setString(_savedKey, jsonEncode(_savedIndices.toList()));
   }
 
   void _toggleMemorized(int index) {
     setState(() {
       _phrases![index].memorized = !_phrases![index].memorized;
     });
-    _saveToPrefs();  // uses cached _prefs, no need for getInstance()
+    _saveToPrefs();
   }
 
-  final Set<int> _savedPhraseIndices = {};  // Track which phrases are saved to My Words
+  // ── Save phrase to My Words ─────────────────────────────────────
 
-  void _saveToMyWords(int index) async {
+  Future<void> _saveToMyWords(int index) async {
     final phrase = _phrases![index];
     final provider = context.read<WordProvider>();
     final s = AppStrings.of(context);
 
-    // Find existing word without using firstOrNull (safer, works on all Dart versions)
-    Word? existingWord;
-    for (final w in provider.words) {
-      if (w.word == phrase.phrase) {
-        existingWord = w;
-        break;
+    // Check if already saved (via persistent set)
+    if (_savedIndices.contains(index)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.locale == 'de' ? 'Bereits gespeichert' : s.locale == 'ar' ? 'تم الحفظ بالفعل' : 'Already saved'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
+      return;
     }
 
-    if (existingWord != null) {
-      // Already saved — update translation if empty
-      if (existingWord.translation.isEmpty) {
-        try {
-          final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: 'en');
-          if (result.meanings.isNotEmpty) {
-            final m = result.meanings.first;
-            final updated = existingWord.copyWith(
+    // Show that we're working
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.locale == 'de' ? 'Übersetze und speichere...' : s.locale == 'ar' ? '...جار الترجمة والحفظ' : 'Translating & saving...'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    try {
+      // 1. Get AI translation
+      final result = await _translator.translate(
+        word: phrase.phrase,
+        sourceLang: _lang,
+        targetLang: 'en',
+      );
+
+      final m = result.meanings.isNotEmpty
+          ? result.meanings.first
+          : Meaning(text: '', article: null, exampleSource: '', exampleTarget: '');
+
+      // 2. Check if word already exists in database
+      bool exists = false;
+      for (final w in provider.words) {
+        if (w.word == phrase.phrase) {
+          // Update with translation if it was empty
+          if (w.translation.isEmpty) {
+            final updated = w.copyWith(
               translation: m.text,
               exampleSource: m.exampleSource,
               exampleTarget: m.exampleTarget,
             );
             await provider.updateWord(updated);
-            setState(() => _savedPhraseIndices.add(index));
-            if (mounted) {
-              final msg = s.savedWordToMyWords.replaceAll('{word}', phrase.phrase);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green));
-            }
           }
-        } catch (_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.locale == 'de' ? 'Übersetzung fehlgeschlagen' : 'Translation failed'), backgroundColor: Colors.red));
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.locale == 'de' ? 'Bereits in Meine Wörter' : 'Already in My Words')));
+          exists = true;
+          break;
         }
       }
-      return;
-    }
 
-    // New word — translate then save
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.locale == 'de' ? 'Übersetze...' : 'Translating...'), duration: const Duration(seconds: 2)));
-    }
-
-    try {
-      final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: 'en');
-      String translation = '';
-      String exampleSource = '';
-      String exampleTarget = '';
-      if (result.meanings.isNotEmpty) {
-        final m = result.meanings.first;
-        translation = m.text;
-        exampleSource = m.exampleSource;
-        exampleTarget = m.exampleTarget;
+      // 3. If new, add to database
+      if (!exists) {
+        await provider.addWord(
+          word: phrase.phrase,
+          translation: m.text,
+          exampleSource: m.exampleSource,
+          exampleTarget: m.exampleTarget,
+          sourceLang: _lang,
+          targetLang: 'en',
+        );
       }
 
-      final success = await provider.addWord(
-        word: phrase.phrase,
-        translation: translation,
-        exampleSource: exampleSource,
-        exampleTarget: exampleTarget,
-        sourceLang: _lang,
-        targetLang: 'en',
-      );
+      // 4. Mark as saved → green icon (persistent)
+      setState(() => _savedIndices.add(index));
+      await _saveToPrefs();
 
-      if (success) {
-        setState(() => _savedPhraseIndices.add(index));
-      }
-
+      // 5. Success feedback
       if (mounted) {
         final msg = s.savedWordToMyWords.replaceAll('{word}', phrase.phrase);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success ? '✅ $msg' : 'Failed to save'), backgroundColor: success ? Colors.green : Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green),
+        );
       }
     } catch (e) {
+      // Show error in a dialog so the user can't miss it
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${s.locale == 'de' ? 'Fehler' : 'Error'}: $e'), backgroundColor: Colors.red));
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(s.locale == 'de' ? 'Fehler' : s.locale == 'ar' ? 'خطأ' : 'Error'),
+            content: Text(
+              s.locale == 'de'
+                  ? 'Konnte "${phrase.phrase}" nicht speichern.\n\n$e'
+                  : s.locale == 'ar'
+                      ? 'تعذر حفظ "${phrase.phrase}"\n\n$e'
+                      : 'Could not save "${phrase.phrase}".\n\n$e',
+            ),
+            actions: [
+              FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(s.locale == 'de' ? 'OK' : 'OK')),
+            ],
+          ),
+        );
       }
     }
   }
+
+  // ── UI ───────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -369,6 +397,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
             itemCount: _phrases!.length,
             itemBuilder: (context, index) {
               final phrase = _phrases![index];
+              final isSaved = _savedIndices.contains(index);
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 color: phrase.memorized
@@ -437,18 +466,16 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Tooltip(
-                        message: _savedPhraseIndices.contains(index)
-                            ? (s.locale == 'de' ? 'Gespeichert' : 'Saved')
+                        message: isSaved
+                            ? (s.locale == 'de' ? 'Gespeichert ✅' : s.locale == 'ar' ? 'تم الحفظ ✅' : 'Saved ✅')
                             : s.saveToWords,
                         child: IconButton(
                           icon: Icon(
-                            Icons.bookmark_added,
+                            isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,
                             size: 20,
-                            color: _savedPhraseIndices.contains(index)
-                                ? Colors.green
-                                : null,
+                            color: isSaved ? Colors.green : null,
                           ),
-                          onPressed: () => _saveToMyWords(index),
+                          onPressed: isSaved ? null : () => _saveToMyWords(index),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           constraints:
