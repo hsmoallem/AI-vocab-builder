@@ -164,7 +164,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       );
       if (result.meanings.isNotEmpty) {
         final m = result.meanings.first;
-        translation = m.meaning;
+        translation = m.text;
         exampleSource = m.exampleSource;
         exampleTarget = m.exampleTarget;
       }
