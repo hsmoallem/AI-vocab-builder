@@ -25,9 +25,6 @@ dependencies:
   # Settings storage
   shared_preferences: ^2.3.0
 
-  # Path utilities
-  path_provider: ^2.1.0
-
   # PDF — render natively + extract text
   flutter_pdfview: any
   syncfusion_flutter_pdf: any

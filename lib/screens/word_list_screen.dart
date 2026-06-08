@@ -1,8 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../config/app_strings.dart';
 import '../models/word.dart';
@@ -34,69 +30,6 @@ class _WordListScreenState extends State<WordListScreen> {
       return w.word.toLowerCase().contains(q) ||
           w.translation.toLowerCase().contains(q);
     }).toList();
-  }
-
-  Future<void> _exportWords(BuildContext context) async {
-    final s = AppStrings.of(context);
-    final words = context.read<WordProvider>().words;
-
-    try {
-      // Try to save to Downloads (visible in Files app), fall back to app directory
-      Directory? dir;
-      try {
-        dir = await getDownloadsDirectory();
-      } catch (_) {
-        dir = null;
-      }
-      dir ??= await getApplicationDocumentsDirectory();
-
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-      final file = File('${dir.path}/ai_vocab_builder_export_$timestamp.json');
-
-      final data = words.map((w) => w.toMap()).toList();
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-
-      if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-            title: Text(s.exportSuccess(count: words.length)),
-            content: Text(
-              s.locale == 'de'
-                  ? 'Datei gespeichert unter:\n${file.path}'
-                  : s.locale == 'ar'
-                      ? 'تم حفظ الملف في:\n${file.path}'
-                      : 'File saved to:\n${file.path}',
-              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            icon: const Icon(Icons.error, color: Colors.red, size: 48),
-            title: Text(s.exportFailed),
-            content: Text('$e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(s.locale == 'de' ? 'OK' : s.locale == 'ar' ? 'موافق' : 'OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _deleteWord(BuildContext context, Word word) async {
@@ -192,17 +125,6 @@ class _WordListScreenState extends State<WordListScreen> {
                     onTap: () => provider.setSortMode(SortMode.newestFirst),
                   ),
                   const Spacer(),
-                  // Export button — only when there are words
-                  if (provider.words.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () => _exportWords(context),
-                      icon: const Icon(Icons.file_download_outlined, size: 18),
-                      label: Text(s.exportWordsShort),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  const SizedBox(width: 4),
                   Text(
                     '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
                     style: TextStyle(color: Colors.grey.shade600),

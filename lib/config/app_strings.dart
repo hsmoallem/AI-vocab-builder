@@ -358,31 +358,6 @@ class AppStrings {
     if (locale == 'ar') return 'اللغة الهدف لترجمات الذكاء الاصطناعي';
     return 'Target language for AI translations';
   }
-  String get exportWords {
-    if (locale == 'de') return 'Wörter exportieren';
-    if (locale == 'ar') return 'تصدير الكلمات';
-    return 'Export Words';
-  }
-  String get exportWordsShort {
-    if (locale == 'de') return 'Export';
-    if (locale == 'ar') return 'تصدير';
-    return 'Export';
-  }
-  String get exportWordsDesc {
-    if (locale == 'de') return 'Alle Wörter als JSON-Datei speichern';
-    if (locale == 'ar') return 'حفظ جميع الكلمات كملف JSON';
-    return 'Save all words as a JSON file';
-  }
-  String exportSuccess({required int count}) {
-    if (locale == 'de') return '$count Wörter exportiert';
-    if (locale == 'ar') return 'تم تصدير $count كلمة';
-    return 'Exported $count words';
-  }
-  String get exportFailed {
-    if (locale == 'de') return 'Export fehlgeschlagen';
-    if (locale == 'ar') return 'فشل التصدير';
-    return 'Export failed';
-  }
 
   // ── Languages for translate dropdown ─────────────────────────────
   static const Map<String, String> targetLanguages = {
