@@ -48,7 +48,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPhrases({String? theme}) async {
+  Future<void> _loadPhrases({String? theme, bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -60,7 +60,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       final lang = _prefs!.getString(_langKey) ?? 'de';
       _lang = lang;
 
-      if (theme == null && savedDate == _today()) {
+      if (!forceRefresh && theme == null && savedDate == _today()) {
         final jsonStr = _prefs!.getString(_phrasesKey);
         if (jsonStr != null) {
           final list = jsonDecode(jsonStr) as List;
@@ -91,7 +91,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
   void _generateNew() {
     final theme = _themeCtrl.text.trim();
-    _loadPhrases(theme: theme.isNotEmpty ? theme : null);
+    _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
 
   Future<void> _saveToPrefs() async {

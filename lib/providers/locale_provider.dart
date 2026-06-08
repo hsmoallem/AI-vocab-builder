@@ -1,6 +1,6 @@
 /// ─── Locale Provider ─────────────────────────────────────────────────
 ///
-/// Manages the app's UI language (en/de) and the default translation
+/// Manages the app's UI language (en/de/ar) and the default translation
 /// target language. Both are persisted via shared_preferences.
 
 import 'package:flutter/foundation.dart';

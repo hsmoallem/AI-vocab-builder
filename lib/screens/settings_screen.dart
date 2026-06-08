@@ -31,6 +31,7 @@ class SettingsScreen extends StatelessWidget {
               segments: const [
                 ButtonSegment(value: 'en', label: Text('English')),
                 ButtonSegment(value: 'de', label: Text('Deutsch')),
+                ButtonSegment(value: 'ar', label: Text('العربية')),
               ],
               selected: {locale.locale},
               onSelectionChanged: (v) => locale.setLocale(v.first),
