@@ -22,11 +22,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
   List<DailyPhrase>? _phrases;
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _error;
   String _lang = 'de';
   String? _lastTheme;
-  SharedPreferences? _prefs;  // cached to avoid getInstance() on every tap
   bool _showThemeWarning = false;
+  SharedPreferences? _prefs;  // cached to avoid getInstance() on every tap
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -50,10 +51,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   }
 
   Future<void> _loadPhrases({String? theme, bool forceRefresh = false}) async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Only show full-screen spinner on initial load, not on refresh
+    if (!forceRefresh) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       _prefs = await SharedPreferences.getInstance();
@@ -78,6 +82,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       );
       _phrases = phrases;
       _isLoading = false;
+      _isRefreshing = false;
       _lastTheme = theme;
       setState(() {});
 
@@ -86,6 +91,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       setState(() {
         _error = 'Failed to load phrases: $e';
         _isLoading = false;
+        _isRefreshing = false;
       });
     }
   }
@@ -93,12 +99,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   void _generateNew() {
     final theme = _themeCtrl.text.trim();
     if (theme.isEmpty) {
-      // Flash red warning on the theme field
       setState(() => _showThemeWarning = true);
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) setState(() => _showThemeWarning = false);
       });
     }
+    // Keep existing phrases visible while refreshing
+    setState(() => _isRefreshing = true);
     _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
 
@@ -240,8 +247,17 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               Tooltip(
                 message: s.generateNew,
                 child: IconButton.filled(
-                  onPressed: _generateNew,
-                  icon: const Icon(Icons.refresh, size: 20),
+                  onPressed: _isRefreshing ? null : _generateNew,
+                  icon: _isRefreshing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.refresh, size: 20),
                   style: IconButton.styleFrom(
                     minimumSize: const Size(42, 42),
                   ),
