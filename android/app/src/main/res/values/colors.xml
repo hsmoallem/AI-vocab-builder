@@ -2,4 +2,5 @@
 <resources>
     <!-- Splash screen background — matches app icon blue gradient base -->
     <color name="splash_background">#FF4585C5</color>
+	<color name="ic_launcher_background">#000000</color>
 </resources>
