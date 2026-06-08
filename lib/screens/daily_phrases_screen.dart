@@ -141,9 +141,40 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       return;
     }
 
+    // Save the word with its AI translation (from daily phrases, no translation yet)
+    // Show a loading indicator while we translate
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.locale == 'de' ? 'Übersetze...' : s.locale == 'ar' ? '...جار الترجمة' : 'Translating...'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // Auto-translate the phrase so flashcards have content
+    String translation = '';
+    String exampleSource = '';
+    String exampleTarget = '';
+    try {
+      final result = await _translator.translate(
+        word: phrase.phrase,
+        sourceLang: _lang,
+        targetLang: 'en',
+      );
+      if (result.meanings.isNotEmpty) {
+        final m = result.meanings.first;
+        translation = m.meaning;
+        exampleSource = m.exampleSource;
+        exampleTarget = m.exampleTarget;
+      }
+    } catch (_) {
+      // If translation fails, save with empty translation — user can edit later
+    }
+
     final success = await provider.addWord(
       word: phrase.phrase,
-      translation: '',
+      translation: translation,
       exampleSource: '',
       exampleTarget: '',
       sourceLang: _lang,

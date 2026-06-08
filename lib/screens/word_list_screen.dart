@@ -41,7 +41,15 @@ class _WordListScreenState extends State<WordListScreen> {
     final words = context.read<WordProvider>().words;
 
     try {
-      final dir = await getApplicationDocumentsDirectory();
+      // Try to save to Downloads (visible in Files app), fall back to app directory
+      Directory? dir;
+      try {
+        dir = await getDownloadsDirectory();
+      } catch (_) {
+        dir = null;
+      }
+      dir ??= await getApplicationDocumentsDirectory();
+
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
       final file = File('${dir.path}/ai_vocab_builder_export_$timestamp.json');
 
