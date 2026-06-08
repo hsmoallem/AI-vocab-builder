@@ -142,7 +142,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     final phrase = _phrases![index];
     // Use read (not watch) — we're in a button handler, not a build method
     final provider = context.read<WordProvider>();
-    final locale = context.read<LocaleProvider>().locale;
+    final localeProvider = context.read<LocaleProvider>();
+    final locale = localeProvider.locale;
+    final targetLang = localeProvider.targetLang;
     final s = AppStrings(locale);
 
     // Check database directly — is this phrase already saved with a translation?
@@ -150,7 +152,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       if (w.word == phrase.phrase && w.translation.isNotEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(s.locale == 'de' ? 'Bereits gespeichert' : 'Already saved'), backgroundColor: Colors.green),
+            SnackBar(content: Text(s.locale == 'de' ? 'Bereits gespeichert' : 'Already saved'),
+                backgroundColor: Theme.of(context).colorScheme.primary),
           );
         }
         setState(() => _savedIndices.add(index));
@@ -166,7 +169,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     }
 
     try {
-      final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: 'en');
+      final result = await _translator.translate(word: phrase.phrase, sourceLang: _lang, targetLang: targetLang);
       final m = result.meanings.isNotEmpty ? result.meanings.first : Meaning(text: phrase.phrase, article: null, exampleSource: '', exampleTarget: '');
 
       await provider.addWord(
@@ -175,7 +178,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         exampleSource: m.exampleSource,
         exampleTarget: m.exampleTarget,
         sourceLang: _lang,
-        targetLang: 'en',
+        targetLang: targetLang,
       );
 
       setState(() => _savedIndices.add(index));

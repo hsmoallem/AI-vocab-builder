@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
+import '../providers/locale_provider.dart';
+import '../config/app_strings.dart';
 import '../services/translation_service.dart';
 
 class AddWordDialog extends StatefulWidget {
@@ -25,6 +27,11 @@ class _AddWordDialogState extends State<AddWordDialog> {
   @override
   void initState() {
     super.initState();
+    // Default "To" language to the user's saved setting
+    final savedTarget = context.read<LocaleProvider>().targetLang;
+    if (AppStrings.targetLanguages.containsKey(savedTarget)) {
+      _targetLang = savedTarget;
+    }
     if (widget.initialWord != null && widget.initialWord!.isNotEmpty) {
       _wordController.text = widget.initialWord!;
       // Auto-translate after the first frame
@@ -229,16 +236,9 @@ class _AddWordDialogState extends State<AddWordDialog> {
                         labelText: 'To',
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'en', child: Text('🇬🇧 English')),
-                        DropdownMenuItem(value: 'de', child: Text('🇩🇪 German')),
-                        DropdownMenuItem(value: 'fr', child: Text('🇫🇷 French')),
-                        DropdownMenuItem(value: 'es', child: Text('🇪🇸 Spanish')),
-                        DropdownMenuItem(value: 'ar', child: Text('🇸🇦 Arabic')),
-                        DropdownMenuItem(value: 'tr', child: Text('🇹🇷 Turkish')),
-                        DropdownMenuItem(value: 'ru', child: Text('🇷🇺 Russian')),
-                        DropdownMenuItem(value: 'zh', child: Text('🇨🇳 Chinese')),
-                      ],
+                      items: AppStrings.targetLanguages.entries
+                          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                          .toList(),
                       onChanged: (val) => setState(() => _targetLang = val!),
                     ),
                   ),
