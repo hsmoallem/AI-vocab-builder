@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_strings.dart';
+import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
@@ -139,8 +140,10 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
   Future<void> _saveToMyWords(int index) async {
     final phrase = _phrases![index];
+    // Use read (not watch) — we're in a button handler, not a build method
     final provider = context.read<WordProvider>();
-    final s = AppStrings.of(context);
+    final locale = context.read<LocaleProvider>().locale;
+    final s = AppStrings(locale);
 
     // Check database directly — is this phrase already saved with a translation?
     for (final w in provider.words) {
@@ -198,6 +201,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final s = AppStrings.of(context);
+    // Watch the word list so save-state stays in sync with the database.
+    final wordProvider = context.watch<WordProvider>();
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -348,7 +353,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
             itemCount: _phrases!.length,
             itemBuilder: (context, index) {
               final phrase = _phrases![index];
-              final isSaved = _savedIndices.contains(index);
+              // Derive saved-state from the actual database, keyed by phrase text —
+              // NOT by list position. Prevents stale per-index state from disabling
+              // the button for never-saved phrases.
+              final isSaved = wordProvider.words.any(
+                (w) => w.word == phrase.phrase && w.translation.isNotEmpty,
+              );
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 color: phrase.memorized
