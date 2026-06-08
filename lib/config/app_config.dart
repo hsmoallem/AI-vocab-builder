@@ -2,22 +2,17 @@
 ///
 /// Central place for app-wide constants.
 ///
-/// ## API Key
-/// The real key lives in `lib/config/secrets.dart` (gitignored).
-/// If that file is missing or has a placeholder, the TranslationService
-/// will use the shared_preferences override instead (set via Settings).
+/// ## Translation
+/// All translation requests go through the proxy server at
+/// 13.140.134.57:9000/translate — the DeepSeek key lives there,
+/// never in the APK. Safe to share.
 ///
 /// ## Language defaults
 /// German → English is the default because the app was built for
 /// learning German vocabulary. These are overridable in the Add Word
 /// dialog's dropdown selectors.
 
-import 'secrets.dart';
-
 class AppConfig {
-  // DeepSeek API — real key from gitignored secrets.dart
-  static const String deepseekApiKey = deepseekApiKeyReal;
-
   // Default languages for the Add Word dialog
   static const String defaultSourceLang = 'de';
   static const String defaultTargetLang = 'en';

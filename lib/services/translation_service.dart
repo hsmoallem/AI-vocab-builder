@@ -16,46 +16,17 @@
 ///   - Temperature 0.3 for translation (precise), 0.7 for daily phrases (variety)
 ///   - `max_tokens: 800` gives room for multi-meaning responses with examples
 ///
-/// ## API key management
-///   - Falls back to AppConfig.deepseekApiKey if no key in shared_preferences
-///   - setApiKey() saves to shared_preferences (future Settings screen)
+/// ## API key safety
+///   - The DeepSeek key lives on a proxy server, never in the APK
+///   - App calls proxy at 13.140.134.57:9000 → proxy forwards to DeepSeek
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
 
 class TranslationService {
-  static const String _apiKeyKey = 'deepseek_api_key';
-  static const String _baseUrl = 'https://api.deepseek.com/v1/chat/completions';
+  static const String _baseUrl = 'http://13.140.134.57:9000/translate';
   static const String _defaultSourceLang = 'de';
   static const String _defaultTargetLang = 'en';
-
-  String? _apiKey;
-
-  /// Save a user-provided API key to shared_preferences.
-  Future<void> setApiKey(String key) async {
-    _apiKey = key;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_apiKeyKey, key);
-  }
-
-  /// Get the API key — checks memory, then shared_preferences,
-  /// then falls back to the embedded key in AppConfig.
-  Future<String?> getApiKey() async {
-    if (_apiKey != null) return _apiKey;
-    final prefs = await SharedPreferences.getInstance();
-    _apiKey = prefs.getString(_apiKeyKey);
-    // Fall back to the embedded key from config
-    _apiKey ??= AppConfig.deepseekApiKey;
-    return _apiKey;
-  }
-
-  /// Check if any API key is configured.
-  Future<bool> isConfigured() async {
-    final key = await getApiKey();
-    return key != null && key.isNotEmpty;
-  }
 
   /// Translate a word/phrase with multi-meaning support.
   ///
@@ -67,18 +38,12 @@ class TranslationService {
     String sourceLang = _defaultSourceLang,
     String targetLang = _defaultTargetLang,
   }) async {
-    final apiKey = await getApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('DeepSeek API key not configured. Add it in Settings.');
-    }
-
     final prompt = _buildPrompt(word, sourceLang, targetLang);
 
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
         'model': 'deepseek-chat',
@@ -146,11 +111,6 @@ Return ONLY a JSON object (no other text) with this format:
     String lang = 'de',
     String? theme,
   }) async {
-    final apiKey = await getApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('DeepSeek API key not configured.');
-    }
-
     final langName = _langName(lang);
     final themeLine = (theme != null && theme.trim().isNotEmpty)
         ? 'Focus ALL 5 phrases on the theme: "${theme.trim()}". '
@@ -168,7 +128,6 @@ Return ONLY a JSON object (no other text):
       Uri.parse(_baseUrl),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
         'model': 'deepseek-chat',
