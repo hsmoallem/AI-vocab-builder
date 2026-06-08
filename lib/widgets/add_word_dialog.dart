@@ -171,12 +171,13 @@ class _AddWordDialogState extends State<AddWordDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _error!,
-                    style: TextStyle(color: Colors.red.shade800),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer),
                   ),
                 ),
               if (_error != null) const SizedBox(height: 12),
@@ -268,7 +269,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
                   '${_meanings.length} meaning${_meanings.length > 1 ? 's' : ''} found:',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -292,10 +293,12 @@ class _AddWordDialogState extends State<AddWordDialog> {
                 FilledButton.icon(
                   onPressed: _isSaving ? null : _save,
                   icon: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : const Icon(Icons.save),
                   label: Text(_isSaving ? 'Saving...' : 'Save Word'),
@@ -356,7 +359,7 @@ class _MeaningCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 1,
-      color: Colors.grey.shade50,
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -376,8 +379,8 @@ class _MeaningCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       '${index + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -390,7 +393,7 @@ class _MeaningCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -398,7 +401,7 @@ class _MeaningCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
+                        color: Theme.of(context).colorScheme.onTertiaryContainer,
                       ),
                     ),
                   ),

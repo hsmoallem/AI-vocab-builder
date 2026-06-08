@@ -67,8 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: auth.isAnonymous
                   ? CircleAvatar(
                       radius: 16,
-                      backgroundColor: Colors.orange.shade100,
-                      child: const Icon(Icons.person_off, size: 18, color: Colors.orange),
+                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                      child: Icon(Icons.person_off, size: 18,
+                          color: Theme.of(context).colorScheme.onSecondaryContainer),
                     )
                   : CircleAvatar(
                       radius: 16,
@@ -93,13 +94,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           children: [
                             Icon(Icons.warning_amber_rounded,
-                                size: 18, color: Colors.orange.shade700),
+                                size: 18,
+                                color: Theme.of(context).colorScheme.secondary),
                             const SizedBox(width: 6),
                             Text(
                               s.anonymousUser,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
+                                color: Theme.of(context).colorScheme.secondary,
                               ),
                             ),
                           ],
@@ -214,18 +216,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAnonymousBanner() {
     final s = AppStrings.of(context);
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: Colors.orange.shade50,
+      color: cs.secondaryContainer,
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, size: 20, color: Colors.orange.shade800),
+          Icon(Icons.warning_amber_rounded, size: 20, color: cs.onSecondaryContainer),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               s.anonymousBanner,
-              style: TextStyle(fontSize: 13, color: Colors.orange.shade900),
+              style: TextStyle(fontSize: 13, color: cs.onSecondaryContainer),
             ),
           ),
         ],

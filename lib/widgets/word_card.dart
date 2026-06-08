@@ -45,9 +45,10 @@ class WordCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     word.word,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -58,7 +59,9 @@ class WordCard extends StatelessWidget {
                       word.isReviewed
                           ? Icons.check_circle
                           : Icons.check_circle_outline,
-                      color: word.isReviewed ? Colors.green : Colors.grey,
+                      color: word.isReviewed
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     tooltip: word.isReviewed ? 'Mark as unreviewed' : 'Mark as reviewed',
                     onPressed: onToggleReview,
@@ -67,7 +70,8 @@ class WordCard extends StatelessWidget {
                   ),
                 if (onDelete != null)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: Icon(Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error),
                     tooltip: 'Delete word',
                     onPressed: onDelete,
                     iconSize: 22,
@@ -83,7 +87,7 @@ class WordCard extends StatelessWidget {
                 word.translation,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             const SizedBox(height: 8),
@@ -91,12 +95,12 @@ class WordCard extends StatelessWidget {
             // Language pair badges
             Row(
               children: [
-                _buildBadge(word.sourceLang, Colors.blue),
+                _buildBadge(word.sourceLang, Theme.of(context).colorScheme.primary),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
+                  child: Icon(Icons.arrow_forward, size: 14),
                 ),
-                _buildBadge(word.targetLang, Colors.green),
+                _buildBadge(word.targetLang, Theme.of(context).colorScheme.tertiary),
               ],
             ),
 
@@ -106,7 +110,7 @@ class WordCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -120,16 +124,18 @@ class WordCard extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.only(right: 6, top: 1),
                             child: Icon(Icons.volume_up,
-                                size: 16, color: Colors.grey[600]),
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ),
                     Expanded(
                       child: Text(
                         word.exampleSource,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontStyle: FontStyle.italic,
                           fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -144,13 +150,14 @@ class WordCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   word.exampleTarget,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
+                    color: Theme.of(context).colorScheme.onTertiaryContainer,
                   ),
                 ),
               ),

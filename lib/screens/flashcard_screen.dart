@@ -222,13 +222,17 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 ),
                 child: Text(
                   word.sourceLang.toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 32),
               Text(
                 'Tap to reveal',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 14),
               ),
             ],
           ),
@@ -246,8 +250,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
             colors: [
-              Colors.green.shade50,
-              Colors.green.shade100,
+              Theme.of(context).colorScheme.primaryContainer,
+              Theme.of(context).colorScheme.primaryContainer,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -261,16 +265,19 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               // Word (smaller)
               Text(
                 word.word,
-                style: const TextStyle(fontSize: 20, color: Colors.grey),
+                style: TextStyle(
+                    fontSize: 20,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 12),
 
               // Translation
               Text(
                 word.translation,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -280,12 +287,14 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   word.targetLang.toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
 
@@ -295,7 +304,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(180),
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
@@ -304,9 +313,10 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       if (word.exampleSource.isNotEmpty)
                         Text(
                           word.exampleSource,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontStyle: FontStyle.italic,
                             fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       if (word.exampleTarget.isNotEmpty) ...[
@@ -314,7 +324,9 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                         const Divider(),
                         Text(
                           word.exampleTarget,
-                          style: const TextStyle(fontSize: 14),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface),
                         ),
                       ],
                     ],
@@ -325,7 +337,9 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               const SizedBox(height: 24),
               Text(
                 'Tap to flip back',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 14),
               ),
             ],
           ),

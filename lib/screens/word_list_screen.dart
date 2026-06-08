@@ -46,7 +46,8 @@ class _WordListScreenState extends State<WordListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
             child: Text(s.delete),
           ),
         ],
@@ -127,7 +128,7 @@ class _WordListScreenState extends State<WordListScreen> {
                   const Spacer(),
                   Text(
                     '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 ],
               ),
@@ -141,7 +142,7 @@ class _WordListScreenState extends State<WordListScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.menu_book_outlined,
-                              size: 64, color: Colors.grey.shade400),
+                              size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2)),
                           const SizedBox(height: 12),
                           Text(
                             _searchController.text.isNotEmpty
@@ -150,7 +151,7 @@ class _WordListScreenState extends State<WordListScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey.shade500,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                             ),
                           ),
                         ],
@@ -167,8 +168,9 @@ class _WordListScreenState extends State<WordListScreen> {
                           background: Container(
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 24),
-                            color: Colors.red,
-                            child: const Icon(Icons.delete, color: Colors.white),
+                            color: Theme.of(context).colorScheme.error,
+                            child: Icon(Icons.delete,
+                                color: Theme.of(context).colorScheme.onError),
                           ),
                           confirmDismiss: (_) async {
                             _deleteWord(context, word);
@@ -225,7 +227,7 @@ class _SortChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? Theme.of(context).colorScheme.primary
-              : Colors.grey.shade200,
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -234,7 +236,9 @@ class _SortChip extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: selected ? Colors.white : Colors.grey.shade700,
+              color: selected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
             const SizedBox(width: 4),
             Text(
@@ -242,7 +246,9 @@ class _SortChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : Colors.grey.shade700,
+                color: selected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ],

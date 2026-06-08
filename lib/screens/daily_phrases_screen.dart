@@ -215,10 +215,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cloud_off, size: 64, color: Colors.grey[400]),
+              Icon(Icons.cloud_off, size: 64,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
               Text(_error!, textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600])),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _loadPhrases,
@@ -253,20 +255,28 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: _showThemeWarning
-                          ? const BorderSide(color: Colors.red, width: 2)
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.error,
+                              width: 2)
                           : BorderSide.none,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: _showThemeWarning
-                          ? const BorderSide(color: Colors.red, width: 2)
-                          : BorderSide(color: Colors.grey.shade300),
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.error,
+                              width: 2)
+                          : BorderSide(
+                              color: Theme.of(context).colorScheme.outlineVariant),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: _showThemeWarning
-                          ? const BorderSide(color: Colors.red, width: 2)
-                          : BorderSide(color: Theme.of(context).colorScheme.primary),
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.error,
+                              width: 2)
+                          : BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
                     ),
                     helperText: _showThemeWarning
                         ? (s.locale == 'de'
@@ -275,7 +285,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                                 ? '⚠️ لا يوجد موضوع — سيتم توليد عبارات عشوائية'
                                 : '⚠️ No theme — generating random phrases')
                         : null,
-                    helperStyle: const TextStyle(color: Colors.red, fontSize: 12),
+                    helperStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12),
                   ),
                   style: const TextStyle(fontSize: 14),
                   onSubmitted: (_) => _generateNew(),
@@ -287,12 +299,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                 child: IconButton.filled(
                   onPressed: _isRefreshing ? null : _generateNew,
                   icon: _isRefreshing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Icon(Icons.refresh, size: 20),
@@ -312,15 +324,17 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           decoration: BoxDecoration(
             color: allMemorized
-                ? Colors.green.shade50
-                : theme.colorScheme.primaryContainer.withOpacity(0.5),
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Icon(
                 allMemorized ? Icons.emoji_events : Icons.auto_awesome,
-                color: allMemorized ? Colors.green : theme.colorScheme.primary,
+                color: allMemorized
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -339,7 +353,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                 s.memorizedCounter(doneCount, _phrases!.length),
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: allMemorized ? Colors.green : theme.colorScheme.primary,
+                  color: allMemorized
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -362,7 +378,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 color: phrase.memorized
-                    ? Colors.green.shade50
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
                     : theme.cardTheme.color ?? theme.cardColor,
                 child: ListTile(
                   contentPadding:
@@ -380,12 +396,14 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: phrase.memorized
-                              ? Colors.green
-                              : Colors.grey.shade300,
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
                         ),
                         child: Icon(
                           phrase.memorized ? Icons.check : Icons.circle_outlined,
-                          color: Colors.white,
+                          color: phrase.memorized
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurface,
                           size: 20,
                         ),
                       ),
@@ -397,8 +415,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                         icon: Icon(Icons.volume_up,
                             size: 18,
                             color: phrase.memorized
-                                ? Colors.grey[400]
-                                : theme.colorScheme.primary),
+                                ? Theme.of(context).colorScheme.onSurfaceVariant
+                                : Theme.of(context).colorScheme.primary),
                         tooltip: s.listenWord,
                         onPressed: phrase.memorized
                             ? null
@@ -417,7 +435,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                             decoration: phrase.memorized
                                 ? TextDecoration.lineThrough
                                 : null,
-                            color: phrase.memorized ? Colors.grey : null,
+                            color: phrase.memorized
+                                ? Theme.of(context).colorScheme.onSurfaceVariant
+                                : null,
                           ),
                         ),
                       ),
@@ -434,7 +454,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                           icon: Icon(
                             isSaved ? Icons.bookmark_added : Icons.bookmark_add_outlined,
                             size: 20,
-                            color: isSaved ? Colors.green : null,
+                            color: isSaved
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
                           ),
                           onPressed: isSaved ? null : () => _saveToMyWords(index),
                           visualDensity: VisualDensity.compact,
@@ -447,7 +469,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                         Tooltip(
                           message: s.locale == 'de' ? 'Gemerkt' : 'Memorized',
                           child: Icon(Icons.check_circle,
-                              color: Colors.green[400], size: 20),
+                              color: Theme.of(context).colorScheme.primary, size: 20),
                         ),
                     ],
                   ),

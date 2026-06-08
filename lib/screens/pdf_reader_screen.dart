@@ -81,7 +81,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+            border: Border(
+                bottom: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant)),
           ),
           child: Row(
             children: [
@@ -191,7 +193,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             Text(
               'View formatted PDFs or extract text\nto add words to your vocabulary',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 24),
             if (_isLoading)
@@ -207,7 +209,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13)),
               ],
             ],
           ],
