@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext HTTP to our proxy server (DeepSeek key lives there, not in the APK) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">13.140.134.57</domain>
+    </domain-config>
+</network-security-config>
