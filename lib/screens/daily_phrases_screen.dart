@@ -175,8 +175,8 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     final success = await provider.addWord(
       word: phrase.phrase,
       translation: translation,
-      exampleSource: '',
-      exampleTarget: '',
+      exampleSource: exampleSource,
+      exampleTarget: exampleTarget,
       sourceLang: _lang,
       targetLang: 'en',
     );
