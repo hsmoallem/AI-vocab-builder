@@ -131,8 +131,41 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     final provider = context.read<WordProvider>();
     final s = AppStrings.of(context);
 
-    final exists = provider.words.any((w) => w.word == phrase.phrase);
-    if (exists) {
+    // Check if this phrase is already in My Words
+    final existingWord = provider.words.where((w) => w.word == phrase.phrase).firstOrNull;
+    if (existingWord != null) {
+      // If translation is empty, update it with AI translation
+      if (existingWord.translation.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.locale == 'de' ? 'Übersetze und aktualisiere...' : 'Translating & updating...'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        try {
+          final result = await _translator.translate(
+            word: phrase.phrase, sourceLang: _lang, targetLang: 'en',
+          );
+          if (result.meanings.isNotEmpty) {
+            final m = result.meanings.first;
+            final updated = existingWord.copyWith(
+              translation: m.text,
+              exampleSource: m.exampleSource,
+              exampleTarget: m.exampleTarget,
+            );
+            await provider.updateWord(updated);
+            if (mounted) {
+              final msg = s.savedWordToMyWords.replaceAll('{word}', phrase.phrase);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green),
+              );
+            }
+          }
+        } catch (_) {}
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(s.locale == 'de' ? 'Bereits in Meine Wörter' : 'Already in My Words')),
@@ -141,8 +174,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       return;
     }
 
-    // Save the word with its AI translation (from daily phrases, no translation yet)
-    // Show a loading indicator while we translate
+    // Show translating indicator
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -158,9 +190,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     String exampleTarget = '';
     try {
       final result = await _translator.translate(
-        word: phrase.phrase,
-        sourceLang: _lang,
-        targetLang: 'en',
+        word: phrase.phrase, sourceLang: _lang, targetLang: 'en',
       );
       if (result.meanings.isNotEmpty) {
         final m = result.meanings.first;
@@ -169,7 +199,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         exampleTarget = m.exampleTarget;
       }
     } catch (_) {
-      // If translation fails, save with empty translation — user can edit later
+      // If translation fails, save with empty translation
     }
 
     final success = await provider.addWord(
