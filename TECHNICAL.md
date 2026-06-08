@@ -1,6 +1,6 @@
 # AI Vocab Builder — Technical Documentation
 
-> Last updated: June 7, 2026
+> Last updated: June 8, 2026
 
 ---
 
@@ -44,7 +44,6 @@
 | `provider` | ^6.1.0 | State management |
 | `http` | ^1.2.0 | HTTP client (DeepSeek API) |
 | `shared_preferences` | ^2.3.0 | Key-value settings storage |
-| `path_provider` | ^2.1.0 | Platform-agnostic paths |
 | `syncfusion_flutter_pdf` | any | PDF text extraction |
 | `flutter_pdfview` | any | Native PDF rendering (Apache 2.0, 2M+ downloads) |
 | `firebase_core` | ^3.0.0 | Firebase initialization |
@@ -132,7 +131,7 @@ lib/
 │   ├── daily_phrases_screen.dart # AI 5 phrases/day, save to words, theme, regenerate
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
 │   ├── settings_screen.dart   # App language + translate language picker
-│   └── word_list_screen.dart  # Searchable word list with sort + delete + export
+│   └── word_list_screen.dart  # Searchable word list with sort + delete
 ├── services/
 │   ├── database_service.dart  # sqflite CRUD (SQLite)
 │   ├── firebase_service.dart  # Firebase init, auth methods, Firestore backup/restore
@@ -309,9 +308,8 @@ SharedPreferences:
 
 ## 10. Settings (Phase 5 — ✅ Complete)
 
-- **App UI Language:** English / Deutsch toggle — wraps all app strings via `AppStrings.of(context)`
+- **App UI Language:** English / Deutsch / العربية toggle — wraps all app strings via `AppStrings.of(context)`
 - **Translate To:** Target language dropdown for AI translation (default German)
-- **Export words:** JSON export available in My Words tab when words exist
 - **Access:** ⚙️ gear icon in HomeScreen AppBar
 - **Storage:** Language preference saved to shared_preferences
 
@@ -355,6 +353,9 @@ flutter test
 | **Firestore per-user structure** | `users/{uid}/words/` — standard Firebase security model |
 | **secrets.dart gitignored** | `git pull` can never overwrite the real API key |
 | **Anonymous restrictions** | No cloud backup — data loss risk clearly warned |
+| **Daily phrases save from DB** | Bug fix: `isSaved` now queries SQLite, not stale SharedPreferences index (June 8, 2026) |
+| **Export feature removed** | JSON export wrote to sandboxed directory — inaccessible to user. Removed entirely (June 8, 2026) |
+| **Stable checkpoint** | Commit `3eb6435` — export removed, daily save working. `git checkout 3eb6435` to revert here. |
 
 ---
 

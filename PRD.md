@@ -66,9 +66,8 @@
 - Graceful fallback when Firebase unavailable (app never bricks)
 
 ### Phase 5 — Settings & Preferences (✅ Complete)
-- Language pair picker (UI language: English/Deutsch)
+- Language pair picker (UI language: English/Deutsch/العربية)
 - Target language for AI translation
-- Export words as JSON (in My Words tab)
 - Settings accessible from ⚙️ gear icon in AppBar
 
 ### Phase 6 — Monetization (⬜ Planned)

@@ -39,7 +39,7 @@
 | **Phase 2** | PDF picker (native), native rendering (flutter_pdfview), text extraction, tap-word | ✅ Complete |
 | **Phase 3** | Flashcards + review flow + Daily Phrases + TTS + Save to My Words + Theme | ✅ Complete |
 | **Phase 4** | Firebase Auth (Google + Anonymous) + Firestore cloud backup | ✅ Complete |
-| **Phase 5** | Settings, language picker, export | ✅ Complete |
+| **Phase 5** | Settings, language picker (EN/DE/AR) | ✅ Complete |
 | **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ |
 
 ---
