@@ -36,7 +36,7 @@ class VocabBuilderApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         if (firebaseReady)
           ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => WordProvider()..loadWords()),
+        ChangeNotifierProvider(create: (_) => WordProvider()),
       ],
       child: MaterialApp(
         title: 'AI Vocab Builder',

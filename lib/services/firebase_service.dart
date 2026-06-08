@@ -64,7 +64,11 @@ class FirebaseService {
 
   Future<User> signInAnonymously() async {
     final credential = await auth.signInAnonymously();
-    return credential.user!;
+    final user = credential.user;
+    if (user == null) {
+      throw Exception('Anonymous sign-in failed — no user returned');
+    }
+    return user;
   }
 
   // ── Sign Out ────────────────────────────────────────────────────────
