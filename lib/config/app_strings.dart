@@ -88,7 +88,7 @@ class AppStrings {
       locale == 'de' ? 'Neue generieren' : 'Generate new';
   String get retry =>
       locale == 'de' ? 'Wiederholen' : 'Retry';
-  String get memorizedCounter(int done, int total) => locale == 'de'
+  String memorizedCounter(int done, int total) => locale == 'de'
       ? '$done / $total gelernt'
       : '$done / $total memorized';
   String get allDone =>
@@ -107,7 +107,7 @@ class AppStrings {
       locale == 'de' ? 'Wort löschen' : 'Delete word';
   String get deleteConfirmTitle =>
       locale == 'de' ? 'Wort löschen?' : 'Delete word?';
-  String get deleteConfirmBody(String word) => locale == 'de'
+  String deleteConfirmBody(String word) => locale == 'de'
       ? '"$word" wirklich löschen?'
       : 'Really delete "$word"?';
   String get cancel => locale == 'de' ? 'Abbrechen' : 'Cancel';
@@ -133,7 +133,7 @@ class AppStrings {
       locale == 'de' ? 'Vorherige Karte' : 'Previous card';
   String get nextCard =>
       locale == 'de' ? 'Nächste Karte' : 'Next card';
-  String get cardXofY(int current, int total) => locale == 'de'
+  String cardXofY(int current, int total) => locale == 'de'
       ? 'Karte $current von $total'
       : 'Card $current of $total';
 
