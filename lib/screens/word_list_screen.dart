@@ -49,20 +49,42 @@ class _WordListScreenState extends State<WordListScreen> {
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${s.exportSuccess(count: words.length)}\n${file.path}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            title: Text(s.exportSuccess(count: words.length)),
+            content: Text(
+              s.locale == 'de'
+                  ? 'Datei gespeichert unter:\n${file.path}'
+                  : s.locale == 'ar'
+                      ? 'تم حفظ الملف في:\n${file.path}'
+                      : 'File saved to:\n${file.path}',
+              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${s.exportFailed}: $e'),
-            backgroundColor: Colors.red,
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.error, color: Colors.red, size: 48),
+            title: Text(s.exportFailed),
+            content: Text('$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(s.locale == 'de' ? 'OK' : s.locale == 'ar' ? 'موافق' : 'OK'),
+              ),
+            ],
           ),
         );
       }

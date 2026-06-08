@@ -26,6 +26,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   String _lang = 'de';
   String? _lastTheme;
   SharedPreferences? _prefs;  // cached to avoid getInstance() on every tap
+  bool _showThemeWarning = false;
 
   static const _dateKey = 'daily_phrases_date';
   static const _phrasesKey = 'daily_phrases_data';
@@ -91,6 +92,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
   void _generateNew() {
     final theme = _themeCtrl.text.trim();
+    if (theme.isEmpty) {
+      // Flash red warning on the theme field
+      setState(() => _showThemeWarning = true);
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _showThemeWarning = false);
+      });
+    }
     _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
 
@@ -199,7 +207,30 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
+                      borderSide: _showThemeWarning
+                          ? const BorderSide(color: Colors.red, width: 2)
+                          : BorderSide.none,
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: _showThemeWarning
+                          ? const BorderSide(color: Colors.red, width: 2)
+                          : BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: _showThemeWarning
+                          ? const BorderSide(color: Colors.red, width: 2)
+                          : BorderSide(color: Theme.of(context).colorScheme.primary),
+                    ),
+                    helperText: _showThemeWarning
+                        ? (s.locale == 'de'
+                            ? '⚠️ Kein Thema — zufällige Phrasen werden generiert'
+                            : s.locale == 'ar'
+                                ? '⚠️ لا يوجد موضوع — سيتم توليد عبارات عشوائية'
+                                : '⚠️ No theme — generating random phrases')
+                        : null,
+                    helperStyle: const TextStyle(color: Colors.red, fontSize: 12),
                   ),
                   style: const TextStyle(fontSize: 14),
                   onSubmitted: (_) => _generateNew(),
