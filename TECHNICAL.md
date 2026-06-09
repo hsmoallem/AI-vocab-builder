@@ -1,6 +1,6 @@
 # AI Vocab Builder — Technical Documentation
 
-> Last updated: June 8, 2026 — stable-2026-06-08
+> Last updated: June 8, 2026 — v1.0
 
 ---
 
@@ -61,15 +61,12 @@
 | `flutter_test` | SDK | Unit + widget testing |
 | `flutter_lints` | any | Code linting |
 | `flutter_launcher_icons` | ^0.14.4 | Generate Android launcher icon |
-| `flutter_native_splash` | ^2.4.1 | Generate Android native splash screen |
 
 ### Assets
 
 | Asset | Purpose |
 |-------|---------|
 | `assets/icon/app_icon.png` | App launcher icon (blue circuit-board "A") |
-| `assets/splash_screen.png` | Native splash screen (VocabView logo on dark bg) |
-| `assets/login_header.png` | Login screen header image (VocabView logo) |
 
 ---
 
@@ -139,7 +136,7 @@ lib/
 │   └── word_provider.dart     # ChangeNotifier — CRUD, sort, search, translate
 ├── screens/
 │   ├── home_screen.dart       # Tab nav (Reader / Daily / My Words) + settings gear + account menu
-│   ├── login_screen.dart      # Google + Anonymous (VocabView logo header)
+│   ├── login_screen.dart      # Google + Anonymous
 │   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
 │   ├── daily_phrases_screen.dart # AI 5 phrases/day, phrase language dropdown, save, theme, regenerate
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
@@ -447,9 +444,6 @@ flutter clean && flutter pub get && flutter run
 
 # Generate app launcher icon (after changing assets/icon/app_icon.png)
 dart run flutter_launcher_icons
-
-# Generate native splash screen (after changing assets/splash_screen.png)
-dart run flutter_native_splash:create
 
 # Build release APK
 flutter build apk --release

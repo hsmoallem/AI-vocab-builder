@@ -79,8 +79,6 @@
 - Server-side prompt building — proxy is not an open LLM relay
 - X-App-Token auth + per-IP rate limiting (30 req/min)
 - App launcher icon (blue circuit-board "A")
-- Native splash screen (VocabView logo on dark background)
-- Login screen header image (VocabView logo)
 - Network security config (cleartext HTTP to proxy IP only)
 
 ### Phase 6 — Monetization (⬜ Planned)
@@ -138,7 +136,7 @@ User reads PDF → taps unknown word → Proxy → DeepSeek translates → saved
 
 ### First-Time User
 ```
-Open app → Splash screen (VocabView logo) → Login Screen
+Open app → Login Screen
   ├─ "Sign in with Google" → one tap → Home Screen
   └─ "Continue without account" → warning → Home Screen (anonymous)
 ```
