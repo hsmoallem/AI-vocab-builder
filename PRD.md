@@ -83,11 +83,13 @@
 - Network security config (cleartext HTTP to proxy IP only)
 
 ### Phase 6 — Monetization (⬜ Planned)
-- AdMob banner ads
-- Interstitial ads (on word add)
-- "Remove Ads" in-app purchase
-- Free tier: full features + ads
-- Paid tier: no ads
+- **Free tier:** Full features + AdMob banner ads + occasional interstitials
+- **Premium:** No ads, 3-day free trial, then subscription
+  - Monthly: **$4/month** (auto-renews)
+  - 6 months: **$15** ($2.50/mo — save 37%)
+  - Yearly: **$25** ($2.08/mo — save 48%)
+- Google Play Billing (subscriptions managed by Google)
+- No ad frequency changes during trial
 
 ---
 
