@@ -50,7 +50,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/app_icon.png
-    - assets/login_header.png
     - assets/splash_screen.png
 
 flutter_launcher_icons:
