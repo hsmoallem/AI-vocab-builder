@@ -66,6 +66,8 @@
 
 ### Branding (June 2026 — ✅ Complete)
 - **Launcher icon:** Blue circuit-board "A" on blue gradient
+- **Native splash:** Android native splash — VocabView logo on dark background (`#121212`)
+- **Login header:** Simple `Icons.menu_book_rounded` icon
 
 ### Current Technical Stack
 
@@ -80,6 +82,7 @@
 | Cloud DB | **Firestore** (backup/restore) |
 | TTS | **Native Android** TextToSpeech (MethodChannel) |
 | Icons | **flutter_launcher_icons** |
+| Splash | **flutter_native_splash** |
 
 > Full details: [`TECHNICAL.md`](TECHNICAL.md)
 
@@ -100,6 +103,7 @@ flutter run       # run on phone
 | `git pull && flutter run` | **Most updates** — code changes only |
 | `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) |
 | `git pull && dart run flutter_launcher_icons` | **App icon changed** |
+| `git pull && dart run flutter_native_splash:create` | **Splash screen changed** |
 
 ---
 

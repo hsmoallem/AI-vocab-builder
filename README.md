@@ -10,7 +10,7 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 - 📅 **Daily Phrases** — 5 AI phrases/day, theme-based generation, configurable phrase language, save to My Words
 - 🔊 **Text-to-Speech** — native Android pronunciation
 - ☁️ **Cloud Backup** — Google sign-in → Firestore backup/restore
-- 🎨 **App Branding** — custom launcher icon (blue circuit-board "A")
+- 🎨 **App Branding** — custom launcher icon, native Android splash screen
 - 🌍 **Multi-language UI** — English, Deutsch, العربية
 
 ## Project Info
@@ -24,7 +24,8 @@ Turn any PDF into a personal language lesson. Add words while you read, AI trans
 | **DeepSeek API** | Via secure proxy server (key never in APK) |
 | **Firebase Config** | `android/app/google-services.json` (gitignored, never committed) |
 | **App Icon** | Blue circuit-board "A" on blue gradient |
-| **Stable Tag** | `v1.0` |
+| **Splash Screen** | Native Android only — VocabView logo on dark background |
+| **Stable Tag** | `stable-2026-06-08` |
 
 ## Authentication
 

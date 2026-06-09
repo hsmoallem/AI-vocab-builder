@@ -1,9 +1,9 @@
 # AI Vocab Builder — Product Requirements Document
 
-> **Version:** 1.1.0  
+> **Version:** 1.0.0  
 > **Date:** June 8, 2026  
 > **Status:** Phases 1-5 Complete, Phase 6 Planned  
-> **Stable tag:** `stable-2026-06-08`
+> **Stable tag:** `v1.0` / `stable-2026-06-08`
 
 ---
 
@@ -79,6 +79,7 @@
 - Server-side prompt building — proxy is not an open LLM relay
 - X-App-Token auth + per-IP rate limiting (30 req/min)
 - App launcher icon (blue circuit-board "A")
+- Native Android splash screen (VocabView logo on dark background)
 - Network security config (cleartext HTTP to proxy IP only)
 
 ### Phase 6 — Monetization (⬜ Planned)

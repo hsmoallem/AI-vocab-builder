@@ -1,6 +1,6 @@
 # AI Vocab Builder — Technical Documentation
 
-> Last updated: June 8, 2026 — v1.0
+> Last updated: June 8, 2026 — v1.0 (stable-2026-06-08)
 
 ---
 
@@ -61,12 +61,14 @@
 | `flutter_test` | SDK | Unit + widget testing |
 | `flutter_lints` | any | Code linting |
 | `flutter_launcher_icons` | ^0.14.4 | Generate Android launcher icon |
+| `flutter_native_splash` | ^2.4.1 | Generate Android native splash screen |
 
 ### Assets
 
 | Asset | Purpose |
 |-------|---------|
 | `assets/icon/app_icon.png` | App launcher icon (blue circuit-board "A") |
+| `assets/splash_screen.png` | Native splash screen image (VocabView logo on dark bg) |
 
 ---
 
@@ -136,7 +138,7 @@ lib/
 │   └── word_provider.dart     # ChangeNotifier — CRUD, sort, search, translate
 ├── screens/
 │   ├── home_screen.dart       # Tab nav (Reader / Daily / My Words) + settings gear + account menu
-│   ├── login_screen.dart      # Google + Anonymous
+│   ├── login_screen.dart      # Google + Anonymous (book icon header)
 │   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
 │   ├── daily_phrases_screen.dart # AI 5 phrases/day, phrase language dropdown, save, theme, regenerate
 │   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
@@ -318,7 +320,7 @@ The DeepSeek API key lives **only on the proxy server** — never in the repo, n
 SharedPreferences:
   daily_phrases_date       = "2026-06-08"
   daily_phrases_data       = '[{"phrase":"Guten Morgen","memorized":true}, ...]'
-  daily_phrase_language    = "de"     (NEW — separate from translate_target_lang)
+  daily_phrase_language    = "de"     (separate from translate_target_lang)
   daily_phrases_lang       = "de"     (legacy key, still read as fallback)
 ```
 
@@ -429,7 +431,9 @@ flutter test
 | **Export feature removed** | JSON export wrote to sandboxed directory — inaccessible to user |
 | **All colors via ColorScheme tokens** | Dark theme fully readable — no hardcoded `Colors.*` values |
 | **Anonymous restrictions** | No cloud backup — data loss risk clearly warned |
-| **Stable checkpoint** | Tag `stable-2026-06-08` — commit `3639653`. `git checkout stable-2026-06-08` to revert here. |
+| **Login icon header** | `Icons.menu_book_rounded` — simple, clean, no external image dependency |
+| **Native splash only** | `flutter_native_splash` — no Flutter splash widget, minimal boot delay |
+| **Stable checkpoint** | Tag `stable-2026-06-08` → `v1.0`. `git checkout stable-2026-06-08` to revert here. |
 
 ---
 
@@ -444,6 +448,9 @@ flutter clean && flutter pub get && flutter run
 
 # Generate app launcher icon (after changing assets/icon/app_icon.png)
 dart run flutter_launcher_icons
+
+# Generate native splash screen (after changing assets/splash_screen.png)
+dart run flutter_native_splash:create
 
 # Build release APK
 flutter build apk --release
