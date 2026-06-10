@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/word.dart';
 import '../services/database_service.dart';
 import '../services/translation_service.dart';
@@ -57,6 +58,7 @@ class WordProvider extends ChangeNotifier {
       word: word,
       sourceLang: from,
       targetLang: to,
+      firebaseUid: FirebaseAuth.instance.currentUser?.uid,
     );
   }
 

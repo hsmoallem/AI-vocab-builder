@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_strings.dart';
 import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
@@ -91,6 +92,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         if (jsonStr != null) {
           final list = jsonDecode(jsonStr) as List;
           _phrases = list.map((j) => DailyPhrase.fromJson(j)).toList();
+          // Filter out blocked phrases from cached data
+          _phrases!.removeWhere(
+            (p) => _blockedPhrases.any(
+              (b) => b.trim().toLowerCase() == p.phrase.trim().toLowerCase(),
+            ),
+          );
           _isLoading = false;
           setState(() {});
           return;
@@ -98,11 +105,13 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       }
 
       // Generate phrases, filter blocked ones, retry if < 5 (max 3 attempts)
+      final uid = FirebaseAuth.instance.currentUser?.uid;
       List<DailyPhrase> phrases = [];
       for (int attempt = 0; attempt < 3; attempt++) {
         final batch = await _translator.generateDailyPhrases(
           lang: _phraseLang,
           theme: theme,
+          firebaseUid: uid,
         );
         // Filter out blocked phrases (case-insensitive, trimmed)
         phrases.addAll(batch.where(
@@ -194,7 +203,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     }
 
     try {
-      final result = await _translator.translate(word: phrase.phrase, sourceLang: _phraseLang, targetLang: targetLang);
+      final result = await _translator.translate(
+        word: phrase.phrase,
+        sourceLang: _phraseLang,
+        targetLang: targetLang,
+        firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+      );
       final m = result.meanings.isNotEmpty ? result.meanings.first : Meaning(text: phrase.phrase, article: null, exampleSource: '', exampleTarget: '');
 
       await provider.addWord(
@@ -250,6 +264,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         );
       });
     }
+    _saveToPrefs(); // update the cache so blocked phrase stays gone
   }
 
   // ── UI ───────────────────────────────────────────────────────────

@@ -28,19 +28,22 @@ class TranslationService {
     required String word,
     String sourceLang = _defaultSourceLang,
     String targetLang = _defaultTargetLang,
+    String? firebaseUid,
   }) async {
+    final body = <String, dynamic>{
+      'word': word,
+      'sourceLang': sourceLang,
+      'targetLang': targetLang,
+      'mode': 'translate',
+    };
+    if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: {
         'Content-Type': 'application/json',
         'X-App-Token': _appToken,
       },
-      body: jsonEncode({
-        'word': word,
-        'sourceLang': sourceLang,
-        'targetLang': targetLang,
-        'mode': 'translate',
-      }),
+      body: jsonEncode(body),
     ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
@@ -56,12 +59,14 @@ class TranslationService {
   Future<List<DailyPhrase>> generateDailyPhrases({
     String lang = 'de',
     String? theme,
+    String? firebaseUid,
   }) async {
     final body = <String, dynamic>{
       'sourceLang': lang,
       'targetLang': lang,  // not used for phrases; mode=phrases ignores it
       'mode': 'phrases',
     };
+    if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (theme != null && theme.trim().isNotEmpty) {
       body['theme'] = theme.trim();
     }
