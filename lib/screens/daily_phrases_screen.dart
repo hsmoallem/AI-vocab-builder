@@ -25,6 +25,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   bool _isRefreshing = false;
   String? _error;
   String _phraseLang = 'de';          // language phrases are generated in
+  List<String> _blockedPhrases = [];   // phrases the user never wants to see again
   bool _showThemeWarning = false;
   SharedPreferences? _prefs;
 
@@ -33,6 +34,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   static const _phraseLangKey = 'daily_phrase_language';  // new key
   static const _legacyLangKey = 'daily_phrases_lang';     // old fallback key
   static const _savedKey = 'daily_phrases_saved';
+  static const _blockedKey = 'daily_phrases_blocked';
 
   String _today() {
     final now = DateTime.now();
@@ -71,6 +73,12 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
           ?? _prefs!.getString(_legacyLangKey)
           ?? 'de';
 
+      // Load blocked phrases list
+      final blockedJson = _prefs!.getString(_blockedKey);
+      if (blockedJson != null && blockedJson.isNotEmpty) {
+        _blockedPhrases = List<String>.from(jsonDecode(blockedJson));
+      }
+
       // Restore saved indices from persistent storage
       final savedJson = _prefs!.getString(_savedKey);
       if (savedJson != null) {
@@ -89,11 +97,24 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         }
       }
 
-      final phrases = await _translator.generateDailyPhrases(
-        lang: _phraseLang,
-        theme: theme,
-      );
-      _phrases = phrases;
+      // Generate phrases, filter blocked ones, retry if < 5 (max 3 attempts)
+      List<DailyPhrase> phrases = [];
+      for (int attempt = 0; attempt < 3; attempt++) {
+        final batch = await _translator.generateDailyPhrases(
+          lang: _phraseLang,
+          theme: theme,
+        );
+        // Filter out blocked phrases (case-insensitive, trimmed)
+        phrases.addAll(batch.where(
+          (p) => !_blockedPhrases.any(
+            (b) => b.trim().toLowerCase() == p.phrase.trim().toLowerCase(),
+          ),
+        ));
+        if (phrases.length >= 5) break;
+        // Pause between retries so the AI gets a different seed
+        await Future.delayed(const Duration(milliseconds: 600));
+      }
+      _phrases = phrases.take(5).toList();
       _isLoading = false;
       _isRefreshing = false;
       setState(() {});
@@ -213,6 +234,21 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
     if (mounted) {
       setState(() => _isRefreshing = true);
       _loadPhrases(forceRefresh: true);
+    }
+  }
+
+  /// Block a phrase forever — add to blocked list, persist, remove from view.
+  void _blockPhrase(DailyPhrase phrase) async {
+    _blockedPhrases.add(phrase.phrase);
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    await prefs.setString(_blockedKey, jsonEncode(_blockedPhrases));
+    if (mounted) {
+      setState(() {
+        _phrases!.removeWhere(
+          (p) => p.phrase.trim().toLowerCase() == phrase.phrase.trim().toLowerCase(),
+        );
+      });
     }
   }
 
@@ -570,6 +606,25 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                           child: Icon(Icons.check_circle,
                               color: Theme.of(context).colorScheme.primary, size: 20),
                         ),
+                      Tooltip(
+                        message: s.locale == 'de'
+                            ? 'Nie wieder anzeigen'
+                            : s.locale == 'ar'
+                                ? 'لا تعرض مرة أخرى'
+                                : 'Never show again',
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.visibility_off_outlined,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                          ),
+                          onPressed: () => _blockPhrase(phrase),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minWidth: 28, minHeight: 28),
+                        ),
+                      ),
                     ],
                   ),
                 ),
