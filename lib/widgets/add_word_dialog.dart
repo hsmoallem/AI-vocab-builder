@@ -95,9 +95,10 @@ class _AddWordDialogState extends State<AddWordDialog> {
         _wordController.text = corrected;
       }
 
-      // If an article was returned, prepend it to the word field
+      // Prepend the article (der/die/das) ONLY when the source language is
+      // German — articles are German-only, so never add them for English etc.
       final article = result.meanings.firstOrNull?.article;
-      if (article != null && article.isNotEmpty) {
+      if (_sourceLang == 'de' && article != null && article.isNotEmpty) {
         final currentWord = _wordController.text.trim();
         if (!currentWord.startsWith(article)) {
           _wordController.text = '$article $currentWord';
