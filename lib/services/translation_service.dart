@@ -60,6 +60,7 @@ class TranslationService {
     String lang = 'de',
     String? theme,
     String? firebaseUid,
+    List<String>? exclude,
   }) async {
     final body = <String, dynamic>{
       'sourceLang': lang,
@@ -69,6 +70,11 @@ class TranslationService {
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (theme != null && theme.trim().isNotEmpty) {
       body['theme'] = theme.trim();
+    }
+    // Phrases the server should NOT repeat (already shown/blocked). The proxy
+    // injects these into the prompt to force fresh, non-duplicate phrases.
+    if (exclude != null && exclude.isNotEmpty) {
+      body['exclude'] = exclude.take(40).toList();
     }
 
     final response = await http.post(
@@ -120,8 +126,10 @@ class Meaning {
 /// Result from DeepSeek translation — contains one or more meanings.
 class TranslationResult {
   final List<Meaning> meanings;
+  // Corrected spelling of the source word, if the server provides one.
+  final String? corrected;
 
-  TranslationResult({required this.meanings});
+  TranslationResult({required this.meanings, this.corrected});
 
   String get translation => meanings.map((m) => m.text).join(', ');
 
@@ -141,6 +149,8 @@ class TranslationResult {
 
   /// Parse from the proxy's JSON response — proxy returns parsed JSON directly.
   factory TranslationResult.fromMeanings(Map<String, dynamic> map) {
+    // Optional corrected spelling of the source word (server may include it).
+    final corrected = map['corrected']?.toString();
     if (map['meanings'] is List) {
       final meanings = (map['meanings'] as List).map((m) {
         final article = m['article']?.toString();
@@ -152,13 +162,13 @@ class TranslationResult {
         );
       }).toList();
       if (meanings.isNotEmpty) {
-        return TranslationResult(meanings: meanings);
+        return TranslationResult(meanings: meanings, corrected: corrected);
       }
     }
     // Fallback
     return TranslationResult(meanings: [
       Meaning(text: map.toString(), exampleSource: '', exampleTarget: ''),
-    ]);
+    ], corrected: corrected);
   }
 }
 

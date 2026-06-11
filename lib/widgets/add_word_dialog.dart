@@ -29,7 +29,10 @@ class _AddWordDialogState extends State<AddWordDialog> {
     super.initState();
     // Default "To" language to the user's saved setting
     final savedTarget = context.read<LocaleProvider>().targetLang;
-    if (AppStrings.targetLanguages.containsKey(savedTarget)) {
+    // Use the saved target only if it's valid AND not the same as the source,
+    // so the dialog never opens with From == To.
+    if (AppStrings.targetLanguages.containsKey(savedTarget) &&
+        savedTarget != _sourceLang) {
       _targetLang = savedTarget;
     }
     if (widget.initialWord != null && widget.initialWord!.isNotEmpty) {
@@ -82,6 +85,15 @@ class _AddWordDialogState extends State<AddWordDialog> {
           exampleTarget: TextEditingController(text: m.exampleTarget),
         )).toList();
       });
+
+      // If the server returned a corrected spelling, replace the typed word
+      // so the properly-spelled form is what gets saved.
+      final corrected = result.corrected?.trim();
+      if (corrected != null &&
+          corrected.isNotEmpty &&
+          corrected.toLowerCase() != word.toLowerCase()) {
+        _wordController.text = corrected;
+      }
 
       // If an article was returned, prepend it to the word field
       final article = result.meanings.firstOrNull?.article;
@@ -212,16 +224,11 @@ class _AddWordDialogState extends State<AddWordDialog> {
                         labelText: 'From',
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'de', child: Text('🇩🇪 German')),
-                        DropdownMenuItem(value: 'en', child: Text('🇬🇧 English')),
-                        DropdownMenuItem(value: 'fr', child: Text('🇫🇷 French')),
-                        DropdownMenuItem(value: 'es', child: Text('🇪🇸 Spanish')),
-                        DropdownMenuItem(value: 'ar', child: Text('🇸🇦 Arabic')),
-                        DropdownMenuItem(value: 'tr', child: Text('🇹🇷 Turkish')),
-                        DropdownMenuItem(value: 'ru', child: Text('🇷🇺 Russian')),
-                        DropdownMenuItem(value: 'zh', child: Text('🇨🇳 Chinese')),
-                      ],
+                      // Same list as "To" so the swap below can never produce
+                      // a value that this dropdown doesn't contain (would crash).
+                      items: AppStrings.targetLanguages.entries
+                          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                          .toList(),
                       onChanged: (val) => setState(() {
                         if (val == _targetLang) {
                           // Swap — never allow same source and target

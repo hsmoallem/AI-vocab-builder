@@ -107,11 +107,18 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       // Generate phrases, filter blocked ones, retry if < 5 (max 3 attempts)
       final uid = FirebaseAuth.instance.currentUser?.uid;
       List<DailyPhrase> phrases = [];
+      // Tell the server which phrases NOT to repeat: blocked ones, the batch
+      // currently on screen, and anything gathered so far this run.
+      final seen = <String>{
+        ..._blockedPhrases,
+        ...?_phrases?.map((p) => p.phrase),
+      };
       for (int attempt = 0; attempt < 3; attempt++) {
         final batch = await _translator.generateDailyPhrases(
           lang: _phraseLang,
           theme: theme,
           firebaseUid: uid,
+          exclude: [...seen, ...phrases.map((p) => p.phrase)],
         );
         // Filter out blocked phrases (case-insensitive, trimmed)
         phrases.addAll(batch.where(
