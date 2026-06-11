@@ -222,7 +222,13 @@ class _AddWordDialogState extends State<AddWordDialog> {
                         DropdownMenuItem(value: 'ru', child: Text('🇷🇺 Russian')),
                         DropdownMenuItem(value: 'zh', child: Text('🇨🇳 Chinese')),
                       ],
-                      onChanged: (val) => setState(() => _sourceLang = val!),
+                      onChanged: (val) => setState(() {
+                        if (val == _targetLang) {
+                          // Swap — never allow same source and target
+                          _targetLang = _sourceLang;
+                        }
+                        _sourceLang = val!;
+                      }),
                     ),
                   ),
                   const Padding(
@@ -239,7 +245,13 @@ class _AddWordDialogState extends State<AddWordDialog> {
                       items: AppStrings.targetLanguages.entries
                           .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                           .toList(),
-                      onChanged: (val) => setState(() => _targetLang = val!),
+                      onChanged: (val) => setState(() {
+                        if (val == _sourceLang) {
+                          // Swap — never allow same source and target
+                          _sourceLang = _targetLang;
+                        }
+                        _targetLang = val!;
+                      }),
                     ),
                   ),
                 ],
