@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
+import '../services/tts_service.dart';
 
 class FlashcardScreen extends StatefulWidget {
   const FlashcardScreen({super.key});
@@ -15,6 +16,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
   late AnimationController _flipController;
   late Animation<double> _flipAnimation;
   bool _isFlipped = false;
+  final TtsService _tts = TtsService();
 
   int _currentIndex = 0;
   late PageController _pageController;
@@ -208,10 +210,21 @@ class _FlashcardScreenState extends State<FlashcardScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                word.word,
-                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    word.word,
+                    style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up, size: 28),
+                    tooltip: 'Listen',
+                    onPressed: () => _tts.speak(word.word, language: word.sourceLang),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Container(
@@ -272,14 +285,26 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               const SizedBox(height: 12),
 
               // Translation
-              Text(
-                word.translation,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                textAlign: TextAlign.center,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Expanded(
+                    child: Text(
+                      word.translation,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up, size: 28),
+                    tooltip: 'Listen',
+                    onPressed: () => _tts.speak(word.translation, language: word.targetLang),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
 
