@@ -308,8 +308,11 @@ class _FlashcardScreenState extends State<FlashcardScreen>
             // residual perspective matrix interferes with gesture hit-testing,
             // which is what stopped the back's scroll view from scrolling. Only
             // the in-between animation frames use the 3D transform.
-            if (v >= 1.0) return _buildBack(context, word);
-            if (v <= 0.0) return _buildFront(context, word);
+            // SizedBox.expand forces each face to FILL the page height, so the
+            // back's SingleChildScrollView gets a bounded height and scrolls
+            // (otherwise it sizes to its content and overflows off-screen).
+            if (v >= 1.0) return SizedBox.expand(child: _buildBack(context, word));
+            if (v <= 0.0) return SizedBox.expand(child: _buildFront(context, word));
 
             final angle = v * 3.14159; // pi radians
             final isShowingFront = v <= 0.5;
@@ -319,11 +322,11 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 ..setEntry(3, 2, 0.001)
                 ..rotateY(angle),
               child: isShowingFront
-                  ? _buildFront(context, word)
+                  ? SizedBox.expand(child: _buildFront(context, word))
                   : Transform(
                       alignment: Alignment.center,
                       transform: Matrix4.identity()..rotateY(3.14159),
-                      child: _buildBack(context, word),
+                      child: SizedBox.expand(child: _buildBack(context, word)),
                     ),
             );
           },
