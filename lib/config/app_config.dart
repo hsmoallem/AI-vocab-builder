@@ -3,9 +3,9 @@
 /// Central place for app-wide constants.
 ///
 /// ## Translation
-/// All translation requests go through the proxy server at
-/// 13.140.134.57:9000/translate — the DeepSeek key lives there,
-/// never in the APK. Safe to share.
+/// All translation requests go over HTTPS through the proxy at
+/// https://api.houssammoallem.com/translate (Cloudflare) — the DeepSeek key
+/// lives there, never in the APK. Safe to share.
 ///
 /// ## Language defaults
 /// German → English is the default because the app was built for

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext HTTP to our proxy server (DeepSeek key lives there, not in the APK) -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">13.140.134.57</domain>
-    </domain-config>
+    <!-- All traffic is HTTPS (proxy is api.houssammoallem.com via Cloudflare;
+         Firebase is HTTPS). Cleartext HTTP is disallowed app-wide. -->
+    <base-config cleartextTrafficPermitted="false"/>
 </network-security-config>
