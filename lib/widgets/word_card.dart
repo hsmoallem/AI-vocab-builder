@@ -22,13 +22,17 @@ class WordCard extends StatelessWidget {
     this.onRegenerate,
   });
 
-  /// Combined text for the copy button: word + translation + all examples.
-  String _copyText() {
-    final parts = <String>[word.word];
-    if (word.translation.isNotEmpty) parts.add(word.translation);
-    if (word.exampleSource.isNotEmpty) parts.add(word.exampleSource);
-    if (word.exampleTarget.isNotEmpty) parts.add(word.exampleTarget);
-    return parts.join('\n');
+  /// A compact copy icon for a single piece of text.
+  Widget _copyIcon(BuildContext context, String text, String label) {
+    return IconButton(
+      icon: const Icon(Icons.copy, size: 16),
+      tooltip: 'Copy $label',
+      onPressed: () => copyToClipboard(context, text, label: label),
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+    );
   }
 
   @override
@@ -66,17 +70,8 @@ class WordCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Copy word + translation + examples
-                IconButton(
-                  icon: const Icon(Icons.copy, size: 19),
-                  tooltip: 'Copy word, translation & examples',
-                  onPressed: () =>
-                      copyToClipboard(context, _copyText(), label: 'Word'),
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
+                // Copy the word only
+                _copyIcon(context, word.word, 'word'),
                 // Regenerate example sentence(s)
                 if (onRegenerate != null)
                   IconButton(
@@ -117,14 +112,22 @@ class WordCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // Translation
+            // Translation — with its own copy icon
             if (word.translation.isNotEmpty)
-              Text(
-                word.translation,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      word.translation,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  _copyIcon(context, word.translation, 'translation'),
+                ],
               ),
             const SizedBox(height: 8),
 
@@ -175,6 +178,7 @@ class WordCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    _copyIcon(context, word.exampleSource, 'example'),
                   ],
                 ),
               ),
@@ -213,6 +217,7 @@ class WordCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    _copyIcon(context, word.exampleTarget, 'example'),
                   ],
                 ),
               ),

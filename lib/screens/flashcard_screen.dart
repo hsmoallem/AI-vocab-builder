@@ -54,6 +54,18 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     return parts.join('\n');
   }
 
+  /// Compact copy icon for a single piece of text on the card.
+  Widget _copyIconBtn(String text, String label, {double size = 18}) {
+    return IconButton(
+      icon: Icon(Icons.copy, size: size),
+      tooltip: 'Copy $label',
+      onPressed: () => copyToClipboard(context, text, label: label),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+    );
+  }
+
   Future<void> _regenerate(Word word) async {
     setState(() => _regenLoading = true);
     try {
@@ -291,9 +303,16 @@ class _FlashcardScreenState extends State<FlashcardScreen>
         child: AnimatedBuilder(
           animation: _flipAnimation,
           builder: (context, child) {
-            final angle = _flipAnimation.value * 3.14159; // pi radians
-            final isShowingFront = _flipAnimation.value <= 0.5;
+            final v = _flipAnimation.value;
+            // At rest, render the face WITHOUT the perspective transform. A
+            // residual perspective matrix interferes with gesture hit-testing,
+            // which is what stopped the back's scroll view from scrolling. Only
+            // the in-between animation frames use the 3D transform.
+            if (v >= 1.0) return _buildBack(context, word);
+            if (v <= 0.0) return _buildFront(context, word);
 
+            final angle = v * 3.14159; // pi radians
+            final isShowingFront = v <= 0.5;
             return Transform(
               alignment: Alignment.center,
               transform: Matrix4.identity()
@@ -356,6 +375,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       onPressed: () =>
                           _tts.speak(word.word, language: word.sourceLang),
                     ),
+                    _copyIconBtn(word.word, 'word', size: 22),
                   ],
                 ),
               ),
@@ -437,6 +457,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                     tooltip: 'Listen',
                     onPressed: () => _tts.speak(word.translation, language: word.targetLang),
                   ),
+                  _copyIconBtn(word.translation, 'translation', size: 22),
                 ],
               ),
               const SizedBox(height: 8),
@@ -491,6 +512,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                                 ),
                               ),
                             ),
+                            _copyIconBtn(word.exampleSource, 'example', size: 16),
                           ],
                         ),
                       if (word.exampleTarget.isNotEmpty) ...[
@@ -516,6 +538,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                                     color: Theme.of(context).colorScheme.onSurface),
                               ),
                             ),
+                            _copyIconBtn(word.exampleTarget, 'example', size: 16),
                           ],
                         ),
                       ],
@@ -682,6 +705,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       fontWeight: FontWeight.bold,
                       color: cs.onSurfaceVariant)),
               const Spacer(),
+              if (note.isNotEmpty) _copyIconBtn(note, 'note', size: 16),
               IconButton(
                 icon: Icon(note.isEmpty ? Icons.add : Icons.edit, size: 16),
                 tooltip: note.isEmpty ? 'Add note' : 'Edit note',
