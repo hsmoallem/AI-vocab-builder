@@ -7,6 +7,7 @@ import 'daily_phrases_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
+import 'bulk_import_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
@@ -53,6 +54,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.playlist_add),
+            tooltip: 'Bulk import',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BulkImportScreen()),
             ),
           ),
           IconButton(

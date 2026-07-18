@@ -25,6 +25,9 @@ dependencies:
   # Settings storage
   shared_preferences: ^2.3.0
 
+  # Bulk import — pick a .txt / .csv word list
+  file_picker: ^8.0.0
+
   # PDF — render natively + extract text
   flutter_pdfview: any
   syncfusion_flutter_pdf: any

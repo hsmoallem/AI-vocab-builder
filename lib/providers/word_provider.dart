@@ -7,6 +7,9 @@ import '../services/translation_service.dart';
 enum SortMode { newestFirst, alphabetical }
 enum LoadState { idle, loading, loaded, error }
 
+/// Outcome of importing one word during a bulk import.
+enum ImportStatus { added, duplicate, failed }
+
 class WordProvider extends ChangeNotifier {
   List<Word> _words = [];
   SortMode _sortMode = SortMode.newestFirst;
@@ -84,6 +87,85 @@ class WordProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Translate ONE word and persist it as part of a bulk import.
+  ///
+  /// This deliberately reuses the exact same translation + example-generation
+  /// workflow as the single-word Add flow (see [AddWordDialog]): the same
+  /// `translate()` call, the same corrected-spelling replacement, the same
+  /// German-article prefix rule, and the same meaning/example formatting.
+  ///
+  /// It does NOT reload the word list — the caller reloads once after the whole
+  /// batch (avoids an O(n²) reload per word). Never throws: failures come back
+  /// as an [ImportOutcome] with [ImportStatus.failed].
+  Future<ImportOutcome> importWord({
+    required String input,
+    required String from,
+    required String to,
+  }) async {
+    final word = input.trim();
+    if (word.isEmpty) {
+      return ImportOutcome(input, ImportStatus.failed, error: 'Empty line');
+    }
+    try {
+      final result = await _translationService.translate(
+        word: word,
+        sourceLang: from,
+        targetLang: to,
+        firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+      );
+
+      // Corrected spelling — replace the typed word with the server's fix.
+      String finalWord = word;
+      final corrected = result.corrected?.trim();
+      if (corrected != null &&
+          corrected.isNotEmpty &&
+          corrected.toLowerCase() != word.toLowerCase()) {
+        finalWord = corrected;
+      }
+
+      // Prepend the article (der/die/das) ONLY when the source is German.
+      final article =
+          result.meanings.isNotEmpty ? result.meanings.first.article : null;
+      if (from == 'de' &&
+          article != null &&
+          article.isNotEmpty &&
+          !finalWord.startsWith(article)) {
+        finalWord = '$article $finalWord';
+      }
+
+      // Build stored fields exactly like the Add dialog's _save().
+      final translation = result.meanings
+          .where((m) => m.text.trim().isNotEmpty)
+          .map((m) => m.text.trim())
+          .join(', ');
+      final exampleSource = result.meanings
+          .where((m) => m.exampleSource.trim().isNotEmpty)
+          .map((m) => '• ${m.exampleSource.trim()}')
+          .join('\n');
+      final exampleTarget = result.meanings
+          .where((m) => m.exampleTarget.trim().isNotEmpty)
+          .map((m) => '• ${m.exampleTarget.trim()}')
+          .join('\n');
+
+      if (translation.isEmpty) {
+        return ImportOutcome(input, ImportStatus.failed,
+            error: 'No translation returned');
+      }
+
+      await DatabaseService.insertWord(Word(
+        word: finalWord,
+        translation: translation,
+        exampleSource: exampleSource,
+        exampleTarget: exampleTarget,
+        sourceLang: from,
+        targetLang: to,
+      ));
+      return ImportOutcome(input, ImportStatus.added, savedWord: finalWord);
+    } catch (e) {
+      return ImportOutcome(input, ImportStatus.failed, error: e.toString());
+    }
+  }
+
   /// Add a word from a [Word] object (used by cloud restore).
   Future<bool> addWordObject(Word word) async {
     // Don't carry over the old ID — let SQLite assign a new one.
@@ -123,4 +205,14 @@ class WordProvider extends ChangeNotifier {
     }
     return await DatabaseService.searchWords(query);
   }
+}
+
+/// Result of importing a single word during a bulk import.
+class ImportOutcome {
+  final String input; // the raw word from the pasted/loaded list
+  final ImportStatus status;
+  final String? savedWord; // final stored form (may include article/correction)
+  final String? error; // failure reason, if any
+
+  ImportOutcome(this.input, this.status, {this.savedWord, this.error});
 }
