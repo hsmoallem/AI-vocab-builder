@@ -4,6 +4,7 @@ import '../providers/word_provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/translation_service.dart';
+import '../services/tts_service.dart';
 
 class AddWordDialog extends StatefulWidget {
   final String? initialWord;
@@ -303,6 +304,8 @@ class _AddWordDialogState extends State<AddWordDialog> {
                     meaning: m.meaning,
                     exampleSource: m.exampleSource,
                     exampleTarget: m.exampleTarget,
+                    sourceLang: _sourceLang,
+                    targetLang: _targetLang,
                   );
                 }),
               ],
@@ -364,6 +367,8 @@ class _MeaningCard extends StatelessWidget {
   final TextEditingController meaning;
   final TextEditingController exampleSource;
   final TextEditingController exampleTarget;
+  final String sourceLang;
+  final String targetLang;
 
   const _MeaningCard({
     required this.index,
@@ -372,10 +377,13 @@ class _MeaningCard extends StatelessWidget {
     required this.meaning,
     required this.exampleSource,
     required this.exampleTarget,
+    required this.sourceLang,
+    required this.targetLang,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tts = TtsService();
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 1,
@@ -436,33 +444,69 @@ class _MeaningCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up, size: 18),
+                  tooltip: 'Listen',
+                  onPressed: () => tts.speak(meaning.text, language: targetLang),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
               ],
             ),
             const SizedBox(height: 8),
 
             // Examples
-            TextField(
-              controller: exampleSource,
-              decoration: const InputDecoration(
-                labelText: 'Example (original)',
-                prefixIcon: Icon(Icons.format_quote, size: 18),
-                isDense: true,
-                border: UnderlineInputBorder(),
-              ),
-              style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
-              maxLines: 2,
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: exampleSource,
+                    decoration: const InputDecoration(
+                      labelText: 'Example (original)',
+                      prefixIcon: Icon(Icons.format_quote, size: 18),
+                      isDense: true,
+                      border: UnderlineInputBorder(),
+                    ),
+                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+                    maxLines: 2,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up, size: 16),
+                  tooltip: 'Listen',
+                  onPressed: () => tts.speak(exampleSource.text, language: sourceLang),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
-            TextField(
-              controller: exampleTarget,
-              decoration: const InputDecoration(
-                labelText: 'Example (translated)',
-                prefixIcon: Icon(Icons.format_quote_outlined, size: 18),
-                isDense: true,
-                border: UnderlineInputBorder(),
-              ),
-              style: const TextStyle(fontSize: 13),
-              maxLines: 2,
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: exampleTarget,
+                    decoration: const InputDecoration(
+                      labelText: 'Example (translated)',
+                      prefixIcon: Icon(Icons.format_quote_outlined, size: 18),
+                      isDense: true,
+                      border: UnderlineInputBorder(),
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                    maxLines: 2,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up, size: 16),
+                  tooltip: 'Listen',
+                  onPressed: () => tts.speak(exampleTarget.text, language: targetLang),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ],
             ),
           ],
         ),

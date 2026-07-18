@@ -7,6 +7,7 @@ class WordCard extends StatelessWidget {
   final VoidCallback? onToggleReview;
   final VoidCallback? onSpeakWord;       // Speak the word in source language
   final VoidCallback? onSpeakExample;    // Speak the example in source language
+  final VoidCallback? onSpeakTargetExample; // Speak the translated example
 
   const WordCard({
     super.key,
@@ -15,6 +16,7 @@ class WordCard extends StatelessWidget {
     this.onToggleReview,
     this.onSpeakWord,
     this.onSpeakExample,
+    this.onSpeakTargetExample,
   });
 
   @override
@@ -153,12 +155,31 @@ class WordCard extends StatelessWidget {
                   color: Theme.of(context).colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  word.exampleTarget,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onTertiaryContainer,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Tooltip(
+                      message: 'Listen to translation',
+                      child: GestureDetector(
+                        onTap: onSpeakTargetExample,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 6, top: 1),
+                          child: Icon(Icons.volume_up,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onTertiaryContainer),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        word.exampleTarget,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onTertiaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

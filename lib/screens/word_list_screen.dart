@@ -193,6 +193,13 @@ class _WordListScreenState extends State<WordListScreen> {
                                         language: word.sourceLang);
                                   }
                                 : null,
+                            // 🔊 Speak target example in target language
+                            onSpeakTargetExample: word.exampleTarget.isNotEmpty
+                                ? () {
+                                    _tts.speak(word.exampleTarget,
+                                        language: word.targetLang);
+                                  }
+                                : null,
                           ),
                         );
                       },

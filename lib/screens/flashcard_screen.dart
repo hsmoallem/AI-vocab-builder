@@ -336,22 +336,54 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (word.exampleSource.isNotEmpty)
-                        Text(
-                          word.exampleSource,
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.volume_up, size: 20),
+                              tooltip: 'Listen',
+                              onPressed: () => _tts.speak(word.exampleSource, language: word.sourceLang),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                word.exampleSource,
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 14,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       if (word.exampleTarget.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         const Divider(),
-                        Text(
-                          word.exampleTarget,
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.volume_up, size: 20),
+                              tooltip: 'Listen',
+                              onPressed: () => _tts.speak(word.exampleTarget, language: word.targetLang),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                word.exampleTarget,
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.onSurface),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
