@@ -72,6 +72,61 @@ class _WordListScreenState extends State<WordListScreen> {
     }
   }
 
+  Future<void> _regenerate(BuildContext context, Word word) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('Regenerating example…'),
+          duration: Duration(seconds: 2)),
+    );
+    try {
+      await context.read<WordProvider>().regenerateExample(word);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Example regenerated'),
+              duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _removeDuplicates(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove duplicates?'),
+        content: const Text(
+          'Removes words that repeat the same text and language pair, keeping '
+          'the oldest of each. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    final removed = await context.read<WordProvider>().removeDuplicates();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(removed == 0
+              ? 'No duplicates found'
+              : 'Removed $removed duplicate${removed == 1 ? '' : 's'}'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
@@ -130,6 +185,25 @@ class _WordListScreenState extends State<WordListScreen> {
                     '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    tooltip: s.locale == 'de' ? 'Mehr' : 'More',
+                    onSelected: (v) {
+                      if (v == 'dedupe') _removeDuplicates(context);
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'dedupe',
+                        child: ListTile(
+                          leading: const Icon(Icons.cleaning_services_outlined),
+                          title: Text(s.locale == 'de'
+                              ? 'Duplikate entfernen'
+                              : 'Remove duplicates'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -182,6 +256,8 @@ class _WordListScreenState extends State<WordListScreen> {
                             onToggleReview: () {
                               context.read<WordProvider>().toggleReview(word);
                             },
+                            // Regenerate the example sentence(s) via AI
+                            onRegenerate: () => _regenerate(context, word),
                             // 🔊 Speak word in its source language
                             onSpeakWord: () {
                               _tts.speak(word.word, language: word.sourceLang);

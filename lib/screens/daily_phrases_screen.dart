@@ -7,6 +7,7 @@ import '../config/app_strings.dart';
 import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
+import '../utils/clipboard_util.dart';
 import '../services/tts_service.dart';
 import '../widgets/cefr_level_dropdown.dart';
 
@@ -615,6 +616,21 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Tooltip(
+                        message: s.locale == 'de'
+                            ? 'Kopieren'
+                            : s.locale == 'ar'
+                                ? 'نسخ'
+                                : 'Copy',
+                        child: IconButton(
+                          icon: const Icon(Icons.copy, size: 18),
+                          onPressed: () => copyToClipboard(context, phrase.phrase),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minWidth: 28, minHeight: 28),
+                        ),
+                      ),
                       Tooltip(
                         message: isSaved
                             ? (s.locale == 'de' ? 'Gespeichert ✅' : s.locale == 'ar' ? 'تم الحفظ ✅' : 'Saved ✅')

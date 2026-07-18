@@ -76,6 +76,43 @@ class TranslationService {
     return TranslationResult.fromMeanings(data);
   }
 
+  /// Generate a short grammar/usage tip for a word (server `grammar` mode).
+  ///
+  /// Returns the tip text, or an empty string when there's nothing noteworthy.
+  /// Uses the exact same endpoint + auth as [translate], so it works wherever
+  /// translation already works.
+  Future<String> generateGrammarTip({
+    required String word,
+    String sourceLang = _defaultSourceLang,
+    String targetLang = _defaultTargetLang,
+    String? firebaseUid,
+    String? level,
+  }) async {
+    final body = <String, dynamic>{
+      'word': word,
+      'sourceLang': sourceLang,
+      'targetLang': targetLang,
+      'mode': 'grammar',
+    };
+    if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
+    if (level != null) body['level'] = level;
+
+    final response = await http
+        .post(
+          Uri.parse(_baseUrl),
+          headers: await _authHeaders(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      throw Exception(_friendlyError(response.statusCode, response.body));
+    }
+
+    final data = jsonDecode(response.body);
+    return (data['grammar_tip'] ?? '').toString().trim();
+  }
+
   /// Generate 5 daily-life phrases in the given language.
   Future<List<DailyPhrase>> generateDailyPhrases({
     String lang = 'de',

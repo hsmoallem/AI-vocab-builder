@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/word.dart';
+import '../utils/clipboard_util.dart';
 
 class WordCard extends StatelessWidget {
   final Word word;
@@ -8,6 +9,7 @@ class WordCard extends StatelessWidget {
   final VoidCallback? onSpeakWord;       // Speak the word in source language
   final VoidCallback? onSpeakExample;    // Speak the example in source language
   final VoidCallback? onSpeakTargetExample; // Speak the translated example
+  final VoidCallback? onRegenerate;      // Regenerate the example sentence(s)
 
   const WordCard({
     super.key,
@@ -17,7 +19,17 @@ class WordCard extends StatelessWidget {
     this.onSpeakWord,
     this.onSpeakExample,
     this.onSpeakTargetExample,
+    this.onRegenerate,
   });
+
+  /// Combined text for the copy button: word + translation + all examples.
+  String _copyText() {
+    final parts = <String>[word.word];
+    if (word.translation.isNotEmpty) parts.add(word.translation);
+    if (word.exampleSource.isNotEmpty) parts.add(word.exampleSource);
+    if (word.exampleTarget.isNotEmpty) parts.add(word.exampleTarget);
+    return parts.join('\n');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +66,28 @@ class WordCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Copy word + translation + examples
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 19),
+                  tooltip: 'Copy word, translation & examples',
+                  onPressed: () =>
+                      copyToClipboard(context, _copyText(), label: 'Word'),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+                // Regenerate example sentence(s)
+                if (onRegenerate != null)
+                  IconButton(
+                    icon: const Icon(Icons.autorenew, size: 19),
+                    tooltip: 'Regenerate example',
+                    onPressed: onRegenerate,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
                 // Review / flashcard toggle
                 if (onToggleReview != null)
                   IconButton(

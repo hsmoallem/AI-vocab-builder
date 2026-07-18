@@ -27,6 +27,10 @@ class Word {
   String sourceLang;
   String targetLang;
   bool isReviewed;
+  // Free-text note the user can attach to a card (nullable — added in DB v2).
+  String? note;
+  // AI grammar/usage tip, generated on demand (nullable — added in DB v2).
+  String? grammarTip;
   DateTime createdAt;
   DateTime updatedAt;
 
@@ -39,6 +43,8 @@ class Word {
     required this.sourceLang,
     required this.targetLang,
     this.isReviewed = false,
+    this.note,
+    this.grammarTip,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -69,6 +75,9 @@ class Word {
       sourceLang: (map['source_lang'] as String?) ?? '',
       targetLang: (map['target_lang'] as String?) ?? '',
       isReviewed: (map['is_reviewed'] as int?) == 1,
+      // Nullable columns (added in DB v2) — absent on pre-v2 rows, which is fine.
+      note: map['note'] as String?,
+      grammarTip: map['grammar_tip'] as String?,
       createdAt: parseDate(map['created_at'] as String?),
       updatedAt: parseDate(map['updated_at'] as String?),
     );
@@ -87,6 +96,8 @@ class Word {
       'source_lang': sourceLang,
       'target_lang': targetLang,
       'is_reviewed': isReviewed ? 1 : 0,
+      'note': note,
+      'grammar_tip': grammarTip,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -104,6 +115,8 @@ class Word {
     String? sourceLang,
     String? targetLang,
     bool? isReviewed,
+    String? note,
+    String? grammarTip,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -116,6 +129,8 @@ class Word {
       sourceLang: sourceLang ?? this.sourceLang,
       targetLang: targetLang ?? this.targetLang,
       isReviewed: isReviewed ?? this.isReviewed,
+      note: note ?? this.note,
+      grammarTip: grammarTip ?? this.grammarTip,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

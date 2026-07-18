@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/tts_service.dart';
+import '../config/app_strings.dart';
+import '../utils/clipboard_util.dart';
 
 class FlashcardScreen extends StatefulWidget {
   const FlashcardScreen({super.key});
@@ -20,6 +22,115 @@ class _FlashcardScreenState extends State<FlashcardScreen>
 
   int _currentIndex = 0;
   late PageController _pageController;
+
+  // Per-card ephemeral state (only the visible card is interactive) — reset on
+  // page change so one card's second-language / loading state never leaks to the
+  // next card.
+  String? _secondLang;
+  String? _secondTranslation;
+  bool _secondLoading = false;
+  bool _grammarLoading = false;
+  bool _regenLoading = false;
+
+  void _resetCardState() {
+    _secondLang = null;
+    _secondTranslation = null;
+    _secondLoading = false;
+    _grammarLoading = false;
+    _regenLoading = false;
+  }
+
+  /// Full-card text for the "copy" action: word, translation, grammar tip,
+  /// examples, and note (whichever are present).
+  String _cardCopyText(Word word) {
+    final parts = <String>[word.word];
+    if (word.translation.isNotEmpty) parts.add(word.translation);
+    if ((word.grammarTip ?? '').isNotEmpty) {
+      parts.add('Grammar: ${word.grammarTip}');
+    }
+    if (word.exampleSource.isNotEmpty) parts.add(word.exampleSource);
+    if (word.exampleTarget.isNotEmpty) parts.add(word.exampleTarget);
+    if ((word.note ?? '').isNotEmpty) parts.add('Note: ${word.note}');
+    return parts.join('\n');
+  }
+
+  Future<void> _regenerate(Word word) async {
+    setState(() => _regenLoading = true);
+    try {
+      await context.read<WordProvider>().regenerateExample(word);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _regenLoading = false);
+  }
+
+  Future<void> _generateGrammar(Word word) async {
+    setState(() => _grammarLoading = true);
+    try {
+      await context.read<WordProvider>().generateGrammarTipFor(word);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _grammarLoading = false);
+  }
+
+  Future<void> _translateSecond(Word word) async {
+    final lang = _secondLang;
+    if (lang == null) return;
+    setState(() {
+      _secondLoading = true;
+      _secondTranslation = null;
+    });
+    try {
+      final result = await context
+          .read<WordProvider>()
+          .translateWord(word.word, from: word.sourceLang, to: lang);
+      if (mounted) setState(() => _secondTranslation = result.translation);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _secondLoading = false);
+  }
+
+  Future<void> _editNote(Word word) async {
+    final controller = TextEditingController(text: word.note ?? '');
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: 'Add a personal note…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Save')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+    await context.read<WordProvider>().updateNote(word, saved);
+  }
 
   @override
   void initState() {
@@ -73,6 +184,17 @@ class _FlashcardScreenState extends State<FlashcardScreen>
         return Scaffold(
           appBar: AppBar(
             title: Text('Flashcard ${_currentIndex + 1} of ${words.length}'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.copy),
+                tooltip: 'Copy card',
+                onPressed: () {
+                  final i = _currentIndex.clamp(0, words.length - 1);
+                  copyToClipboard(context, _cardCopyText(words[i]),
+                      label: 'Card');
+                },
+              ),
+            ],
           ),
           body: Column(
             children: [
@@ -98,6 +220,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       _currentIndex = i;
                       _isFlipped = false;
                       _flipController.reset();
+                      _resetCardState();
                     });
                   },
                   itemBuilder: (context, index) {
@@ -210,21 +333,31 @@ class _FlashcardScreenState extends State<FlashcardScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    word.word,
-                    style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.volume_up, size: 28),
-                    tooltip: 'Listen',
-                    onPressed: () => _tts.speak(word.word, language: word.sourceLang),
-                  ),
-                ],
+              // Word + 🔊. Flexible lets long words wrap to multiple lines
+              // instead of being clipped, and keeps the speaker always visible.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        word.word,
+                        style: const TextStyle(
+                            fontSize: 32, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.volume_up, size: 28),
+                      tooltip: 'Listen',
+                      onPressed: () =>
+                          _tts.speak(word.word, language: word.sourceLang),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -391,7 +524,28 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 ),
               ],
 
-              const SizedBox(height: 24),
+              // Regenerate the example sentence(s)
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton.icon(
+                  onPressed: _regenLoading ? null : () => _regenerate(word),
+                  icon: _regenLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.autorenew, size: 18),
+                  label: Text(
+                      _regenLoading ? 'Regenerating…' : 'Regenerate example'),
+                ),
+              ),
+
+              _buildGrammarSection(context, word),
+              _buildNoteSection(context, word),
+              _buildSecondLangSection(context, word),
+
+              const SizedBox(height: 20),
               Text(
                 'Tap to flip back',
                 style: TextStyle(
@@ -401,6 +555,241 @@ class _FlashcardScreenState extends State<FlashcardScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// AI grammar/usage tip. null = never generated (show button); '' = generated
+  /// but nothing noteworthy; non-empty = show the tip.
+  Widget _buildGrammarSection(BuildContext context, Word word) {
+    final cs = Theme.of(context).colorScheme;
+    final tip = word.grammarTip;
+
+    final spinner = SizedBox(
+      width: 16,
+      height: 16,
+      child: CircularProgressIndicator(strokeWidth: 2, color: cs.tertiary),
+    );
+
+    if (tip == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: OutlinedButton.icon(
+          onPressed: _grammarLoading ? null : () => _generateGrammar(word),
+          icon: _grammarLoading
+              ? spinner
+              : const Icon(Icons.lightbulb_outline, size: 18),
+          label: Text(_grammarLoading ? 'Generating…' : 'Grammar tip'),
+        ),
+      );
+    }
+
+    if (tip.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('No notable grammar point',
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            IconButton(
+              icon: _grammarLoading
+                  ? spinner
+                  : const Icon(Icons.refresh, size: 16),
+              tooltip: 'Try again',
+              onPressed: _grammarLoading ? null : () => _generateGrammar(word),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer.withAlpha(120),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb, size: 16, color: cs.tertiary),
+              const SizedBox(width: 6),
+              Text('Grammar tip',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: cs.tertiary)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 16),
+                tooltip: 'Copy grammar tip',
+                onPressed: () =>
+                    copyToClipboard(context, tip, label: 'Grammar tip'),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+              IconButton(
+                icon: _grammarLoading
+                    ? spinner
+                    : const Icon(Icons.refresh, size: 16),
+                tooltip: 'Regenerate',
+                onPressed:
+                    _grammarLoading ? null : () => _generateGrammar(word),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(tip, style: const TextStyle(fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  /// Free-text note, editable via a dialog (so tapping never flips the card).
+  Widget _buildNoteSection(BuildContext context, Word word) {
+    final cs = Theme.of(context).colorScheme;
+    final note = word.note ?? '';
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.sticky_note_2_outlined,
+                  size: 16, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text('Note',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurfaceVariant)),
+              const Spacer(),
+              IconButton(
+                icon: Icon(note.isEmpty ? Icons.add : Icons.edit, size: 16),
+                tooltip: note.isEmpty ? 'Add note' : 'Edit note',
+                onPressed: () => _editNote(word),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(note, style: const TextStyle(fontSize: 13)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// On-demand second-language translation (not stored).
+  Widget _buildSecondLangSection(BuildContext context, Word word) {
+    final cs = Theme.of(context).colorScheme;
+    final entries = AppStrings.targetLanguages.entries
+        .where((e) => e.key != word.sourceLang)
+        .toList();
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Also translate to',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cs.onSurfaceVariant)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _secondLang,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    border: OutlineInputBorder(),
+                    hintText: 'Language',
+                  ),
+                  items: entries
+                      .map((e) => DropdownMenuItem(
+                          value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: _secondLoading
+                      ? null
+                      : (v) => setState(() {
+                            _secondLang = v;
+                            _secondTranslation = null;
+                          }),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: (_secondLang == null || _secondLoading)
+                    ? null
+                    : () => _translateSecond(word),
+                child: _secondLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Go'),
+              ),
+            ],
+          ),
+          if (_secondTranslation != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(_secondTranslation!,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up, size: 18),
+                  tooltip: 'Listen',
+                  onPressed: () =>
+                      _tts.speak(_secondTranslation!, language: _secondLang!),
+                  visualDensity: VisualDensity.compact,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 16),
+                  tooltip: 'Copy',
+                  onPressed: () =>
+                      copyToClipboard(context, _secondTranslation!),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
