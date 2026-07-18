@@ -14,13 +14,13 @@ const cefrLevels = {
 /// (AI auto-adjusts). The controller tracks which level is currently active.
 class CefrLevelDropdown extends StatelessWidget {
   final String? value;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool compact;
 
   const CefrLevelDropdown({
     super.key,
     this.value,
-    required this.onChanged,
+    this.onChanged,
     this.compact = false,
   });
 
