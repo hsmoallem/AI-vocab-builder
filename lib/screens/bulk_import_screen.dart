@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
+import '../widgets/cefr_level_dropdown.dart';
 
 class BulkImportScreen extends StatefulWidget {
   const BulkImportScreen({super.key});
@@ -28,6 +29,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
   String _sourceLang = 'de';
   String _targetLang = 'en';
   bool _skipDuplicates = true;
+  String? _level;       // CEFR level (null = auto)
 
   bool _isImporting = false;
   int _done = 0;
@@ -97,6 +99,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
           input: word,
           from: _sourceLang,
           to: _targetLang,
+          level: _level,
         );
         if (outcome.status == ImportStatus.added) {
           existing.add(word.toLowerCase());
@@ -210,6 +213,14 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 dense: true,
+              ),
+
+              CefrLevelDropdown(
+                value: _level,
+                onChanged: _isImporting
+                    ? null
+                    : (v) => setState(() => _level = v),
+                compact: true,
               ),
 
               if (_error != null) ...[

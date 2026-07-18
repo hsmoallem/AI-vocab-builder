@@ -5,6 +5,7 @@ import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
+import '../widgets/cefr_level_dropdown.dart';
 
 class AddWordDialog extends StatefulWidget {
   final String? initialWord;
@@ -21,6 +22,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
 
   String _sourceLang = 'de';
   String _targetLang = 'en';
+  String? _level;       // CEFR level (null = auto)
   bool _isTranslating = false;
   bool _isSaving = false;
   String? _error;
@@ -76,6 +78,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
         word,
         from: _sourceLang,
         to: _targetLang,
+        level: _level,
       );
 
       setState(() {
@@ -264,6 +267,14 @@ class _AddWordDialogState extends State<AddWordDialog> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // CEFR Level
+              CefrLevelDropdown(
+                value: _level,
+                onChanged: (v) => setState(() => _level = v),
+                compact: true,
               ),
               const SizedBox(height: 12),
 

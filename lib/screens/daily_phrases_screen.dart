@@ -8,6 +8,7 @@ import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
+import '../widgets/cefr_level_dropdown.dart';
 
 class DailyPhrasesScreen extends StatefulWidget {
   const DailyPhrasesScreen({super.key});
@@ -27,6 +28,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
   String? _error;
   String _phraseLang = 'de';          // language phrases are generated in
   List<String> _blockedPhrases = [];   // phrases the user never wants to see again
+  String? _level;                     // CEFR level (null = auto)
   bool _showThemeWarning = false;
   SharedPreferences? _prefs;
 
@@ -118,6 +120,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
           lang: _phraseLang,
           theme: theme,
           firebaseUid: uid,
+          level: _level,
           exclude: [...seen, ...phrases.map((p) => p.phrase)],
         );
         // Filter out blocked phrases (case-insensitive, trimmed)
@@ -354,6 +357,15 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+        // ── CEFR Level ────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: CefrLevelDropdown(
+            value: _level,
+            onChanged: (v) => setState(() => _level = v),
+            compact: true,
           ),
         ),
         // ── Same-language warning ─────────────────────────────

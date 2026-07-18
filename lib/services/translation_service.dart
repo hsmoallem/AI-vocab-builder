@@ -51,6 +51,7 @@ class TranslationService {
     String sourceLang = _defaultSourceLang,
     String targetLang = _defaultTargetLang,
     String? firebaseUid,
+    String? level,
   }) async {
     final body = <String, dynamic>{
       'word': word,
@@ -59,6 +60,7 @@ class TranslationService {
       'mode': 'translate',
     };
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
+    if (level != null) body['level'] = level;
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: await _authHeaders(),
@@ -80,13 +82,15 @@ class TranslationService {
     String? theme,
     String? firebaseUid,
     List<String>? exclude,
+    String? level,
   }) async {
     final body = <String, dynamic>{
       'sourceLang': lang,
-      'targetLang': lang,  // not used for phrases; mode=phrases ignores it
+      'targetLang': lang,
       'mode': 'phrases',
     };
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
+    if (level != null) body['level'] = level;
     if (theme != null && theme.trim().isNotEmpty) {
       body['theme'] = theme.trim();
     }

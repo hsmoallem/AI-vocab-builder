@@ -56,11 +56,13 @@ class WordProvider extends ChangeNotifier {
     String word, {
     required String from,
     required String to,
+    String? level,
   }) async {
     return await _translationService.translate(
       word: word,
       sourceLang: from,
       targetLang: to,
+      level: level,
       firebaseUid: FirebaseAuth.instance.currentUser?.uid,
     );
   }
@@ -101,6 +103,7 @@ class WordProvider extends ChangeNotifier {
     required String input,
     required String from,
     required String to,
+    String? level,
   }) async {
     final word = input.trim();
     if (word.isEmpty) {
@@ -111,6 +114,7 @@ class WordProvider extends ChangeNotifier {
         word: word,
         sourceLang: from,
         targetLang: to,
+        level: level,
         firebaseUid: FirebaseAuth.instance.currentUser?.uid,
       );
 
