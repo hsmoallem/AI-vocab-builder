@@ -39,8 +39,9 @@
 | **Phase 2** | PDF picker (native), native rendering (flutter_pdfview), text extraction, tap-word | ✅ Complete |
 | **Phase 3** | Flashcards + review flow + Daily Phrases + TTS + Save to My Words + Theme | ✅ Complete |
 | **Phase 4** | Firebase Auth (Google + Anonymous) + Firestore cloud backup | ✅ Complete |
-| **Phase 5** | Settings, language picker (EN/DE/AR), phrase language dropdown | ✅ Complete |
-| **Phase 6** | AdMob ads + Remove Ads IAP | ⬜ Planned |
+| **Phase 5** | Settings, language picker (EN/DE/AR), phrase language dropdown, multi-language TTS | ✅ Complete |
+| **Phase 6** | Bulk Import + TTS everywhere (flashcards, word list, add dialog) | ✅ Complete |
+| **Phase 7** | AdMob ads + Remove Ads IAP | ⬜ Planned |
 
 ---
 
@@ -51,9 +52,10 @@
 - **Anonymous** — skip login, warning about no cloud backup (orange banner)
 - **Cloud Backup:** One-tap backup/restore all words to Firestore
 
-### Core (Phases 1-3 — ✅ Complete)
+### Core (Phases 1-6 — ✅ Complete)
 - **3-tab navigation:** Reader · Daily Phrases · My Words
 - **Add word:** Enter any word → AI translates via proxy → DeepSeek
+- **Bulk Import:** Paste a list of words (one per line) → batch translate → auto-save
 - **Multi-meaning translation:** Separate entries with unique examples
 - **German article detection:** `der`/`die`/`das` auto-detected
 - **Sort & search:** Alphabetical or newest-first, live search
@@ -62,7 +64,7 @@
 - **PDF Reader:** Native rendering + text extraction, tap-to-add
 - **Daily Phrases:** AI generates 5 phrases/day, mark as memorized, save to My Words, theme-based generation, regenerate button
 - **Phrase Language Dropdown:** Pick language for phrase generation — separate from translate-to language
-- **Text-to-Speech:** Native Android TTS (no external package)
+- **Text-to-Speech Everywhere:** Native Android TTS on flashcards (word, translation, examples), word list, and add word dialog
 
 ### Branding (June 2026 — ✅ Complete)
 - **Launcher icon:** Blue circuit-board "A" on blue gradient
@@ -92,18 +94,37 @@
 
 ```bash
 cd ~/StudioProjects/ai_vocab_builder
-git pull          # get latest code from GitHub
-flutter run       # run on phone
+git pull origin main     # get latest code from GitHub
+flutter run --release    # build, install, launch on emulator
 ```
 
 **When to add extra commands:**
 
 | Command | When |
 |---------|------|
-| `git pull && flutter run` | **Most updates** — code changes only |
-| `git pull && flutter clean && flutter pub get && flutter run` | **New package added** (pubspec.yaml changed) |
-| `git pull && dart run flutter_launcher_icons` | **App icon changed** |
-| `git pull && dart run flutter_native_splash:create` | **Splash screen changed** |
+| `git pull && flutter run --release` | **Most updates** — code changes only |
+| `git pull && flutter clean && flutter pub get && flutter run --release` | **New package added/removed** (pubspec.yaml changed) |
+| `flutter build apk --release` | **Build APK only** (no install/launch) |
+| `flutter emulators --launch Pixel_8` | **Start emulator** before running |
+| `dart run flutter_launcher_icons` | **App icon changed** |
+| `dart run flutter_native_splash:create` | **Splash screen changed** |
+
+### Running on Emulator
+
+```bash
+# 1. Start the emulator (replace Pixel_8 with your emulator name)
+flutter emulators --launch Pixel_8
+
+# 2. Run the app (builds + installs + launches automatically)
+cd ~/StudioProjects/ai_vocab_builder && flutter run --release
+```
+
+### Building APK Only (for phone install)
+
+```bash
+cd ~/StudioProjects/ai_vocab_builder && git pull origin main && flutter build apk --release
+# APK at: build/app/outputs/flutter-apk/app-release.apk
+```
 
 ---
 
@@ -145,14 +166,18 @@ The API key lives on a dedicated proxy server — never in the APK.
 4. DeepSeek response is parsed and returned to the app
 
 ### Security
-- Decompiling the APK yields only the proxy URL + shared token
-- No API key anywhere in the code
+- Signed-in users authenticate with verified Firebase ID tokens (`Authorization: Bearer <token>`)
+- Anonymous users fall back to legacy `X-App-Token` shared secret
+- Decompiling the APK yields only the proxy URL — no API key, no prompt injection possible
 - Proxy is not an open LLM relay — app can't inject custom prompts
+- Per-UID rate limiting (10 req/min) + per-IP backstop (30 req/min)
 
 ### Proxy server
 - Location: Contabo VPS (`13.140.134.57`)
 - Port: 9000 (HTTP)
-- Auto-start: systemd service on boot
+- Process: gunicorn (127.0.0.1:9001) + socat (0.0.0.0:9000)
+- Start: `bash /home/houssam/deepseek-proxy/start.sh`
+- Firebase: `FIREBASE_PROJECT_ID=project-794490258159` for JWT verification
 
 ---
 

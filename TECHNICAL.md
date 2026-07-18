@@ -1,6 +1,6 @@
 # AI Vocab Builder — Technical Documentation
 
-> Last updated: June 8, 2026 — v1.0 (stable-2026-06-08)
+> Last updated: July 18, 2026 — v1.2 (bulk import + TTS everywhere + Firebase auth)
 
 ---
 
@@ -141,13 +141,15 @@ lib/
 │   ├── login_screen.dart      # Google + Anonymous (book icon header)
 │   ├── pdf_reader_screen.dart # PDF upload → native rendering + text extraction
 │   ├── daily_phrases_screen.dart # AI 5 phrases/day, phrase language dropdown, save, theme, regenerate
-│   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar
+│   ├── flashcard_screen.dart  # Tap-to-flip flashcards with progress bar + 🔊 TTS
+   ├── bulk_import_screen.dart # Paste word list → batch translate → auto-save
 │   ├── settings_screen.dart   # App language + translate-to language picker
 │   └── word_list_screen.dart  # Searchable word list with sort + delete
-├── services/
-│   ├── database_service.dart  # sqflite CRUD (SQLite)
-│   ├── firebase_service.dart  # Firebase init, auth methods, Firestore backup/restore
-│   └── translation_service.dart # Proxy client — sends {word, lang, mode}, no prompts or keys
+│   ├── services/
+│   │   ├── database_service.dart  # sqflite CRUD (SQLite)
+│   │   ├── firebase_service.dart  # Firebase init, auth methods, Firestore backup/restore
+│   │   ├── tts_service.dart       # Native Android TTS via MethodChannel
+│   │   └── translation_service.dart # Proxy client — Firebase ID token, X-App-Token fallback
 └── widgets/
     ├── add_word_dialog.dart   # Add word dialog with AI translate + meaning cards
     └── word_card.dart         # Word display card with review + delete buttons
@@ -278,26 +280,28 @@ The DeepSeek API key lives **only on the proxy server** — never in the repo, n
 ```
 
 ### What the proxy does
-1. Validates `X-App-Token` shared secret
-2. Enforces per-IP rate limit (30 req/min via Flask-Limiter)
-3. Builds the prompt server-side with language names and formatting instructions
-4. Forwards to DeepSeek with the real API key
-5. Parses DeepSeek's raw JSON response
-6. Returns structured JSON to the app
+1. Verifies Firebase ID token (`Authorization: Bearer <token>`) — cryptographically validated via Google's JWKS
+2. Falls back to legacy `X-App-Token` shared secret for anonymous/signed-out sessions
+3. Enforces per-UID rate limit (10 req/min) + per-IP backstop (30 req/min)
+4. Builds the prompt server-side with language names and formatting instructions
+5. Forwards to DeepSeek with the real API key
+6. Parses DeepSeek's raw JSON response
+7. Returns structured JSON to the app
 
 ### Security properties
 - **Decompiling the APK** yields only: proxy URL + shared token
-- **No API key** anywhere in the codebase — `secrets.dart` is no longer imported
+- **No API key** anywhere in the codebase
 - **No open LLM relay** — proxy builds prompts, app can't inject custom messages/models/temperature
-- **Rate limited** — one user can't abuse the API
-- **App token** is a speed bump (extractable) — real security is at the server level
+- **Firebase ID token** is cryptographically verified — UID cannot be forged
+- **Rate limited** — 10 req/min per UID + 30 req/min per IP — one user can't abuse the API
+- **App token** is a speed bump (extractable from APK) — real security is at server level
 
 ### Proxy server
 - Location: Contabo VPS (`13.140.134.57`)
 - File: `/home/houssam/deepseek-proxy/proxy.py`
-- Service: systemd (`deepseek-proxy.service`), auto-start on boot
-- Port: 9000 (HTTP, cleartext allowed via `network_security_config.xml`)
-- HTTPS: pending domain + Let's Encrypt (needed before Play Store submission)
+- Process: gunicorn (127.0.0.1:9001) + socat (0.0.0.0:9000)
+- Start: `FIREBASE_PROJECT_ID=project-794490258159 bash /home/houssam/deepseek-proxy/start.sh`
+- Port: 9000 (HTTP)
 
 ---
 
@@ -476,9 +480,8 @@ flutter clean && rm -f pubspec.lock && rm -rf ~/.pub-cache/hosted/pub.dev/* && f
 |-------|-----------|
 | **API key** | On proxy server only — never in repo, never in APK |
 | **Proxy** | Server-side prompt building — not an open LLM relay |
-| **Proxy auth** | `X-App-Token` shared secret |
-| **Rate limit** | 30 req/min per IP (Flask-Limiter) |
-| **Network** | `network_security_config.xml` — cleartext only to proxy IP |
+| **Proxy auth** | Firebase ID token (JWT verified via Google JWKS) — fallback to X-App-Token for anonymous |
+| **Rate limit** | 10 req/min per UID + 30 req/min per IP backstop |
 | **Firestore** | Per-user rules deployed — `request.auth.uid == userId` |
 | **Database** | All queries use `?` placeholders — SQL injection immune |
 | **UI** | All controllers disposed, no memory leaks, no dangling listeners |

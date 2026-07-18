@@ -18,6 +18,7 @@
 ///   - Change _baseUrl if the proxy moves to a different host/domain
 
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 class TranslationService {
@@ -25,6 +26,24 @@ class TranslationService {
   static const String _appToken = 'vocab-builder-shared-secret-2026';
   static const String _defaultSourceLang = 'de';
   static const String _defaultTargetLang = 'en';
+
+  /// Request headers. Prefer a verified Firebase ID token
+  /// (Authorization: Bearer …); fall back to the legacy shared token when no
+  /// user is signed in (or Firebase is unavailable) so translation still works.
+  Future<Map<String, String>> _authHeaders() async {
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+        return headers;
+      }
+    } catch (_) {
+      // fall through to the legacy token
+    }
+    headers['X-App-Token'] = _appToken;
+    return headers;
+  }
 
   /// Translate a word/phrase with multi-meaning support.
   Future<TranslationResult> translate({
@@ -42,10 +61,7 @@ class TranslationService {
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     final response = await http.post(
       Uri.parse(_baseUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-App-Token': _appToken,
-      },
+      headers: await _authHeaders(),
       body: jsonEncode(body),
     ).timeout(const Duration(seconds: 30));
 
