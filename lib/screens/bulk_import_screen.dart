@@ -6,13 +6,9 @@
 /// the same corrected-spelling / German-article / example formatting as the
 /// single-word Add Word dialog.
 ///
-/// Input: paste a list (one word per line, or comma/semicolon separated) or
-/// load a .txt / .csv file. Pick the From → To languages, then import.
-
-import 'dart:io';
+/// Input: paste a list (one word per line, or comma/semicolon separated).
 
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/word_provider.dart';
@@ -68,30 +64,6 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       if (seen.add(w.toLowerCase())) out.add(w);
     }
     return out;
-  }
-
-  Future<void> _pickFile() async {
-    try {
-      final res = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['txt', 'csv'],
-      );
-      final path = res?.files.first.path;
-      if (path == null) return;
-      final content = await File(path).readAsString();
-      if (!mounted) return;
-      setState(() {
-        final existing = _inputController.text.trim();
-        _inputController.text = existing.isEmpty
-            ? content.trim()
-            : '$existing\n${content.trim()}';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not read file: $e')),
-      );
-    }
   }
 
   Future<void> _import() async {
@@ -176,8 +148,8 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Paste words (one per line, or comma-separated) or load a '
-                '.txt / .csv file. Each word is translated with the same AI '
+                'Paste words (one per line, or comma-separated). '
+                'Each word is translated with the same AI '
                 'workflow as adding a single word.',
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
@@ -195,16 +167,6 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
                   alignLabelWithHint: true,
                   hintText: 'Haus\nKatze\nWasser',
                   border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: _isImporting ? null : _pickFile,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Load from file'),
                 ),
               ),
               const SizedBox(height: 12),

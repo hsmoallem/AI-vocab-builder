@@ -25,11 +25,6 @@ dependencies:
   # Settings storage
   shared_preferences: ^2.3.0
 
-  # Bulk import — pick a .txt / .csv word list
-  # 11.x is built for the current Android toolchain (compileSdk 36); older
-  # 8.x hardcodes compileSdk 34 and fails against flutter_plugin_android_lifecycle.
-  file_picker: ^11.0.0
-
   # PDF — render natively + extract text
   flutter_pdfview: any
   syncfusion_flutter_pdf: any
