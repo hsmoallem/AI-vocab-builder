@@ -77,7 +77,7 @@
 ### Phase 5.5 — Security & Branding (✅ Complete)
 - DeepSeek API key moved to proxy server — never in APK
 - Server-side prompt building — proxy is not an open LLM relay
-- X-App-Token auth + per-IP rate limiting (30 req/min)
+- Token-based & Firebase-ID-token auth + per-IP / per-user rate limiting
 - App launcher icon (blue circuit-board "A")
 - Native Android splash screen (VocabView logo on dark background)
 - Network security config (cleartext HTTP to proxy IP only)
@@ -99,7 +99,7 @@
 ```
 ┌──────────┐     HTTP POST      ┌─────────────────┐     HTTPS      ┌────────────┐
 │  App     │ ─── {word,lang, ──→│  Flask Proxy     │ ─── prompt + ─→│  DeepSeek  │
-│  (APK)   │     mode, token}   │  :9000 (Contabo) │    key        │  API       │
+│  (APK)   │     mode, token}   │  (private VPS)   │    key        │  API       │
 │          │ ←── {meanings[]} ──│                  │ ←── JSON ─────│            │
 └──────────┘                    └─────────────────┘               └────────────┘
 ```
