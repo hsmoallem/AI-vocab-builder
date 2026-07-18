@@ -214,11 +214,19 @@ class WordProvider extends ChangeNotifier {
   /// workflow (same `translate()` call + `• `-bulleted formatting as the Add /
   /// bulk-import flows). Keeps the stored translation; only the examples change.
   Future<void> regenerateExample(Word word, {String? level}) async {
+    // Collect the current example sentence(s) (strip "• " bullets) so the server
+    // produces a brand-new example in a different context, not a reworded copy.
+    final avoid = <String>[];
+    for (final line in '${word.exampleSource}\n${word.exampleTarget}'.split('\n')) {
+      final t = line.replaceFirst(RegExp(r'^[•\-\s]+'), '').trim();
+      if (t.isNotEmpty) avoid.add(t);
+    }
     final result = await _translationService.translate(
       word: word.word,
       sourceLang: word.sourceLang,
       targetLang: word.targetLang,
       level: level,
+      avoid: avoid.isEmpty ? null : avoid,
       firebaseUid: FirebaseAuth.instance.currentUser?.uid,
     );
     final exampleSource = result.meanings

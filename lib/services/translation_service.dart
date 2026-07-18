@@ -52,6 +52,7 @@ class TranslationService {
     String targetLang = _defaultTargetLang,
     String? firebaseUid,
     String? level,
+    List<String>? avoid,
   }) async {
     final body = <String, dynamic>{
       'word': word,
@@ -61,6 +62,9 @@ class TranslationService {
     };
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (level != null) body['level'] = level;
+    // When regenerating, the current example(s) are sent so the server produces
+    // a genuinely new example in a different context — not a reworded copy.
+    if (avoid != null && avoid.isNotEmpty) body['avoid'] = avoid;
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: await _authHeaders(),
