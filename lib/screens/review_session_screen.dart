@@ -51,6 +51,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   // Rich-content state (restores the normal flip behaviour: grammar tip, note,
   // and 2nd-language translation on the answer side). Reset on each new card.
   bool _grammarLoading = false;
+  bool _regenLoading = false;
   String? _secondLang;
   String? _secondTranslation;
   bool _secondLoading = false;
@@ -135,6 +136,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _typedCorrect = null;
       _typeController.clear();
       _grammarLoading = false;
+      _regenLoading = false;
       _secondLang = null;
       _secondTranslation = null;
       _secondLoading = false;
@@ -157,6 +159,76 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     );
   }
 
+  /// Compact copy icon for a single piece of text on the card.
+  Widget _copyIconBtn(String text, String label, {double size = 18}) {
+    return IconButton(
+      icon: Icon(Icons.copy, size: size),
+      tooltip: 'Copy $label',
+      onPressed: () => copyToClipboard(context, text, label: label),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+    );
+  }
+
+  /// Whole-card copy text (word + translation + grammar + examples + note).
+  String _cardCopyText(Word w) {
+    final parts = <String>[w.word];
+    if (w.translation.isNotEmpty) parts.add(w.translation);
+    if ((w.grammarTip ?? '').isNotEmpty) parts.add('Grammar: ${w.grammarTip}');
+    if (w.exampleSource.isNotEmpty) parts.add(w.exampleSource);
+    if (w.exampleTarget.isNotEmpty) parts.add(w.exampleTarget);
+    if ((w.note ?? '').isNotEmpty) parts.add('Note: ${w.note}');
+    return parts.join('\n');
+  }
+
+  Future<void> _regenerate(Word w) async {
+    setState(() => _regenLoading = true);
+    try {
+      await context.read<WordProvider>().regenerateExample(w);
+      final updated = context
+          .read<WordProvider>()
+          .words
+          .firstWhere((x) => x.id == w.id, orElse: () => w);
+      if (mounted) {
+        setState(() => _deck[_index] = _deck[_index].copyWith(
+              exampleSource: updated.exampleSource,
+              exampleTarget: updated.exampleTarget,
+            ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _regenLoading = false);
+  }
+
+  Future<void> _archiveCurrent() async {
+    final w = _current;
+    await context.read<WordProvider>().archiveWord(w);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"${w.word}" archived')),
+    );
+    _deck.removeWhere((x) => x.id == w.id);
+    if (_index >= _deck.length) {
+      _finish();
+      return;
+    }
+    setState(() {
+      _revealed = false;
+      _typedCorrect = null;
+      _typeController.clear();
+      _grammarLoading = false;
+      _regenLoading = false;
+      _secondLang = null;
+      _secondTranslation = null;
+      _secondLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = _current;
@@ -165,8 +237,19 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       appBar: AppBar(
         title: const Text('Review'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.archive_outlined),
+            tooltip: 'Archive this card',
+            onPressed: _archiveCurrent,
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy),
+            tooltip: 'Copy card',
+            onPressed: () =>
+                copyToClipboard(context, _cardCopyText(w), label: 'Card'),
+          ),
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 12),
             child: Center(
                 child: Text('$remaining left',
                     style: const TextStyle(fontSize: 13))),
@@ -269,6 +352,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
               tooltip: 'Listen',
               onPressed: () => _tts.speak(text, language: lang),
             ),
+            _copyIconBtn(text, 'text', size: 22),
           ],
         ),
       ],
@@ -306,7 +390,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
               ],
             ),
           ),
-        // The answer: word + translation
+        // The answer: word / translation + TTS + copy
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -322,9 +406,14 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
               tooltip: 'Listen',
               onPressed: () => _tts.speak(
                   widget.mode == StudyMode.reverse ? w.word : w.translation,
-                  language:
-                      widget.mode == StudyMode.reverse ? w.sourceLang : w.targetLang),
+                  language: widget.mode == StudyMode.reverse
+                      ? w.sourceLang
+                      : w.targetLang),
             ),
+            _copyIconBtn(
+                widget.mode == StudyMode.reverse ? w.word : w.translation,
+                'translation',
+                size: 20),
           ],
         ),
         const SizedBox(height: 6),
@@ -342,17 +431,72 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(w.exampleSource,
-                    style: const TextStyle(
-                        fontStyle: FontStyle.italic, fontSize: 14)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.volume_up, size: 20),
+                      tooltip: 'Listen',
+                      onPressed: () =>
+                          _tts.speak(w.exampleSource, language: w.sourceLang),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 28, minHeight: 28),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(w.exampleSource,
+                          style: const TextStyle(
+                              fontStyle: FontStyle.italic, fontSize: 14)),
+                    ),
+                    _copyIconBtn(w.exampleSource, 'example', size: 16),
+                  ],
+                ),
                 if (w.exampleTarget.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(w.exampleTarget, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(height: 4),
+                  const Divider(),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.volume_up, size: 20),
+                        tooltip: 'Listen',
+                        onPressed: () =>
+                            _tts.speak(w.exampleTarget, language: w.targetLang),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(w.exampleTarget,
+                            style: const TextStyle(fontSize: 14)),
+                      ),
+                      _copyIconBtn(w.exampleTarget, 'example', size: 16),
+                    ],
+                  ),
                 ],
               ],
             ),
           ),
         ],
+        // Regenerate the example sentence(s)
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.center,
+          child: TextButton.icon(
+            onPressed: _regenLoading ? null : () => _regenerate(w),
+            icon: _regenLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.autorenew, size: 18),
+            label: Text(_regenLoading ? 'Regenerating…' : 'Regenerate example'),
+          ),
+        ),
         // Restored rich content: grammar tip, note, translate-to-another-language.
         _grammarSection(w),
         _noteSection(w),
