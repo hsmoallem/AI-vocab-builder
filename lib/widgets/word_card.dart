@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/word.dart';
 import '../utils/clipboard_util.dart';
-import 'cefr_badge.dart';
 
 class WordCard extends StatelessWidget {
   final Word word;
@@ -71,11 +70,6 @@ class WordCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // CEFR level chip (hidden until the word is classified)
-                if ((word.cefr ?? '').isNotEmpty) ...[
-                  CefrBadge(word.cefr),
-                  const SizedBox(width: 4),
-                ],
                 // Copy the word only
                 _copyIcon(context, word.word, 'word'),
                 // Regenerate example sentence(s)

@@ -117,45 +117,6 @@ class TranslationService {
     return (data['grammar_tip'] ?? '').toString().trim();
   }
 
-  /// Classify a BATCH of words by CEFR level (server `cefr` mode).
-  ///
-  /// Returns a list of levels aligned by index to [words] — each entry is a
-  /// CEFR code ('A1'–'C2') or an empty string when the model couldn't classify
-  /// that word. Batching keeps a full-library classification to a few calls.
-  Future<List<String>> classifyCefr({
-    required List<String> words,
-    String sourceLang = _defaultSourceLang,
-    String? firebaseUid,
-  }) async {
-    if (words.isEmpty) return const [];
-    final body = <String, dynamic>{
-      'mode': 'cefr',
-      'sourceLang': sourceLang,
-      'words': words,
-    };
-    if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
-
-    final response = await http
-        .post(
-          Uri.parse(_baseUrl),
-          headers: await _authHeaders(),
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 60));
-
-    if (response.statusCode != 200) {
-      throw Exception(_friendlyError(response.statusCode, response.body));
-    }
-
-    final data = jsonDecode(response.body);
-    final raw = (data['levels'] as List?) ?? const [];
-    // Align defensively to the input length.
-    return List<String>.generate(
-      words.length,
-      (i) => i < raw.length ? (raw[i]?.toString() ?? '') : '',
-    );
-  }
-
   /// Generate 5 daily-life phrases in the given language.
   Future<List<DailyPhrase>> generateDailyPhrases({
     String lang = 'de',

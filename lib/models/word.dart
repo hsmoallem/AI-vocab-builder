@@ -33,9 +33,6 @@ class Word {
   String? grammarTip;
   // Archived words are hidden from Saved Words + flashcards (added in DB v3).
   bool archived;
-  // CEFR level (A1–C2), assigned by the AI classifier (added in DB v5).
-  // null / empty = not yet classified.
-  String? cefr;
   DateTime createdAt;
   DateTime updatedAt;
 
@@ -66,7 +63,6 @@ class Word {
     this.note,
     this.grammarTip,
     this.archived = false,
-    this.cefr,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.srsInterval = 0,
@@ -117,8 +113,6 @@ class Word {
       note: map['note'] as String?,
       grammarTip: map['grammar_tip'] as String?,
       archived: (map['archived'] as int?) == 1,
-      // CEFR (DB v5) — absent on pre-v5 rows → null (unclassified).
-      cefr: map['cefr'] as String?,
       createdAt: parseDate(map['created_at'] as String?),
       updatedAt: parseDate(map['updated_at'] as String?),
       // SRS fields (DB v4). Absent on pre-v4 rows → defaults via the model.
@@ -146,7 +140,6 @@ class Word {
       'note': note,
       'grammar_tip': grammarTip,
       'archived': archived ? 1 : 0,
-      'cefr': cefr,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'srs_interval': srsInterval,
@@ -172,7 +165,6 @@ class Word {
     String? note,
     String? grammarTip,
     bool? archived,
-    String? cefr,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? srsInterval,
@@ -198,7 +190,6 @@ class Word {
       note: note ?? this.note,
       grammarTip: grammarTip ?? this.grammarTip,
       archived: archived ?? this.archived,
-      cefr: cefr ?? this.cefr,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       srsInterval: srsInterval ?? this.srsInterval,

@@ -58,8 +58,7 @@ class DatabaseService {
     return await openDatabase(
       path,
       // v2: note + grammar_tip.  v3: archived.  v4: SM-2 SRS fields + app_state.
-      // v5: cefr level.
-      version: 5,
+      version: 4,
       onCreate: (db, version) async {
         // Fresh install — create the table with all current columns.
         await db.execute('''
@@ -75,7 +74,6 @@ class DatabaseService {
             note TEXT,
             grammar_tip TEXT,
             archived INTEGER NOT NULL DEFAULT 0,
-            cefr TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             srs_interval INTEGER NOT NULL DEFAULT 0,
@@ -137,21 +135,8 @@ class DatabaseService {
           await db.execute(
               'INSERT OR IGNORE INTO app_state (id, current_streak, longest_streak) VALUES (1, 0, 0)');
         }
-        if (oldVersion < 5) {
-          // CEFR level column. null on existing rows = not yet classified;
-          // the user can fill them in via "Classify CEFR levels".
-          await db.execute('ALTER TABLE words ADD COLUMN cefr TEXT');
-        }
       },
     );
-  }
-
-  /// Set the CEFR level (A1–C2) for a word. Cheap targeted update used by the
-  /// bulk classifier so it doesn't rewrite every column per word.
-  static Future<void> updateCefr(int id, String? cefr) async {
-    final db = await database;
-    await db.update('words', {'cefr': cefr},
-        where: 'id = ?', whereArgs: [id]);
   }
 
   /// Insert a new word. Returns the auto-incremented row ID.
