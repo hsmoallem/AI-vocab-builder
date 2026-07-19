@@ -105,6 +105,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     final word = words[_currentIndex.clamp(0, words.length - 1)];
     await context.read<WordProvider>().resetSrs(word);
     if (!mounted) return;
+    // Force rebuild so the "Studied" badge disappears immediately.
+    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('"${word.word}" — study progress reset')),
     );

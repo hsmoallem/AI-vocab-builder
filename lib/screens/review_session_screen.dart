@@ -293,6 +293,34 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
+              // Progress bar + reset
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _deck.isEmpty ? 0 : (_index / _deck.length),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 32,
+                    child: TextButton.icon(
+                      onPressed: _resetSession,
+                      icon: const Icon(Icons.replay, size: 18),
+                      label: const Text('Reset', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Expanded(
                 // Tap anywhere on the card to reveal the answer (flip/reverse
                 // modes). Typing mode keeps its Check-answer flow, so tapping
