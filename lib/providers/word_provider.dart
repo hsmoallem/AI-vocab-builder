@@ -430,8 +430,8 @@ class WordProvider extends ChangeNotifier {
       srsInterval: 0,
       srsEaseFactor: 2.5,
       srsRepetitions: 0,
-      srsNextDue: null,
-      srsLastReview: null,
+      clearSrsNextDue: true,
+      clearSrsLastReview: true,
       updatedAt: DateTime.now(),
     );
     await DatabaseService.updateWord(reset);

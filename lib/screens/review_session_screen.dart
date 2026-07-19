@@ -265,11 +265,6 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         title: const Text('Review'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.replay),
-            tooltip: 'Restart session',
-            onPressed: _resetSession,
-          ),
-          IconButton(
             icon: const Icon(Icons.archive_outlined),
             tooltip: 'Archive this card',
             onPressed: _archiveCurrent,
