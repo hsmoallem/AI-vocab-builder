@@ -4,6 +4,8 @@ import '../config/app_strings.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/tts_service.dart';
+import '../services/export_service.dart';
+import '../utils/clipboard_util.dart';
 import '../widgets/word_card.dart';
 
 class WordListScreen extends StatefulWidget {
@@ -127,6 +129,74 @@ class _WordListScreenState extends State<WordListScreen> {
     }
   }
 
+  Future<void> _export(BuildContext context) async {
+    final words = context.read<WordProvider>().words;
+    if (words.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No words to export')));
+      return;
+    }
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Export word list',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('Newest words first'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart_outlined),
+              title: const Text('Share as CSV (opens in Excel)'),
+              onTap: () => Navigator.pop(ctx, 'csv'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Share as text'),
+              onTap: () => Navigator.pop(ctx, 'txt'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('Copy to clipboard (paste into Excel)'),
+              onTap: () => Navigator.pop(ctx, 'clip'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    try {
+      switch (choice) {
+        case 'csv':
+          await ExportService.shareFile(
+              content: ExportService.toCsv(words),
+              filename: 'vocab_$stamp.csv',
+              mime: 'text/csv');
+          break;
+        case 'txt':
+          await ExportService.shareFile(
+              content: ExportService.toText(words),
+              filename: 'vocab_$stamp.txt',
+              mime: 'text/plain');
+          break;
+        case 'clip':
+          if (context.mounted) {
+            await copyToClipboard(context, ExportService.toTsv(words),
+                label: 'Word list');
+          }
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(
@@ -190,8 +260,19 @@ class _WordListScreenState extends State<WordListScreen> {
                     tooltip: s.locale == 'de' ? 'Mehr' : 'More',
                     onSelected: (v) {
                       if (v == 'dedupe') _removeDuplicates(context);
+                      if (v == 'export') _export(context);
                     },
                     itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'export',
+                        child: ListTile(
+                          leading: const Icon(Icons.ios_share),
+                          title: Text(s.locale == 'de'
+                              ? 'Wortliste exportieren'
+                              : 'Export word list'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'dedupe',
                         child: ListTile(

@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeech
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -15,6 +16,7 @@ import java.util.Locale
 class MainActivity : FlutterActivity() {
     private val PICKER_CHANNEL = "com.vocabreader/picker"
     private val TTS_CHANNEL = "com.vocabreader/tts"
+    private val SHARE_CHANNEL = "com.vocabreader/share"
     private var pendingResult: MethodChannel.Result? = null
     private var tts: TextToSpeech? = null
 
@@ -62,6 +64,37 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                     else -> result.notImplemented()
+                }
+            }
+
+        // ── Share / Export Channel ─────────────────────────────
+        // Writes content to a cache file and opens the Android share sheet so
+        // the word list can be exported as a real .csv / .txt file.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "shareFile") {
+                    try {
+                        val content = call.argument<String>("content") ?: ""
+                        val filename = call.argument<String>("filename") ?: "export.txt"
+                        val mime = call.argument<String>("mime") ?: "text/plain"
+
+                        val file = File(cacheDir, filename)
+                        file.writeText(content)
+                        val uri = FileProvider.getUriForFile(
+                            this, "$packageName.fileprovider", file
+                        )
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = mime
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        startActivity(Intent.createChooser(intent, "Export word list"))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("SHARE_ERROR", e.message, null)
+                    }
+                } else {
+                    result.notImplemented()
                 }
             }
     }

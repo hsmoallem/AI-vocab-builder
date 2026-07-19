@@ -96,11 +96,23 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
         outcome = ImportOutcome(word, ImportStatus.duplicate);
       } else {
         outcome = await provider.importWord(
-          input: word,
-          from: _sourceLang,
-          to: _targetLang,
-          level: _level,
-        );
+            input: word, from: _sourceLang, to: _targetLang, level: _level);
+        // Backstop: if we still hit the per-minute limit (very large lists),
+        // wait out the window and retry instead of failing the word.
+        var attempt = 0;
+        while (outcome.status == ImportStatus.failed &&
+            (outcome.error ?? '')
+                .toLowerCase()
+                .contains('too many requests') &&
+            attempt < 3) {
+          attempt++;
+          if (!mounted) return;
+          setState(() => _currentWord = '$word — rate-limited, retrying…');
+          await Future.delayed(const Duration(seconds: 8));
+          if (!mounted) return;
+          outcome = await provider.importWord(
+              input: word, from: _sourceLang, to: _targetLang, level: _level);
+        }
         if (outcome.status == ImportStatus.added) {
           existing.add(word.toLowerCase());
           final saved = outcome.savedWord;
