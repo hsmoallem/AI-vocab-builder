@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# ─── Pre-commit guard: no cleartext http:// in Dart source ──────────────
+#
+# The app disables cleartext traffic app-wide
+# (android/app/src/main/res/xml/network_security_config.xml). A stray
+# http:// URL in lib/ silently breaks networking on release Android builds
+# and leaks credentials on any surface where cleartext still works. This
+# hook blocks such a URL from being committed.
+#
+# Enable once (per clone):   git config core.hooksPath .githooks
+# Bypass a specific commit:  git commit --no-verify
+
+set -euo pipefail
+
+# Staged, added/copied/modified Dart files under lib/.
+files=$(git diff --cached --name-only --diff-filter=ACM -- lib | grep '\.dart$' || true)
+[ -z "$files" ] && exit 0
+
+hits=$(grep -nE 'http://' $files || true)
+if [ -n "$hits" ]; then
+  echo "✖ Commit blocked: cleartext http:// URL found in lib/ (use https://):"
+  echo "$hits"
+  echo ""
+  echo "All app traffic must be HTTPS (network_security_config.xml forbids cleartext)."
+  echo "If this is genuinely intentional, bypass with:  git commit --no-verify"
+  exit 1
+fi
+exit 0
