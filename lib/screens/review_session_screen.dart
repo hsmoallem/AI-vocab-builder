@@ -507,21 +507,25 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
 
   // ── Bottom controls ────────────────────────────────────────────────
   Widget _revealControls(Word w) {
+    // Full-width buttons (Size.fromHeight → infinite min width) with real
+    // horizontal padding, so the label sits inside with room to spare.
+    final style = FilledButton.styleFrom(
+      minimumSize: const Size.fromHeight(50),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    );
     if (widget.mode == StudyMode.typing) {
       return FilledButton.icon(
         onPressed: _submitTyped,
         icon: const Icon(Icons.check),
         label: const Text('Check answer'),
-        style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14)),
+        style: style,
       );
     }
     return FilledButton.icon(
       onPressed: () => setState(() => _revealed = true),
       icon: const Icon(Icons.visibility),
       label: const Text('Show answer'),
-      style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14)),
+      style: style,
     );
   }
 

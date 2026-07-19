@@ -44,6 +44,16 @@ class VocabBuilderApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
+        // Clamp text scaling so a large device font/display size can't blow
+        // labels out of their buttons across the app.
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          return MediaQuery(
+            data: mq.copyWith(
+                textScaler: mq.textScaler.clamp(maxScaleFactor: 1.3)),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const AuthGate(),
       ),
     );
