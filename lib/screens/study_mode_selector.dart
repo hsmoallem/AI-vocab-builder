@@ -127,7 +127,7 @@ class _StudyModeSheetState extends State<_StudyModeSheet> {
                     Icon(Icons.schedule, size: 16, color: cs.primary),
                     const SizedBox(width: 4),
                     Text(
-                      '$dueCount due',
+                      '${widget.dueCount} due',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -140,7 +140,7 @@ class _StudyModeSheetState extends State<_StudyModeSheet> {
                     Icon(Icons.fiber_new, size: 16, color: cs.tertiary),
                     const SizedBox(width: 4),
                     Text(
-                      '$newCount new',
+                      '${widget.newCount} new',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
