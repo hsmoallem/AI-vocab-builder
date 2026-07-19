@@ -100,6 +100,16 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     if (mounted) setState(() => _regenLoading = false);
   }
 
+  Future<void> _resetSrs(List<Word> words) async {
+    if (words.isEmpty) return;
+    final word = words[_currentIndex.clamp(0, words.length - 1)];
+    await context.read<WordProvider>().resetSrs(word);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"${word.word}" — study progress reset')),
+    );
+  }
+
   Future<void> _generateGrammar(Word word) async {
     setState(() => _grammarLoading = true);
     try {
@@ -223,6 +233,16 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 icon: const Icon(Icons.archive_outlined),
                 tooltip: 'Archive this card',
                 onPressed: () => _archive(words),
+              ),
+              IconButton(
+                icon: const Icon(Icons.replay),
+                tooltip: 'Start over',
+                onPressed: _currentIndex == 0 ? null : _resetToStart,
+              ),
+              IconButton(
+                icon: const Icon(Icons.restart_alt),
+                tooltip: 'Reset study progress',
+                onPressed: () => _resetSrs(words),
               ),
               IconButton(
                 icon: const Icon(Icons.copy),
@@ -410,6 +430,27 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 ),
               ),
               const SizedBox(height: 16),
+              // Studied indicator
+              if (word.srsNextDue != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 14, color: Colors.green.shade700),
+                      const SizedBox(width: 4),
+                      Text('Studied',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(

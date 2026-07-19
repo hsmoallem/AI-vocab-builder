@@ -168,7 +168,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     });
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     final stats = SessionStats(
       again: _again,
       hard: _hard,
@@ -178,10 +178,13 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       sessionEnd: DateTime.now(),
       streak: _lastStreak ?? context.read<WordProvider>().streak,
     );
-    Navigator.pushReplacement(
+    final result = await Navigator.push<String>(
       context,
       MaterialPageRoute(builder: (_) => ReviewSummaryScreen(stats: stats)),
     );
+    if (result == 'review_again' && mounted) {
+      _resetSession();
+    }
   }
 
   /// Compact copy icon for a single piece of text on the card.

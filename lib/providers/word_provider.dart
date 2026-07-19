@@ -417,7 +417,24 @@ class WordProvider extends ChangeNotifier {
     // Streak recording (idempotent within the same day).
     _streak = await DatabaseService.recordStudyDay();
 
-    // Refresh due counts.
+  }
+
+  /// Reset a word's SRS state — marks it as never studied so it appears
+  /// as a "new" card in the next study session.
+  Future<void> resetSrs(Word word) async {
+    final reset = word.copyWith(
+      srsInterval: 0,
+      srsEaseFactor: 2.5,
+      srsRepetitions: 0,
+      srsNextDue: null,
+      srsLastReview: null,
+      updatedAt: DateTime.now(),
+    );
+    await DatabaseService.updateWord(reset);
+    final idx = _words.indexWhere((w) => w.id == word.id);
+    if (idx >= 0) _words[idx] = reset;
+    notifyListeners();
+  }
     _dueCount = await DatabaseService.getDueCount();
     notifyListeners();
 
