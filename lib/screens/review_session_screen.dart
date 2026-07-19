@@ -68,6 +68,25 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     super.dispose();
   }
 
+  void _resetSession() {
+    setState(() {
+      _deck = [...widget.deck];
+      _index = 0;
+      _revealed = false;
+      _typeController.clear();
+      _typedCorrect = null;
+      _again = 0;
+      _hard = 0;
+      _good = 0;
+      _easy = 0;
+      _start = DateTime.now();
+      _grammarLoading = false;
+      _regenLoading = false;
+      _secondLang = null;
+      _secondLoading = false;
+    });
+  }
+
   Word get _current => _deck[_index];
 
   // ── Answer checking (typing mode) ──────────────────────────────────
@@ -242,6 +261,11 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       appBar: AppBar(
         title: const Text('Review'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.replay),
+            tooltip: 'Restart session',
+            onPressed: _resetSession,
+          ),
           IconButton(
             icon: const Icon(Icons.archive_outlined),
             tooltip: 'Archive this card',

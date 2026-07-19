@@ -150,20 +150,29 @@ class _NewCardsControl extends StatefulWidget {
 
 class _NewCardsControlState extends State<_NewCardsControl> {
   static const List<int> _options = [10, 20, 30, 50, StudyPrefs.all];
-  int _value = 30;
+  int? _value; // null = still loading from prefs
 
   @override
   void initState() {
     super.initState();
-    StudyPrefs.newCardsPerSession().then((n) {
-      if (mounted) setState(() => _value = _options.contains(n) ? n : 30);
-    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    final n = await StudyPrefs.newCardsPerSession();
+    if (mounted) setState(() => _value = _options.contains(n) ? n : 30);
   }
 
   String _label(int n) => n == StudyPrefs.all ? 'All' : '$n';
 
   @override
   Widget build(BuildContext context) {
+    if (_value == null) {
+      return const SizedBox(
+        height: 48,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
     return DropdownButtonFormField<int>(
       value: _value,
       decoration: const InputDecoration(
