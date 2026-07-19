@@ -182,6 +182,7 @@ class WordProvider extends ChangeNotifier {
       targetLang: word.targetLang,
       note: word.note,
       grammarTip: word.grammarTip,
+      archived: word.archived,
     );
     await DatabaseService.insertWord(w);
     await loadWords();
@@ -209,6 +210,21 @@ class WordProvider extends ChangeNotifier {
     await DatabaseService.updateWord(word.copyWith(note: note));
     await loadWords();
   }
+
+  /// Archive a word — hides it from Saved Words AND the flashcard deck.
+  Future<void> archiveWord(Word word) async {
+    await DatabaseService.updateWord(word.copyWith(archived: true));
+    await loadWords();
+  }
+
+  /// Restore an archived word so it shows again.
+  Future<void> unarchiveWord(Word word) async {
+    await DatabaseService.updateWord(word.copyWith(archived: false));
+    await loadWords();
+  }
+
+  /// Archived words (for the Archived Words screen).
+  Future<List<Word>> archivedWords() => DatabaseService.getArchivedWords();
 
   /// Regenerate the example sentence(s) for [word] using the SAME translation
   /// workflow (same `translate()` call + `• `-bulleted formatting as the Add /

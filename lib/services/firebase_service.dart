@@ -120,6 +120,7 @@ class FirebaseService {
         'is_reviewed': word.isReviewed,
         'note': word.note,
         'grammar_tip': word.grammarTip,
+        'archived': word.archived,
         'created_at': word.createdAt.toIso8601String(),
         'updated_at': word.updatedAt.toIso8601String(),
       };
@@ -140,6 +141,7 @@ class FirebaseService {
       isReviewed: (data['is_reviewed'] as bool?) ?? false,
       note: data['note'] as String?,
       grammarTip: data['grammar_tip'] as String?,
+      archived: (data['archived'] as bool?) ?? false,
       createdAt: parseDate(data['created_at'] as String?),
       updatedAt: parseDate(data['updated_at'] as String?),
     );

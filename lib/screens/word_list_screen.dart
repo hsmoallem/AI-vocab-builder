@@ -7,6 +7,7 @@ import '../services/tts_service.dart';
 import '../services/export_service.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/word_card.dart';
+import 'archived_words_screen.dart';
 
 class WordListScreen extends StatefulWidget {
   const WordListScreen({super.key});
@@ -239,6 +240,13 @@ class _WordListScreenState extends State<WordListScreen> {
                     onSelected: (v) {
                       if (v == 'dedupe') _removeDuplicates(context);
                       if (v == 'export') _export(context);
+                      if (v == 'archived') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ArchivedWordsScreen()),
+                        );
+                      }
                     },
                     itemBuilder: (_) => [
                       PopupMenuItem(
@@ -248,6 +256,16 @@ class _WordListScreenState extends State<WordListScreen> {
                           title: Text(s.locale == 'de'
                               ? 'Wortliste exportieren'
                               : 'Export word list'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'archived',
+                        child: ListTile(
+                          leading: const Icon(Icons.archive_outlined),
+                          title: Text(s.locale == 'de'
+                              ? 'Archivierte Wörter'
+                              : 'Archived words'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -444,12 +462,21 @@ class _ExportSheetState extends State<_ExportSheet> {
         return all;
       case _Scope.range:
         if (_from == null || _to == null) return const [];
-        final start = DateTime(_from!.year, _from!.month, _from!.day);
-        final end = DateTime(_to!.year, _to!.month, _to!.day, 23, 59, 59, 999);
-        return all
-            .where((w) =>
-                !w.createdAt.isBefore(start) && !w.createdAt.isAfter(end))
-            .toList();
+        // Compare by LOCAL calendar day (YYYYMMDD) so time-of-day never
+        // excludes a same-day word; swap if the range is reversed.
+        int dnum(DateTime d) {
+          final l = d.toLocal();
+          return l.year * 10000 + l.month * 100 + l.day;
+        }
+
+        final a = dnum(_from!);
+        final b = dnum(_to!);
+        final lo = a <= b ? a : b;
+        final hi = a <= b ? b : a;
+        return all.where((w) {
+          final d = dnum(w.createdAt);
+          return d >= lo && d <= hi;
+        }).toList();
       case _Scope.last:
         final n = int.tryParse(_nController.text.trim()) ?? 0;
         return n <= 0 ? const [] : all.take(n).toList();
@@ -461,13 +488,15 @@ class _ExportSheetState extends State<_ExportSheet> {
     final picked = await showDatePicker(
       context: context,
       initialDate: (isFrom ? _from : _to) ?? now,
-      firstDate: DateTime(2020),
+      // The "To" date can't be earlier than the "From" date.
+      firstDate: isFrom ? DateTime(2020) : (_from ?? DateTime(2020)),
       lastDate: DateTime(now.year + 1, 12, 31),
     );
     if (picked != null) {
       setState(() {
         if (isFrom) {
           _from = picked;
+          if (_to != null && _to!.isBefore(picked)) _to = picked; // keep To ≥ From
         } else {
           _to = picked;
         }
@@ -521,7 +550,15 @@ class _ExportSheetState extends State<_ExportSheet> {
                 ButtonSegment(value: _Scope.last, label: Text('Last N')),
               ],
               selected: {_scope},
-              onSelectionChanged: (s) => setState(() => _scope = s.first),
+              onSelectionChanged: (s) => setState(() {
+                _scope = s.first;
+                // Default the range to TODAY so it immediately shows today's words.
+                if (_scope == _Scope.range) {
+                  final now = DateTime.now();
+                  _from ??= now;
+                  _to ??= now;
+                }
+              }),
             ),
             const SizedBox(height: 12),
             if (_scope == _Scope.range)

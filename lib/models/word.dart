@@ -31,6 +31,8 @@ class Word {
   String? note;
   // AI grammar/usage tip, generated on demand (nullable — added in DB v2).
   String? grammarTip;
+  // Archived words are hidden from Saved Words + flashcards (added in DB v3).
+  bool archived;
   DateTime createdAt;
   DateTime updatedAt;
 
@@ -45,6 +47,7 @@ class Word {
     this.isReviewed = false,
     this.note,
     this.grammarTip,
+    this.archived = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -78,6 +81,7 @@ class Word {
       // Nullable columns (added in DB v2) — absent on pre-v2 rows, which is fine.
       note: map['note'] as String?,
       grammarTip: map['grammar_tip'] as String?,
+      archived: (map['archived'] as int?) == 1,
       createdAt: parseDate(map['created_at'] as String?),
       updatedAt: parseDate(map['updated_at'] as String?),
     );
@@ -98,6 +102,7 @@ class Word {
       'is_reviewed': isReviewed ? 1 : 0,
       'note': note,
       'grammar_tip': grammarTip,
+      'archived': archived ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -117,6 +122,7 @@ class Word {
     bool? isReviewed,
     String? note,
     String? grammarTip,
+    bool? archived,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -131,6 +137,7 @@ class Word {
       isReviewed: isReviewed ?? this.isReviewed,
       note: note ?? this.note,
       grammarTip: grammarTip ?? this.grammarTip,
+      archived: archived ?? this.archived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

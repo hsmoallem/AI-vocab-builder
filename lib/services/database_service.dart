@@ -57,12 +57,10 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'vocab_builder.db');
     return await openDatabase(
       path,
-      // v2 (2026-07): added `note` and `grammar_tip` columns.
-      version: 2,
+      // v2: added `note` + `grammar_tip`.  v3: added `archived`.
+      version: 3,
       onCreate: (db, version) async {
         // Fresh install — create the table with all current columns.
-        // `is_reviewed` defaults to 0 (false) — words start unreviewed.
-        // `note` and `grammar_tip` are nullable and hold user notes / AI tips.
         await db.execute('''
           CREATE TABLE words (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +73,7 @@ class DatabaseService {
             is_reviewed INTEGER NOT NULL DEFAULT 0,
             note TEXT,
             grammar_tip TEXT,
+            archived INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
           )
@@ -82,10 +81,14 @@ class DatabaseService {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // Migrate existing installs WITHOUT losing data. ALTER TABLE ADD COLUMN
-        // only appends nullable columns; all existing rows are preserved.
+        // only appends columns; all existing rows are preserved.
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE words ADD COLUMN note TEXT');
           await db.execute('ALTER TABLE words ADD COLUMN grammar_tip TEXT');
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+              'ALTER TABLE words ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
         }
       },
     );
@@ -97,14 +100,26 @@ class DatabaseService {
     return await db.insert('words', word.toMap());
   }
 
-  /// Get all words, ordered by the given SQL ORDER BY clause.
+  /// Get all NON-archived words, ordered by the given SQL ORDER BY clause.
   /// Default: newest first (created_at DESC).
   /// Pass 'LOWER(word) ASC' for alphabetical sorting.
   static Future<List<Word>> getWords({String orderBy = 'created_at DESC'}) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'words',
+      where: 'archived = 0',
       orderBy: orderBy,
+    );
+    return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
+  }
+
+  /// Get archived words only (for the Archived Words screen), newest first.
+  static Future<List<Word>> getArchivedWords() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'words',
+      where: 'archived = 1',
+      orderBy: 'created_at DESC',
     );
     return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
   }
@@ -149,7 +164,7 @@ class DatabaseService {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'words',
-      where: 'word LIKE ? OR translation LIKE ?',
+      where: 'archived = 0 AND (word LIKE ? OR translation LIKE ?)',
       whereArgs: ['%$query%', '%$query%'],
       orderBy: 'created_at DESC',
     );

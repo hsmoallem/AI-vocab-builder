@@ -54,6 +54,29 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     return parts.join('\n');
   }
 
+  Future<void> _archive(List<Word> words) async {
+    if (words.isEmpty) return;
+    final word = words[_currentIndex.clamp(0, words.length - 1)];
+    await context.read<WordProvider>().archiveWord(word);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"${word.word}" archived')),
+    );
+    // The deck just shrank — clamp the page so it stays valid.
+    final newLen = context.read<WordProvider>().words.length;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || newLen == 0) return;
+      final target = _currentIndex.clamp(0, newLen - 1);
+      if (_pageController.hasClients) _pageController.jumpToPage(target);
+      setState(() {
+        _currentIndex = target;
+        _isFlipped = false;
+        _flipController.reset();
+        _resetCardState();
+      });
+    });
+  }
+
   /// Compact copy icon for a single piece of text on the card.
   Widget _copyIconBtn(String text, String label, {double size = 18}) {
     return IconButton(
@@ -195,8 +218,14 @@ class _FlashcardScreenState extends State<FlashcardScreen>
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('Flashcard ${_currentIndex + 1} of ${words.length}'),
+            title: Text(
+                'Flashcard ${_currentIndex.clamp(0, words.length - 1) + 1} of ${words.length}'),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.archive_outlined),
+                tooltip: 'Archive this card',
+                onPressed: () => _archive(words),
+              ),
               IconButton(
                 icon: const Icon(Icons.copy),
                 tooltip: 'Copy card',
