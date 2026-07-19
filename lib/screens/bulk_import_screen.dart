@@ -125,6 +125,13 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
         _results.add(outcome);
         _done++;
       });
+
+      // Pace requests: a short gap between AI calls keeps the whole import
+      // comfortably under the per-minute rate limit (duplicates are skipped
+      // locally, so they don't need a delay).
+      if (outcome.status != ImportStatus.duplicate) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
     }
 
     // importWord() does not reload per word — reload once after the batch.
