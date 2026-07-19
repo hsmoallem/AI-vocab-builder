@@ -540,16 +540,25 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
             onPressed: () => _rate(r),
             style: FilledButton.styleFrom(
                 backgroundColor: color,
-                padding: const EdgeInsets.symmetric(vertical: 10)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(SrsService.hintForInterval(days),
-                    style: const TextStyle(fontSize: 11)),
-              ],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                minimumSize: const Size(0, 52),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            // FittedBox scales the label down to fit so text never spills
+            // outside the button on narrow screens / large font scales.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label,
+                      maxLines: 1,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(SrsService.hintForInterval(days),
+                      maxLines: 1, style: const TextStyle(fontSize: 11)),
+                ],
+              ),
             ),
           ),
         ),
