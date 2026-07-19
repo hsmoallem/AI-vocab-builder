@@ -136,58 +136,33 @@ class _WordListScreenState extends State<WordListScreen> {
           .showSnackBar(const SnackBar(content: Text('No words to export')));
       return;
     }
-    final choice = await showModalBottomSheet<String>(
+    final choice = await showModalBottomSheet<_ExportChoice>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(
-              title: Text('Export word list',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Newest words first'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.table_chart_outlined),
-              title: const Text('Share as CSV'),
-              subtitle: const Text(
-                  'Opens in Excel — or pick "Save to Drive" to open as a Google Sheet',
-                  style: TextStyle(fontSize: 12)),
-              onTap: () => Navigator.pop(ctx, 'csv'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('Share as text'),
-              onTap: () => Navigator.pop(ctx, 'txt'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.content_copy),
-              title: const Text('Copy to clipboard (paste into Excel)'),
-              onTap: () => Navigator.pop(ctx, 'clip'),
-            ),
-          ],
-        ),
+      isScrollControlled: true, // room for the number field / keyboard
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: _ExportSheet(words: words),
       ),
     );
     if (choice == null || !context.mounted) return;
     final stamp = DateTime.now().toIso8601String().substring(0, 10);
     try {
-      switch (choice) {
-        case 'csv':
+      switch (choice.format) {
+        case _ExportFormat.csv:
           await ExportService.shareFile(
-              content: ExportService.toCsv(words),
+              content: ExportService.toCsv(choice.words),
               filename: 'vocab_$stamp.csv',
               mime: 'text/csv');
           break;
-        case 'txt':
+        case _ExportFormat.txt:
           await ExportService.shareFile(
-              content: ExportService.toText(words),
+              content: ExportService.toText(choice.words),
               filename: 'vocab_$stamp.txt',
               mime: 'text/plain');
           break;
-        case 'clip':
+        case _ExportFormat.clip:
           if (context.mounted) {
-            await copyToClipboard(context, ExportService.toTsv(words),
+            await copyToClipboard(context, ExportService.toTsv(choice.words),
                 label: 'Word list');
           }
           break;
@@ -418,6 +393,179 @@ class _SortChip extends StatelessWidget {
                     : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Export options ────────────────────────────────────────────────
+
+enum _ExportFormat { csv, txt, clip }
+
+class _ExportChoice {
+  final _ExportFormat format;
+  final List<Word> words; // already filtered + newest-first
+  _ExportChoice(this.format, this.words);
+}
+
+enum _Scope { all, range, last }
+
+/// Bottom sheet: choose a scope (all / date range / last N) then a format.
+class _ExportSheet extends StatefulWidget {
+  final List<Word> words;
+  const _ExportSheet({required this.words});
+
+  @override
+  State<_ExportSheet> createState() => _ExportSheetState();
+}
+
+class _ExportSheetState extends State<_ExportSheet> {
+  _Scope _scope = _Scope.all;
+  DateTime? _from;
+  DateTime? _to;
+  final _nController = TextEditingController(text: '20');
+
+  @override
+  void dispose() {
+    _nController.dispose();
+    super.dispose();
+  }
+
+  List<Word> _filtered() {
+    final all = [...widget.words]
+      ..sort((a, b) {
+        final c = b.createdAt.compareTo(a.createdAt);
+        return c != 0 ? c : (b.id ?? 0).compareTo(a.id ?? 0);
+      });
+    switch (_scope) {
+      case _Scope.all:
+        return all;
+      case _Scope.range:
+        if (_from == null || _to == null) return const [];
+        final start = DateTime(_from!.year, _from!.month, _from!.day);
+        final end = DateTime(_to!.year, _to!.month, _to!.day, 23, 59, 59, 999);
+        return all
+            .where((w) =>
+                !w.createdAt.isBefore(start) && !w.createdAt.isAfter(end))
+            .toList();
+      case _Scope.last:
+        final n = int.tryParse(_nController.text.trim()) ?? 0;
+        return n <= 0 ? const [] : all.take(n).toList();
+    }
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isFrom ? _from : _to) ?? now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isFrom) {
+          _from = picked;
+        } else {
+          _to = picked;
+        }
+      });
+    }
+  }
+
+  String _fmt(DateTime? d) => d == null
+      ? 'Pick'
+      : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Widget _fmtTile(
+      IconData icon, String title, String? subtitle, bool ready, _ExportFormat f) {
+    return ListTile(
+      enabled: ready,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: subtitle == null
+          ? null
+          : Text(subtitle, style: const TextStyle(fontSize: 12)),
+      onTap: ready
+          ? () => Navigator.pop(context, _ExportChoice(f, _filtered()))
+          : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final count = _filtered().length;
+    final ready = count > 0;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Export word list',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 2),
+            Text('Newest words first',
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            const SizedBox(height: 12),
+            SegmentedButton<_Scope>(
+              segments: const [
+                ButtonSegment(value: _Scope.all, label: Text('All')),
+                ButtonSegment(value: _Scope.range, label: Text('Range')),
+                ButtonSegment(value: _Scope.last, label: Text('Last N')),
+              ],
+              selected: {_scope},
+              onSelectionChanged: (s) => setState(() => _scope = s.first),
+            ),
+            const SizedBox(height: 12),
+            if (_scope == _Scope.range)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.event, size: 16),
+                      label: Text('From: ${_fmt(_from)}'),
+                      onPressed: () => _pickDate(true),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.event, size: 16),
+                      label: Text('To: ${_fmt(_to)}'),
+                      onPressed: () => _pickDate(false),
+                    ),
+                  ),
+                ],
+              ),
+            if (_scope == _Scope.last)
+              TextField(
+                controller: _nController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Number of most recent words',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            const SizedBox(height: 10),
+            Text('$count word${count == 1 ? '' : 's'} selected',
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            const Divider(height: 20),
+            _fmtTile(Icons.table_chart_outlined, 'Share as CSV',
+                'Excel — or "Save to Drive" to open as a Google Sheet', ready,
+                _ExportFormat.csv),
+            _fmtTile(Icons.description_outlined, 'Share as text', null, ready,
+                _ExportFormat.txt),
+            _fmtTile(Icons.content_copy, 'Copy to clipboard', null, ready,
+                _ExportFormat.clip),
           ],
         ),
       ),
