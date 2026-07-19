@@ -15,6 +15,7 @@ import 'bulk_import_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
+import '../services/auto_backup.dart';
 import '../config/app_strings.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,6 +34,19 @@ class _HomeScreenState extends State<HomeScreen> {
     DailyPhrasesScreen(),
     WordListScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Run an automatic backup on launch if it's enabled + due (silent).
+    // Delay so the word list has time to load first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 3), () {
+        if (!mounted) return;
+        AutoBackup.maybeRun(context.read<WordProvider>().words);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
+import '../services/auto_backup.dart';
+import 'user_guide_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -43,7 +45,6 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.translate,
             title: s.translateLanguage,
             subtitle: s.translateLanguageDesc,
-            last: true,
             child: DropdownButtonFormField<String>(
               value: locale.targetLang,
               decoration: const InputDecoration(
@@ -58,8 +59,73 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
+
+          // ── Automatic backup ────────────────────────────────
+          const _Section(
+            icon: Icons.cloud_upload_outlined,
+            title: 'Automatic backup',
+            subtitle: 'Back up to the cloud on a schedule (signed-in accounts)',
+            child: _AutoBackupControl(),
+          ),
+
+          // ── User guide ──────────────────────────────────────
+          _Section(
+            icon: Icons.help_outline,
+            title: 'User guide',
+            subtitle: 'Flashcards, spaced repetition, study modes, and more',
+            last: true,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserGuideScreen()),
+                ),
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Open guide'),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// SegmentedButton control for the automatic-backup frequency, backed by
+/// SharedPreferences via [AutoBackup].
+class _AutoBackupControl extends StatefulWidget {
+  const _AutoBackupControl();
+
+  @override
+  State<_AutoBackupControl> createState() => _AutoBackupControlState();
+}
+
+class _AutoBackupControlState extends State<_AutoBackupControl> {
+  String _freq = AutoBackup.freqOff;
+
+  @override
+  void initState() {
+    super.initState();
+    AutoBackup.getFrequency().then((f) {
+      if (mounted) setState(() => _freq = f);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<String>(
+      segments: const [
+        ButtonSegment(value: AutoBackup.freqOff, label: Text('Off')),
+        ButtonSegment(value: AutoBackup.freqDaily, label: Text('Daily')),
+        ButtonSegment(value: AutoBackup.freqWeekly, label: Text('Weekly')),
+      ],
+      selected: {_freq},
+      showSelectedIcon: false,
+      onSelectionChanged: (v) async {
+        setState(() => _freq = v.first);
+        await AutoBackup.setFrequency(v.first);
+      },
     );
   }
 }
