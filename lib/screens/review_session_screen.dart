@@ -15,6 +15,8 @@ import '../providers/word_provider.dart';
 import '../services/database_service.dart'; // StreakSnapshot
 import '../services/srs_service.dart';
 import '../services/tts_service.dart';
+import '../config/app_strings.dart';
+import '../utils/clipboard_util.dart';
 import 'review_summary_screen.dart';
 
 class ReviewSessionScreen extends StatefulWidget {
@@ -45,6 +47,13 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   int _again = 0, _hard = 0, _good = 0, _easy = 0;
   late final DateTime _start;
   StreakSnapshot? _lastStreak;
+
+  // Rich-content state (restores the normal flip behaviour: grammar tip, note,
+  // and 2nd-language translation on the answer side). Reset on each new card.
+  bool _grammarLoading = false;
+  String? _secondLang;
+  String? _secondTranslation;
+  bool _secondLoading = false;
 
   @override
   void initState() {
@@ -125,6 +134,10 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _revealed = false;
       _typedCorrect = null;
       _typeController.clear();
+      _grammarLoading = false;
+      _secondLang = null;
+      _secondTranslation = null;
+      _secondLoading = false;
     });
   }
 
@@ -340,6 +353,10 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
             ),
           ),
         ],
+        // Restored rich content: grammar tip, note, translate-to-another-language.
+        _grammarSection(w),
+        _noteSection(w),
+        _secondLangSection(w),
       ],
     );
   }
@@ -402,6 +419,246 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         btn(Rating.good, 'Good', Colors.green.shade600),
         btn(Rating.easy, 'Easy', Colors.blue.shade600),
       ],
+    );
+  }
+
+  // ── Rich content (grammar tip / note / 2nd-language) ───────────────
+  Future<void> _generateGrammar(Word w) async {
+    setState(() => _grammarLoading = true);
+    try {
+      final tip = await context.read<WordProvider>().generateGrammarTipFor(w);
+      if (mounted) {
+        setState(() => _deck[_index] = _deck[_index].copyWith(grammarTip: tip));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _grammarLoading = false);
+  }
+
+  Future<void> _editNote(Word w) async {
+    final controller = TextEditingController(text: w.note ?? '');
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+              hintText: 'Add a personal note…', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Save')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+    await context.read<WordProvider>().updateNote(w, saved);
+    if (mounted) {
+      setState(() => _deck[_index] = _deck[_index].copyWith(note: saved));
+    }
+  }
+
+  Future<void> _translateSecond(Word w) async {
+    final lang = _secondLang;
+    if (lang == null) return;
+    setState(() {
+      _secondLoading = true;
+      _secondTranslation = null;
+    });
+    try {
+      final result = await context
+          .read<WordProvider>()
+          .translateWord(w.word, from: w.sourceLang, to: lang);
+      if (mounted) setState(() => _secondTranslation = result.translation);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+    if (mounted) setState(() => _secondLoading = false);
+  }
+
+  Widget _grammarSection(Word w) {
+    final cs = Theme.of(context).colorScheme;
+    final tip = w.grammarTip;
+    final spinner = SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: cs.tertiary));
+    if (tip == null || tip.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: OutlinedButton.icon(
+          onPressed: _grammarLoading ? null : () => _generateGrammar(w),
+          icon: _grammarLoading
+              ? spinner
+              : const Icon(Icons.lightbulb_outline, size: 18),
+          label: Text(_grammarLoading
+              ? 'Generating…'
+              : (tip == null ? 'Grammar tip' : 'No tip — try again')),
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: cs.tertiaryContainer.withAlpha(120),
+          borderRadius: BorderRadius.circular(10)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.lightbulb, size: 16, color: cs.tertiary),
+          const SizedBox(width: 6),
+          Text('Grammar tip',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cs.tertiary)),
+          const Spacer(),
+          IconButton(
+              icon: const Icon(Icons.copy, size: 16),
+              tooltip: 'Copy',
+              onPressed: () => copyToClipboard(context, tip, label: 'Grammar tip'),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28)),
+          IconButton(
+              icon: _grammarLoading ? spinner : const Icon(Icons.refresh, size: 16),
+              tooltip: 'Regenerate',
+              onPressed: _grammarLoading ? null : () => _generateGrammar(w),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28)),
+        ]),
+        const SizedBox(height: 4),
+        Text(tip, style: const TextStyle(fontSize: 13)),
+      ]),
+    );
+  }
+
+  Widget _noteSection(Word w) {
+    final cs = Theme.of(context).colorScheme;
+    final note = w.note ?? '';
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cs.outlineVariant)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.sticky_note_2_outlined, size: 16, color: cs.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text('Note',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cs.onSurfaceVariant)),
+          const Spacer(),
+          IconButton(
+              icon: Icon(note.isEmpty ? Icons.add : Icons.edit, size: 16),
+              tooltip: note.isEmpty ? 'Add note' : 'Edit note',
+              onPressed: () => _editNote(w),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28)),
+        ]),
+        if (note.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(note, style: const TextStyle(fontSize: 13)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _secondLangSection(Word w) {
+    final cs = Theme.of(context).colorScheme;
+    final entries = AppStrings.targetLanguages.entries
+        .where((e) => e.key != w.sourceLang)
+        .toList();
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: cs.surfaceContainerLow, borderRadius: BorderRadius.circular(10)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Also translate to',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: cs.onSurfaceVariant)),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              value: _secondLang,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  border: OutlineInputBorder(),
+                  hintText: 'Language'),
+              items: entries
+                  .map((e) =>
+                      DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .toList(),
+              onChanged: _secondLoading
+                  ? null
+                  : (v) => setState(() {
+                        _secondLang = v;
+                        _secondTranslation = null;
+                      }),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: (_secondLang == null || _secondLoading)
+                ? null
+                : () => _translateSecond(w),
+            child: _secondLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Go'),
+          ),
+        ]),
+        if (_secondTranslation != null) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+                child: Text(_secondTranslation!,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600))),
+            IconButton(
+                icon: const Icon(Icons.volume_up, size: 18),
+                tooltip: 'Listen',
+                onPressed: () =>
+                    _tts.speak(_secondTranslation!, language: _secondLang!),
+                visualDensity: VisualDensity.compact),
+            IconButton(
+                icon: const Icon(Icons.copy, size: 16),
+                tooltip: 'Copy',
+                onPressed: () => copyToClipboard(context, _secondTranslation!),
+                visualDensity: VisualDensity.compact),
+          ]),
+        ],
+      ]),
     );
   }
 }
