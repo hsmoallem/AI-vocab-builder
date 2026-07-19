@@ -16,6 +16,7 @@ import '../services/database_service.dart'; // StreakSnapshot
 import '../services/srs_service.dart';
 import '../services/tts_service.dart';
 import '../config/app_strings.dart';
+import '../widgets/cefr_badge.dart';
 import '../utils/clipboard_util.dart';
 import 'review_summary_screen.dart';
 
@@ -399,6 +400,15 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        // CEFR level of this word (when classified)
+        if ((w.cefr ?? '').isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Align(
+              alignment: Alignment.center,
+              child: CefrBadge(w.cefr, fontSize: 12),
             ),
           ),
         // The answer: word / translation + TTS + copy

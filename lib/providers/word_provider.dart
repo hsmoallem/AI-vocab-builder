@@ -128,6 +128,69 @@ class WordProvider extends ChangeNotifier {
     );
   }
 
+  /// Words in the library that still have no CEFR level.
+  int get unclassifiedCefrCount =>
+      _words.where((w) => (w.cefr == null || w.cefr!.isEmpty)).length;
+
+  /// Classify every not-yet-classified word by CEFR level.
+  ///
+  /// Batches requests (grouped by source language, since the classifier judges
+  /// a word in its own language) so a whole library costs a handful of calls,
+  /// not one per word. [onProgress] fires with (done, total) as it advances.
+  /// Returns how many words got a level. Batches that fail are skipped so one
+  /// error doesn't abort the whole run.
+  Future<int> classifyAllCefr({
+    void Function(int done, int total)? onProgress,
+    int batchSize = 40,
+  }) async {
+    final pending = _words
+        .where((w) => w.id != null && (w.cefr == null || w.cefr!.isEmpty))
+        .toList();
+    final total = pending.length;
+    if (total == 0) return 0;
+
+    // Group by source language.
+    final byLang = <String, List<Word>>{};
+    for (final w in pending) {
+      byLang.putIfAbsent(w.sourceLang, () => []).add(w);
+    }
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    int done = 0;
+    int classified = 0;
+
+    for (final entry in byLang.entries) {
+      final list = entry.value;
+      for (var i = 0; i < list.length; i += batchSize) {
+        final end =
+            (i + batchSize) < list.length ? (i + batchSize) : list.length;
+        final batch = list.sublist(i, end);
+        try {
+          final levels = await _translationService.classifyCefr(
+            words: batch.map((w) => w.word).toList(),
+            sourceLang: entry.key,
+            firebaseUid: uid,
+          );
+          for (var j = 0; j < batch.length; j++) {
+            final lvl = (j < levels.length) ? levels[j].trim() : '';
+            if (lvl.isNotEmpty) {
+              await DatabaseService.updateCefr(batch[j].id!, lvl);
+              batch[j].cefr = lvl; // reflect in the in-memory model
+              classified++;
+            }
+          }
+        } catch (_) {
+          // Skip this batch; keep going with the rest.
+        }
+        done += batch.length;
+        onProgress?.call(done, total);
+        notifyListeners();
+      }
+    }
+    await loadWords(); // re-sort / refresh with the new levels
+    return classified;
+  }
+
   /// Add a new word with all fields
   Future<bool> addWord({
     required String word,

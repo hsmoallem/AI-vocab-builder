@@ -75,6 +75,17 @@ class UserGuideScreen extends StatelessWidget {
                 'CSV as a Google Sheet.',
           ),
           _Guide(
+            icon: Icons.school_outlined,
+            title: 'CEFR levels',
+            body:
+                'Each word can show its CEFR level (A1–C2) — how advanced a '
+                'learner needs to be to know it. To fill them in, open Saved '
+                'Words → ⋮ → "Classify CEFR levels"; the AI grades every word '
+                'that doesn\'t have a level yet. The colored badge then appears '
+                'on the word and on its review card. Run it again after adding '
+                'new words.',
+          ),
+          _Guide(
             icon: Icons.archive_outlined,
             title: 'Archiving',
             body:

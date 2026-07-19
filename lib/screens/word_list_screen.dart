@@ -130,6 +130,81 @@ class _WordListScreenState extends State<WordListScreen> {
     }
   }
 
+  Future<void> _classifyCefr(BuildContext context) async {
+    final provider = context.read<WordProvider>();
+    final pending = provider.unclassifiedCefrCount;
+    if (pending == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('All words already have a CEFR level')));
+      return;
+    }
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Classify CEFR levels?'),
+        content: Text(
+          'The AI will assign a CEFR level (A1–C2) to $pending word'
+          "${pending == 1 ? '' : 's'} that don't have one yet. "
+          'This uses the translation server and may take a moment.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Classify')),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+
+    // Non-dismissible progress dialog with a live counter.
+    final progress = ValueNotifier<int>(0);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ValueListenableBuilder<int>(
+                valueListenable: progress,
+                builder: (_, done, __) =>
+                    Text('Classifying… $done / $pending'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    int classified = 0;
+    try {
+      classified = await provider.classifyAllCefr(
+        onProgress: (done, total) => progress.value = done,
+      );
+    } catch (_) {
+      // Reported below via classified == 0.
+    }
+    if (!mounted) {
+      progress.dispose();
+      return;
+    }
+    Navigator.of(context, rootNavigator: true).pop(); // close progress dialog
+    progress.dispose();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(classified == 0
+          ? 'Could not classify — check your connection and try again'
+          : 'Classified $classified word${classified == 1 ? '' : 's'}'),
+    ));
+  }
+
   Future<void> _export(BuildContext context) async {
     final words = context.read<WordProvider>().words;
     if (words.isEmpty) {
@@ -240,6 +315,7 @@ class _WordListScreenState extends State<WordListScreen> {
                     onSelected: (v) {
                       if (v == 'dedupe') _removeDuplicates(context);
                       if (v == 'export') _export(context);
+                      if (v == 'classify') _classifyCefr(context);
                       if (v == 'archived') {
                         Navigator.push(
                           context,
@@ -249,6 +325,16 @@ class _WordListScreenState extends State<WordListScreen> {
                       }
                     },
                     itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'classify',
+                        child: ListTile(
+                          leading: const Icon(Icons.school_outlined),
+                          title: Text(s.locale == 'de'
+                              ? 'CEFR-Niveaus einstufen'
+                              : 'Classify CEFR levels'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'export',
                         child: ListTile(
