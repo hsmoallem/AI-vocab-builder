@@ -22,7 +22,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 class TranslationService {
-  static const String _baseUrl = 'http://13.140.134.57:9000/translate';
+  static const String _baseUrl = 'https://api.houssammoallem.com/translate';
   static const String _appToken = 'vocab-builder-shared-secret-2026';
   static const String _defaultSourceLang = 'de';
   static const String _defaultTargetLang = 'en';
