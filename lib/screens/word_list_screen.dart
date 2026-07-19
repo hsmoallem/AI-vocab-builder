@@ -149,7 +149,10 @@ class _WordListScreenState extends State<WordListScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.table_chart_outlined),
-              title: const Text('Share as CSV (opens in Excel)'),
+              title: const Text('Share as CSV'),
+              subtitle: const Text(
+                  'Opens in Excel — or pick "Save to Drive" to open as a Google Sheet',
+                  style: TextStyle(fontSize: 12)),
               onTap: () => Navigator.pop(ctx, 'csv'),
             ),
             ListTile(
