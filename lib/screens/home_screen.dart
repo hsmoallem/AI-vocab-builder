@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import 'word_list_screen.dart';
 import 'pdf_reader_screen.dart';
 import 'flashcard_screen.dart';
+import 'review_session_screen.dart';
+import 'study_mode_selector.dart';
 import 'daily_phrases_screen.dart';
+import '../models/study_mode.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
@@ -49,12 +53,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.style_outlined),
-            tooltip: s.flashcards,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+            icon: Badge.count(
+              count: context.watch<WordProvider>().dueCount,
+              isLabelVisible: context.watch<WordProvider>().dueCount > 0,
+              child: const Icon(Icons.style_outlined),
             ),
+            tooltip: s.flashcards,
+            onPressed: () => _startReview(context),
           ),
           IconButton(
             icon: const Icon(Icons.playlist_add),
@@ -249,6 +254,47 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (_) => const AddWordDialog(),
+    );
+  }
+
+  /// Start a spaced-repetition review session: pick a study mode, build the
+  /// due+new deck, and open the session. If nothing is due, fall back to
+  /// browsing all cards.
+  Future<void> _startReview(BuildContext context) async {
+    final provider = context.read<WordProvider>();
+    await provider.refreshSrs();
+    if (!context.mounted) return;
+    if (provider.dueCount == 0 && provider.newCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('🎉 All caught up — no cards due. Browsing all cards.')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+      );
+      return;
+    }
+    final mode = await showStudyModeSelector(
+      context: context,
+      dueCount: provider.dueCount,
+      newCount: provider.newCount,
+    );
+    if (mode == null || !context.mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kStudyModePrefKey, mode.index);
+    final deck = await provider.buildSessionDeck();
+    if (!context.mounted) return;
+    if (deck.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nothing to review right now.')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => ReviewSessionScreen(mode: mode, deck: deck)),
     );
   }
 
