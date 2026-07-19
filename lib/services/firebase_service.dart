@@ -123,6 +123,16 @@ class FirebaseService {
         'archived': word.archived,
         'created_at': word.createdAt.toIso8601String(),
         'updated_at': word.updatedAt.toIso8601String(),
+        // SRS state (DB v4) — preserves spaced-repetition progress across
+        // devices. Optional fields, so older backups without them still
+        // restore cleanly via the null-coalescing in _wordFromFirestore.
+        if (word.srsInterval != 0) 'srs_interval': word.srsInterval,
+        if (word.srsEaseFactor != 2.5) 'srs_ease_factor': word.srsEaseFactor,
+        if (word.srsRepetitions != 0) 'srs_repetitions': word.srsRepetitions,
+        if (word.srsNextDue != null)
+          'srs_next_due': word.srsNextDue!.toIso8601String(),
+        if (word.srsLastReview != null)
+          'srs_last_review': word.srsLastReview!.toIso8601String(),
       };
 
   Word _wordFromFirestore(Map<String, dynamic> data) {
@@ -144,6 +154,12 @@ class FirebaseService {
       archived: (data['archived'] as bool?) ?? false,
       createdAt: parseDate(data['created_at'] as String?),
       updatedAt: parseDate(data['updated_at'] as String?),
+      // SRS — absent in older backups → defaults via the model.
+      srsInterval: (data['srs_interval'] as num?)?.toInt() ?? 0,
+      srsEaseFactor: (data['srs_ease_factor'] as num?)?.toDouble() ?? 2.5,
+      srsRepetitions: (data['srs_repetitions'] as num?)?.toInt() ?? 0,
+      srsNextDue: parseDate(data['srs_next_due'] as String?),
+      srsLastReview: parseDate(data['srs_last_review'] as String?),
     );
   }
 }

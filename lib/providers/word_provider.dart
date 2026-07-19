@@ -3,12 +3,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/word.dart';
 import '../services/database_service.dart';
 import '../services/translation_service.dart';
+import '../services/srs_service.dart';
 
 enum SortMode { newestFirst, alphabetical }
 enum LoadState { idle, loading, loaded, error }
 
 /// Outcome of importing one word during a bulk import.
 enum ImportStatus { added, duplicate, failed }
+
+/// Result returned by [WordProvider.processReview]. Carries the new due
+/// count + streak snapshot so the UI can update badges without re-querying.
+class ReviewResult {
+  final int remainingDue;
+  final StreakSnapshot streak;
+  const ReviewResult({required this.remainingDue, required this.streak});
+}
 
 class WordProvider extends ChangeNotifier {
   List<Word> _words = [];
@@ -17,14 +26,66 @@ class WordProvider extends ChangeNotifier {
   String? _error;
   final TranslationService _translationService = TranslationService();
 
+  // ── SRS session state ──────────────────────────────────────────────
+  // Cached due/new-card counts drive the home-screen badge. Refreshed on
+  // app start, after every review, and after archive/restore/import.
+  List<Word> _dueWords = [];
+  List<Word> _newWords = [];
+  int _dueCount = 0;
+  int _newCount = 0;
+  StreakSnapshot _streak = DatabaseService.zeroStreak;
+
   List<Word> get words => _words;
   SortMode get sortMode => _sortMode;
   LoadState get state => _state;
   String? get error => _error;
   bool get isLoading => _state == LoadState.loading;
 
+  /// Words currently due or overdue for review (cached).
+  List<Word> get dueWords => List.unmodifiable(_dueWords);
+  /// New (unscheduled) cards available to introduce (cached).
+  List<Word> get newWords => List.unmodifiable(_newWords);
+  /// Count of due cards — drives the home-screen flashcard badge.
+  int get dueCount => _dueCount;
+  /// Count of new (unscheduled) cards.
+  int get newCount => _newCount;
+  /// Current streak snapshot (cached).
+  StreakSnapshot get streak => _streak;
+
   WordProvider() {
     loadWords();
+    refreshSrs();
+  }
+
+  /// Reload due/new counts and streak from the DB. Cheap; safe to call
+  /// after any mutation (review, archive, add, restore).
+  Future<void> refreshSrs() async {
+    final due = await DatabaseService.getDueCount();
+    final fresh = await DatabaseService.getNewCount();
+    final streak = await DatabaseService.getStreak();
+    _dueCount = due;
+    _newCount = fresh;
+    _streak = streak;
+    notifyListeners();
+  }
+
+  /// Load the full due + new card lists for a review session.
+  ///
+  /// Due cards come first (most-overdue first), then new cards. New cards
+  /// are capped at [maxNewCards] per session so the user is not flooded
+  /// with cards they have never seen.
+  Future<void> loadDueWords({int maxNewCards = 30}) async {
+    _dueWords = await DatabaseService.getDueWords();
+    _newWords = await DatabaseService.getNewWords(limit: maxNewCards);
+    _dueCount = _dueWords.length;
+    _newCount = _newWords.length;
+    notifyListeners();
+  }
+
+  /// Get the streak snapshot (re-queried).
+  Future<StreakSnapshot> fetchStreak() async {
+    _streak = await DatabaseService.getStreak();
+    return _streak;
   }
 
   Future<void> loadWords() async {
@@ -215,12 +276,14 @@ class WordProvider extends ChangeNotifier {
   Future<void> archiveWord(Word word) async {
     await DatabaseService.updateWord(word.copyWith(archived: true));
     await loadWords();
+    await refreshSrs();
   }
 
   /// Restore an archived word so it shows again.
   Future<void> unarchiveWord(Word word) async {
     await DatabaseService.updateWord(word.copyWith(archived: false));
     await loadWords();
+    await refreshSrs();
   }
 
   /// Archived words (for the Archived Words screen).
@@ -304,6 +367,63 @@ class WordProvider extends ChangeNotifier {
       return _words;
     }
     return await DatabaseService.searchWords(query);
+  }
+
+  // ── SRS / review session ───────────────────────────────────────────
+
+  /// Apply one review rating to [word] and persist the new SRS state.
+  ///
+  /// Steps:
+  ///   1. Run the pure SM-2 calc via [SrsService.next].
+  ///   2. Persist the new state (and mark the word reviewed).
+  ///   3. Record today as a study day for streak tracking.
+  ///   4. Refresh due/new counts + streak snapshot.
+  ///   5. Update the cached [words] list in place.
+  ///
+  /// Returns a [ReviewResult] with the remaining due count and the
+  /// (possibly updated) streak, so the UI can react without re-querying.
+  Future<ReviewResult> processReview(Word word, Rating rating) async {
+    final next = SrsService.next(
+      repetitions: word.srsRepetitions,
+      easeFactor: word.srsEaseFactor,
+      interval: word.srsInterval,
+      rating: rating,
+    );
+
+    final updated = word.copyWith(
+      isReviewed: true,
+      srsInterval: next.intervalDays,
+      srsEaseFactor: next.easeFactor,
+      srsRepetitions: next.repetitions,
+      srsNextDue: next.nextDue,
+      srsLastReview: next.lastReview,
+      updatedAt: DateTime.now(),
+    );
+
+    await DatabaseService.updateWord(updated);
+
+    // Update the cached word in _words so the UI shows new SRS state.
+    final idx = _words.indexWhere((w) => w.id == word.id);
+    if (idx >= 0) _words[idx] = updated;
+
+    // Streak recording (idempotent within the same day).
+    _streak = await DatabaseService.recordStudyDay();
+
+    // Refresh due counts.
+    _dueCount = await DatabaseService.getDueCount();
+    notifyListeners();
+
+    return ReviewResult(remainingDue: _dueCount, streak: _streak);
+  }
+
+  /// Combine due + new cards into a single ordered session deck.
+  ///
+  /// Due cards come first (most-overdue first), then new cards (oldest
+  /// first). New cards are capped at [maxNewCards] so a single session
+  /// is not overwhelmed with unfamiliar material.
+  Future<List<Word>> buildSessionDeck({int maxNewCards = 30}) async {
+    await loadDueWords(maxNewCards: maxNewCards);
+    return [..._dueWords, ..._newWords];
   }
 }
 
