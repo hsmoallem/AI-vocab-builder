@@ -16,6 +16,7 @@ import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
 import '../services/auto_backup.dart';
+import '../services/study_prefs.dart';
 import '../config/app_strings.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -297,7 +298,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mode == null || !context.mounted) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(kStudyModePrefKey, mode.index);
-    final deck = await provider.buildSessionDeck();
+    final maxNew = await StudyPrefs.newCardsPerSession();
+    final deck = await provider.buildSessionDeck(maxNewCards: maxNew);
     if (!context.mounted) return;
     if (deck.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

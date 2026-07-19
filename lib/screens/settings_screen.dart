@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/auto_backup.dart';
+import '../services/study_prefs.dart';
 import 'user_guide_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -66,6 +67,14 @@ class SettingsScreen extends StatelessWidget {
             title: 'Automatic backup',
             subtitle: 'Back up to the cloud on a schedule (signed-in accounts)',
             child: _AutoBackupControl(),
+          ),
+
+          // ── New cards per session ───────────────────────────
+          const _Section(
+            icon: Icons.layers_outlined,
+            title: 'New cards per session',
+            subtitle: 'How many new words a review introduces (choose All to study them all)',
+            child: _NewCardsControl(),
           ),
 
           // ── User guide ──────────────────────────────────────
@@ -125,6 +134,49 @@ class _AutoBackupControlState extends State<_AutoBackupControl> {
       onSelectionChanged: (v) async {
         setState(() => _freq = v.first);
         await AutoBackup.setFrequency(v.first);
+      },
+    );
+  }
+}
+
+/// Dropdown for how many NEW cards a session introduces (10/20/30/50/All),
+/// backed by SharedPreferences via [StudyPrefs].
+class _NewCardsControl extends StatefulWidget {
+  const _NewCardsControl();
+
+  @override
+  State<_NewCardsControl> createState() => _NewCardsControlState();
+}
+
+class _NewCardsControlState extends State<_NewCardsControl> {
+  static const List<int> _options = [10, 20, 30, 50, StudyPrefs.all];
+  int _value = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    StudyPrefs.newCardsPerSession().then((n) {
+      if (mounted) setState(() => _value = _options.contains(n) ? n : 30);
+    });
+  }
+
+  String _label(int n) => n == StudyPrefs.all ? 'All' : '$n';
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      value: _value,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      items: _options
+          .map((n) => DropdownMenuItem(value: n, child: Text(_label(n))))
+          .toList(),
+      onChanged: (v) async {
+        if (v == null) return;
+        setState(() => _value = v);
+        await StudyPrefs.setNewCardsPerSession(v);
       },
     );
   }
