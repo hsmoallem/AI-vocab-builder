@@ -36,6 +36,21 @@ class Word {
   DateTime createdAt;
   DateTime updatedAt;
 
+  // ── SRS fields (SM-2 algorithm — added in DB v4) ──────────────────
+  // Defaults make a brand-new card "fresh and unscheduled": it has never
+  // been studied, has the standard SM-2 easiness (2.5), and is immediately
+  // eligible for the next review session.
+  /// Days until next review. 0 = learning state (due immediately).
+  int srsInterval;
+  /// SM-2 easiness factor. Starts at 2.5, floored at 1.3.
+  double srsEaseFactor;
+  /// Consecutive successful reviews. Resets to 0 on "Again".
+  int srsRepetitions;
+  /// When the card is next due. null = never scheduled (new card).
+  DateTime? srsNextDue;
+  /// When the card was last reviewed. null = never reviewed.
+  DateTime? srsLastReview;
+
   Word({
     this.id,
     required this.word,
@@ -50,8 +65,24 @@ class Word {
     this.archived = false,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.srsInterval = 0,
+    this.srsEaseFactor = 2.5,
+    this.srsRepetitions = 0,
+    this.srsNextDue,
+    this.srsLastReview,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
+
+  /// Convenience: is this card due (or overdue) for review right now?
+  ///
+  /// A card is due when its scheduled time has passed, OR when it has
+  /// never been scheduled (new card). Archived cards are never due.
+  bool get isDue {
+    if (archived) return false;
+    final due = srsNextDue;
+    if (due == null) return true; // new card
+    return due.isBefore(DateTime.now());
+  }
 
   /// Create from a database row map.
   /// All fields are null-safe — missing or null values become
@@ -84,6 +115,12 @@ class Word {
       archived: (map['archived'] as int?) == 1,
       createdAt: parseDate(map['created_at'] as String?),
       updatedAt: parseDate(map['updated_at'] as String?),
+      // SRS fields (DB v4). Absent on pre-v4 rows → defaults via the model.
+      srsInterval: (map['srs_interval'] as int?) ?? 0,
+      srsEaseFactor: (map['srs_ease_factor'] as num?)?.toDouble() ?? 2.5,
+      srsRepetitions: (map['srs_repetitions'] as int?) ?? 0,
+      srsNextDue: parseDate(map['srs_next_due'] as String?),
+      srsLastReview: parseDate(map['srs_last_review'] as String?),
     );
   }
 
@@ -105,6 +142,11 @@ class Word {
       'archived': archived ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'srs_interval': srsInterval,
+      'srs_ease_factor': srsEaseFactor,
+      'srs_repetitions': srsRepetitions,
+      'srs_next_due': srsNextDue?.toIso8601String(),
+      'srs_last_review': srsLastReview?.toIso8601String(),
     };
   }
 
@@ -125,6 +167,16 @@ class Word {
     bool? archived,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? srsInterval,
+    double? srsEaseFactor,
+    int? srsRepetitions,
+    DateTime? srsNextDue,
+    DateTime? srsLastReview,
+    // Sentinel-aware optionals: pass [clearSrsNextDue] / [clearSrsLastReview]
+    // to set the field back to null (copyWith's usual `??` pattern can't
+    // distinguish "leave unchanged" from "explicitly null").
+    bool clearSrsNextDue = false,
+    bool clearSrsLastReview = false,
   }) {
     return Word(
       id: id ?? this.id,
@@ -140,6 +192,12 @@ class Word {
       archived: archived ?? this.archived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      srsInterval: srsInterval ?? this.srsInterval,
+      srsEaseFactor: srsEaseFactor ?? this.srsEaseFactor,
+      srsRepetitions: srsRepetitions ?? this.srsRepetitions,
+      srsNextDue: clearSrsNextDue ? null : (srsNextDue ?? this.srsNextDue),
+      srsLastReview:
+          clearSrsLastReview ? null : (srsLastReview ?? this.srsLastReview),
     );
   }
 }
