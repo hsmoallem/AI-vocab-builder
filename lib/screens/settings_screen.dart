@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/auto_backup.dart';
+import 'package:provider/provider.dart';
+import '../providers/word_provider.dart';
 import '../services/study_prefs.dart';
 import 'user_guide_screen.dart';
 
@@ -75,6 +77,14 @@ class SettingsScreen extends StatelessWidget {
             title: 'New cards per session',
             subtitle: 'How many new words a review introduces (choose All to study them all)',
             child: _NewCardsControl(),
+          ),
+
+          // ── Reset all progress ─────────────────────────────
+          _Section(
+            icon: Icons.restart_alt,
+            title: 'Reset all study progress',
+            subtitle: 'Clear SRS for all cards so you can study them fresh again',
+            child: const _ResetAllButton(),
           ),
 
           // ── User guide ──────────────────────────────────────
@@ -188,6 +198,87 @@ class _NewCardsControlState extends State<_NewCardsControl> {
         await StudyPrefs.setNewCardsPerSession(v);
       },
     );
+  }
+}
+
+/// Button that resets SRS for all cards.
+class _ResetAllButton extends StatefulWidget {
+  const _ResetAllButton();
+
+  @override
+  State<_ResetAllButton> createState() => _ResetAllButtonState();
+}
+
+class _ResetAllButtonState extends State<_ResetAllButton> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _loading
+            ? null
+            : () => _confirmReset(context),
+        icon: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.restart_alt),
+        label: Text(_loading ? 'Resetting...' : 'Reset All'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmReset(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset all progress?'),
+        content: const Text(
+          'This will clear the SRS schedule for ALL cards. '
+          'All cards will appear as "new" in your next study session.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reset All'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      final provider = context.read<WordProvider>();
+      await provider.resetAllSrs();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All study progress cleared. Cards are ready for study!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
   }
 }
 

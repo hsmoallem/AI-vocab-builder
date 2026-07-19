@@ -440,6 +440,16 @@ class WordProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Reset SRS for all non-archived words — marks every card as "new"
+  /// so all cards are available for fresh study.
+  Future<void> resetAllSrs() async {
+    await DatabaseService.resetAllSrs();
+    await loadWords();
+    _dueCount = 0;
+    _newCount = _words.length;
+    notifyListeners();
+  }
+
   /// Combine due + new cards into a single ordered session deck.
   ///
   /// Due cards come first (most-overdue first), then new cards (oldest

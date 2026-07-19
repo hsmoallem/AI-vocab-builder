@@ -260,6 +260,23 @@ class DatabaseService {
     return Sqflite.firstIntValue(rows) ?? 0;
   }
 
+  /// Reset SRS for all non-archived cards — clear due dates, intervals,
+  /// ease factors so every card becomes "new" again.
+  static Future<void> resetAllSrs() async {
+    final db = await database;
+    await db.update(
+      'words',
+      {
+        'srs_next_due': null,
+        'srs_last_review': null,
+        'srs_interval': 0,
+        'srs_ease_factor': 2.5,
+        'srs_repetitions': 0,
+      },
+      where: 'archived = 0',
+    );
+  }
+
   /// Get non-archived cards that have never been scheduled (new cards).
   /// Ordered oldest-first so the user sees the cards they added earliest.
   static Future<List<Word>> getNewWords({int? limit}) async {
