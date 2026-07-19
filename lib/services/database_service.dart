@@ -58,7 +58,8 @@ class DatabaseService {
     return await openDatabase(
       path,
       // v2: note + grammar_tip.  v3: archived.  v4: SM-2 SRS fields + app_state.
-      version: 4,
+      // v5: saved 2nd-language translation.
+      version: 5,
       onCreate: (db, version) async {
         // Fresh install — create the table with all current columns.
         await db.execute('''
@@ -74,6 +75,8 @@ class DatabaseService {
             note TEXT,
             grammar_tip TEXT,
             archived INTEGER NOT NULL DEFAULT 0,
+            second_lang TEXT,
+            second_translation TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             srs_interval INTEGER NOT NULL DEFAULT 0,
@@ -134,6 +137,12 @@ class DatabaseService {
           ''');
           await db.execute(
               'INSERT OR IGNORE INTO app_state (id, current_streak, longest_streak) VALUES (1, 0, 0)');
+        }
+        if (oldVersion < 5) {
+          // Saved "also translate to" result. Null on existing rows.
+          await db.execute('ALTER TABLE words ADD COLUMN second_lang TEXT');
+          await db.execute(
+              'ALTER TABLE words ADD COLUMN second_translation TEXT');
         }
       },
     );

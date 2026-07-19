@@ -33,6 +33,10 @@ class Word {
   String? grammarTip;
   // Archived words are hidden from Saved Words + flashcards (added in DB v3).
   bool archived;
+  // Optional "also translate to" result the user saved on the card (DB v5):
+  // the extra language code and its translation, shown again on reopen.
+  String? secondLang;
+  String? secondTranslation;
   DateTime createdAt;
   DateTime updatedAt;
 
@@ -63,6 +67,8 @@ class Word {
     this.note,
     this.grammarTip,
     this.archived = false,
+    this.secondLang,
+    this.secondTranslation,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.srsInterval = 0,
@@ -113,6 +119,9 @@ class Word {
       note: map['note'] as String?,
       grammarTip: map['grammar_tip'] as String?,
       archived: (map['archived'] as int?) == 1,
+      // Saved 2nd-language translation (DB v5) — null on pre-v5 rows.
+      secondLang: map['second_lang'] as String?,
+      secondTranslation: map['second_translation'] as String?,
       createdAt: parseDate(map['created_at'] as String?),
       updatedAt: parseDate(map['updated_at'] as String?),
       // SRS fields (DB v4). Absent on pre-v4 rows → defaults via the model.
@@ -140,6 +149,8 @@ class Word {
       'note': note,
       'grammar_tip': grammarTip,
       'archived': archived ? 1 : 0,
+      'second_lang': secondLang,
+      'second_translation': secondTranslation,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'srs_interval': srsInterval,
@@ -165,6 +176,8 @@ class Word {
     String? note,
     String? grammarTip,
     bool? archived,
+    String? secondLang,
+    String? secondTranslation,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? srsInterval,
@@ -190,6 +203,8 @@ class Word {
       note: note ?? this.note,
       grammarTip: grammarTip ?? this.grammarTip,
       archived: archived ?? this.archived,
+      secondLang: secondLang ?? this.secondLang,
+      secondTranslation: secondTranslation ?? this.secondTranslation,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       srsInterval: srsInterval ?? this.srsInterval,

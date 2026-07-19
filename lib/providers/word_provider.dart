@@ -272,6 +272,14 @@ class WordProvider extends ChangeNotifier {
     await loadWords();
   }
 
+  /// Persist the "also translate to" result on a card so it reappears on reopen.
+  Future<void> updateSecondTranslation(
+      Word word, String lang, String translation) async {
+    await DatabaseService.updateWord(word.copyWith(
+        secondLang: lang, secondTranslation: translation));
+    await loadWords();
+  }
+
   /// Archive a word — hides it from Saved Words AND the flashcard deck.
   Future<void> archiveWord(Word word) async {
     await DatabaseService.updateWord(word.copyWith(archived: true));

@@ -27,14 +27,12 @@ class _FlashcardScreenState extends State<FlashcardScreen>
   // page change so one card's second-language / loading state never leaks to the
   // next card.
   String? _secondLang;
-  String? _secondTranslation;
   bool _secondLoading = false;
   bool _grammarLoading = false;
   bool _regenLoading = false;
 
   void _resetCardState() {
     _secondLang = null;
-    _secondTranslation = null;
     _secondLoading = false;
     _grammarLoading = false;
     _regenLoading = false;
@@ -116,17 +114,17 @@ class _FlashcardScreenState extends State<FlashcardScreen>
   }
 
   Future<void> _translateSecond(Word word) async {
-    final lang = _secondLang;
+    final lang = _secondLang ?? word.secondLang;
     if (lang == null) return;
-    setState(() {
-      _secondLoading = true;
-      _secondTranslation = null;
-    });
+    setState(() => _secondLoading = true);
     try {
       final result = await context
           .read<WordProvider>()
           .translateWord(word.word, from: word.sourceLang, to: lang);
-      if (mounted) setState(() => _secondTranslation = result.translation);
+      // Persist so it's still shown when the card is reopened.
+      await context
+          .read<WordProvider>()
+          .updateSecondTranslation(word, lang, result.translation);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -758,7 +756,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     );
   }
 
-  /// On-demand second-language translation (not stored).
+  /// Second-language translation — saved on the card and shown again on reopen.
   Widget _buildSecondLangSection(BuildContext context, Word word) {
     final cs = Theme.of(context).colorScheme;
     final entries = AppStrings.targetLanguages.entries
@@ -784,7 +782,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _secondLang,
+                  value: _secondLang ?? word.secondLang,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     isDense: true,
@@ -799,17 +797,15 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       .toList(),
                   onChanged: _secondLoading
                       ? null
-                      : (v) => setState(() {
-                            _secondLang = v;
-                            _secondTranslation = null;
-                          }),
+                      : (v) => setState(() => _secondLang = v),
                 ),
               ),
               const SizedBox(width: 8),
               FilledButton(
-                onPressed: (_secondLang == null || _secondLoading)
-                    ? null
-                    : () => _translateSecond(word),
+                onPressed:
+                    ((_secondLang ?? word.secondLang) == null || _secondLoading)
+                        ? null
+                        : () => _translateSecond(word),
                 child: _secondLoading
                     ? const SizedBox(
                         width: 16,
@@ -819,27 +815,27 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               ),
             ],
           ),
-          if (_secondTranslation != null) ...[
+          if ((word.secondTranslation ?? '').isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: Text(_secondTranslation!,
+                  child: Text(word.secondTranslation!,
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.volume_up, size: 18),
                   tooltip: 'Listen',
-                  onPressed: () =>
-                      _tts.speak(_secondTranslation!, language: _secondLang!),
+                  onPressed: () => _tts.speak(word.secondTranslation!,
+                      language: word.secondLang ?? word.targetLang),
                   visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy, size: 16),
                   tooltip: 'Copy',
                   onPressed: () =>
-                      copyToClipboard(context, _secondTranslation!),
+                      copyToClipboard(context, word.secondTranslation!),
                   visualDensity: VisualDensity.compact,
                 ),
               ],

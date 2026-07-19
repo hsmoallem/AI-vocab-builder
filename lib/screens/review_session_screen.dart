@@ -53,7 +53,6 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   bool _grammarLoading = false;
   bool _regenLoading = false;
   String? _secondLang;
-  String? _secondTranslation;
   bool _secondLoading = false;
 
   @override
@@ -146,7 +145,6 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _grammarLoading = false;
       _regenLoading = false;
       _secondLang = null;
-      _secondTranslation = null;
       _secondLoading = false;
     });
   }
@@ -232,7 +230,6 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _grammarLoading = false;
       _regenLoading = false;
       _secondLang = null;
-      _secondTranslation = null;
       _secondLoading = false;
     });
   }
@@ -270,18 +267,27 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _prompt(w),
-                      if (_revealed) ...[
-                        const SizedBox(height: 20),
-                        const Divider(),
-                        const SizedBox(height: 12),
-                        _answer(w),
+                // Tap anywhere on the card to reveal the answer (flip/reverse
+                // modes). Typing mode keeps its Check-answer flow, so tapping
+                // there does nothing and the text field stays usable.
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: (!_revealed && widget.mode != StudyMode.typing)
+                      ? () => setState(() => _revealed = true)
+                      : null,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _prompt(w),
+                        if (_revealed) ...[
+                          const SizedBox(height: 20),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          _answer(w),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -639,17 +645,21 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   }
 
   Future<void> _translateSecond(Word w) async {
-    final lang = _secondLang;
+    final lang = _secondLang ?? w.secondLang;
     if (lang == null) return;
-    setState(() {
-      _secondLoading = true;
-      _secondTranslation = null;
-    });
+    setState(() => _secondLoading = true);
     try {
       final result = await context
           .read<WordProvider>()
           .translateWord(w.word, from: w.sourceLang, to: lang);
-      if (mounted) setState(() => _secondTranslation = result.translation);
+      // Persist so the translation is still here when the card is reopened.
+      await context
+          .read<WordProvider>()
+          .updateSecondTranslation(w, lang, result.translation);
+      if (mounted) {
+        setState(() => _deck[_index] = _deck[_index].copyWith(
+            secondLang: lang, secondTranslation: result.translation));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -773,7 +783,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         Row(children: [
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: _secondLang,
+              value: _secondLang ?? w.secondLang,
               isExpanded: true,
               decoration: const InputDecoration(
                   isDense: true,
@@ -787,15 +797,12 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
                   .toList(),
               onChanged: _secondLoading
                   ? null
-                  : (v) => setState(() {
-                        _secondLang = v;
-                        _secondTranslation = null;
-                      }),
+                  : (v) => setState(() => _secondLang = v),
             ),
           ),
           const SizedBox(width: 8),
           FilledButton(
-            onPressed: (_secondLang == null || _secondLoading)
+            onPressed: ((_secondLang ?? w.secondLang) == null || _secondLoading)
                 ? null
                 : () => _translateSecond(w),
             child: _secondLoading
@@ -806,23 +813,24 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
                 : const Text('Go'),
           ),
         ]),
-        if (_secondTranslation != null) ...[
+        if ((w.secondTranslation ?? '').isNotEmpty) ...[
           const SizedBox(height: 8),
           Row(children: [
             Expanded(
-                child: Text(_secondTranslation!,
+                child: Text(w.secondTranslation!,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w600))),
             IconButton(
                 icon: const Icon(Icons.volume_up, size: 18),
                 tooltip: 'Listen',
-                onPressed: () =>
-                    _tts.speak(_secondTranslation!, language: _secondLang!),
+                onPressed: () => _tts.speak(w.secondTranslation!,
+                    language: w.secondLang ?? w.targetLang),
                 visualDensity: VisualDensity.compact),
             IconButton(
                 icon: const Icon(Icons.copy, size: 16),
                 tooltip: 'Copy',
-                onPressed: () => copyToClipboard(context, _secondTranslation!),
+                onPressed: () =>
+                    copyToClipboard(context, w.secondTranslation!),
                 visualDensity: VisualDensity.compact),
           ]),
         ],
