@@ -212,6 +212,16 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     setState(() => _isFlipped = !_isFlipped);
   }
 
+  void _resetToStart() {
+    _pageController.jumpToPage(0);
+    setState(() {
+      _currentIndex = 0;
+      _isFlipped = false;
+      _flipController.reset();
+      _resetCardState();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WordProvider>(

@@ -417,6 +417,10 @@ class WordProvider extends ChangeNotifier {
     // Streak recording (idempotent within the same day).
     _streak = await DatabaseService.recordStudyDay();
 
+    _dueCount = await DatabaseService.getDueCount();
+    notifyListeners();
+
+    return ReviewResult(remainingDue: _dueCount, streak: _streak);
   }
 
   /// Reset a word's SRS state — marks it as never studied so it appears
@@ -434,11 +438,6 @@ class WordProvider extends ChangeNotifier {
     final idx = _words.indexWhere((w) => w.id == word.id);
     if (idx >= 0) _words[idx] = reset;
     notifyListeners();
-  }
-    _dueCount = await DatabaseService.getDueCount();
-    notifyListeners();
-
-    return ReviewResult(remainingDue: _dueCount, streak: _streak);
   }
 
   /// Combine due + new cards into a single ordered session deck.
