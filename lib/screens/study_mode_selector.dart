@@ -1,7 +1,7 @@
 /// ─── Study Mode Selector ─────────────────────────────────────────────
 ///
 /// Bottom sheet shown before starting a review session. Lets the user
-/// pick an active-recall mode (Flip / Type / Reverse / Cloze), see the
+/// pick an active-recall mode (Flip / Type / Reverse), see the
 /// available card counts, and start the session.
 
 import 'package:flutter/material.dart';
@@ -195,8 +195,6 @@ class _StudyModeSheetState extends State<_StudyModeSheet> {
         return Icons.keyboard;
       case StudyMode.reverse:
         return Icons.swap_vert;
-      case StudyMode.cloze:
-        return Icons.text_fields;
     }
   }
 
@@ -208,8 +206,6 @@ class _StudyModeSheetState extends State<_StudyModeSheet> {
         return 'Type';
       case StudyMode.reverse:
         return 'Reverse';
-      case StudyMode.cloze:
-        return 'Cloze';
     }
   }
 
@@ -221,8 +217,6 @@ class _StudyModeSheetState extends State<_StudyModeSheet> {
         return 'Show the word, type the translation before revealing.';
       case StudyMode.reverse:
         return 'Show the translation, recall the original word.';
-      case StudyMode.cloze:
-        return 'Fill in the missing word in an example sentence.';
     }
   }
 }

@@ -73,10 +73,14 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
 
   // ── Answer checking (typing mode) ──────────────────────────────────
   bool _checkTyped(Word w, String typed) {
+    // Unicode-aware: keep letters of ANY script (Arabic, CJK, Cyrillic, …)
+    // and digits, drop punctuation/diacritic marks. The old [a-z…] filter
+    // erased non-Latin answers to empty, so e.g. Arabic could never match.
     String norm(String s) => s
         .toLowerCase()
         .replaceAll(RegExp(r'^(der|die|das|the|a|an|to)\s+'), '')
-        .replaceAll(RegExp(r'[^a-z0-9äöüß\s]'), '')
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     final t = norm(typed);
     if (t.isEmpty) return false;
@@ -87,13 +91,17 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     return options.contains(t);
   }
 
-  // Cloze: blank the target word inside its example sentence.
-  String _clozeText(Word w) {
-    final bare = w.word.replaceFirst(
-        RegExp(r'^(der|die|das)\s+', caseSensitive: false), '');
-    if (bare.trim().isEmpty) return w.exampleSource;
-    final re = RegExp(RegExp.escape(bare), caseSensitive: false);
-    return w.exampleSource.replaceAll(re, '____');
+  /// Hint under the typing box: which language to answer in (the language the
+  /// word was translated to). If the card stores more than one meaning, any of
+  /// them is accepted.
+  String _answerLangHint(Word w) {
+    final langName = AppStrings.targetLanguages[w.targetLang] ?? w.targetLang;
+    final multi = w.translation.split(RegExp(r'[,/;]'))
+        .where((e) => e.trim().isNotEmpty)
+        .length > 1;
+    return multi
+        ? 'Answer in $langName — any of your translations counts'
+        : 'Answer in $langName';
   }
 
   void _submitTyped() {
@@ -296,20 +304,6 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       case StudyMode.reverse:
         // Show the translation; recall the source word.
         return _bigPrompt(w.translation, w.targetLang, 'Recall the word');
-      case StudyMode.cloze:
-        if (w.exampleSource.isEmpty) {
-          return _bigPrompt(w.word, w.sourceLang, 'Recall the meaning');
-        }
-        return Column(
-          children: [
-            Text('Fill in the blank',
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-            const SizedBox(height: 12),
-            Text(_clozeText(w),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, height: 1.4)),
-          ],
-        );
       case StudyMode.typing:
         return Column(
           children: [
@@ -324,6 +318,23 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
                 labelText: 'Your answer',
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 8),
+            // Which language the answer is expected in — the language the word
+            // was translated to. Multiple stored meanings are all accepted.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 14, color: cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    _answerLangHint(w),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ],
             ),
           ],
         );

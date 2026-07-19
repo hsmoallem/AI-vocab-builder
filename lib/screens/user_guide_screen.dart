@@ -42,9 +42,10 @@ class UserGuideScreen extends StatelessWidget {
             title: 'Study modes',
             body:
                 '• Flip — see the word, flip to recall the translation.\n'
-                '• Typing — type the translation; it is checked.\n'
-                '• Reverse — see the translation, recall the word.\n'
-                '• Cloze — see an example sentence with the word blanked out.\n\n'
+                '• Typing — type the translation; it is checked. A hint shows '
+                'which language to answer in (the one the word is translated '
+                'to). If a card has more than one translation, any is accepted.\n'
+                '• Reverse — see the translation, recall the word.\n\n'
                 'Pick a mode when you start a session.',
           ),
           _Guide(
