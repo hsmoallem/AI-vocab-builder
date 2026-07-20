@@ -35,7 +35,10 @@ class ReviewSessionScreen extends StatefulWidget {
 }
 
 class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
-  late final List<Word> _deck;
+  // NOT `final`: _resetSession() reassigns this on "Review again" / "Reset".
+  // A `late final` here throws LateInitializationError on the 2nd write, which
+  // silently aborts the reset and strands the session on the last card.
+  late List<Word> _deck;
   int _index = 0;
   bool _revealed = false;
 
@@ -46,7 +49,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
 
   // Session stats.
   int _again = 0, _hard = 0, _good = 0, _easy = 0;
-  late final DateTime _start;
+  late DateTime _start; // reassigned by _resetSession() — must not be final
   StreakSnapshot? _lastStreak;
 
   // Rich-content state (restores the normal flip behaviour: grammar tip, note,
