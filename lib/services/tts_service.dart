@@ -17,6 +17,7 @@
 ///   await tts.speak('Good morning', language: 'en');
 ///   ```
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class TtsService {
@@ -29,6 +30,7 @@ class TtsService {
   /// Works offline — no network call, no API key.
   Future<void> speak(String text, {required String language}) async {
     if (text.trim().isEmpty) return;
+    if (kIsWeb) return; // no native TTS channel on web (browser TTS TODO)
 
     await _channel.invokeMethod('speak', {
       'text': text.trim(),
@@ -38,6 +40,7 @@ class TtsService {
 
   /// Stop any currently playing speech.
   Future<void> stop() async {
+    if (kIsWeb) return;
     await _channel.invokeMethod('stop');
   }
 }

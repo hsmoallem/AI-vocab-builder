@@ -6,8 +6,10 @@
 ///
 /// Words are always ordered NEWEST-FIRST (most recently added on top).
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/word.dart';
+import 'web_download.dart';
 
 class ExportService {
   static const _channel = MethodChannel('com.vocabreader/share');
@@ -88,6 +90,11 @@ class ExportService {
     required String filename,
     required String mime,
   }) async {
+    if (kIsWeb) {
+      // Browser download instead of the native Android share sheet.
+      downloadTextFile(content, filename, mime);
+      return;
+    }
     await _channel.invokeMethod('shareFile', {
       'content': content,
       'filename': filename,

@@ -12,9 +12,14 @@ import 'providers/word_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/firebase_service.dart';
+import 'services/db_bootstrap.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Select the SQLite backend for this platform (web → WASM/IndexedDB).
+  // Must run before any database access.
+  configureDatabaseFactory();
 
   final firebaseReady = await FirebaseService.instance.init();
   if (!firebaseReady) {

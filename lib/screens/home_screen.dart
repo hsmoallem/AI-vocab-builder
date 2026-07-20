@@ -30,11 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _isBackingUp = false;
 
-  final _screens = const [
-    PdfReaderScreen(),
-    DailyPhrasesScreen(),
-    WordListScreen(),
-  ];
+  // The PDF reader relies on Android-native plugins, so it's omitted on web.
+  // kIsWeb is a compile-time constant, so this stays a const list.
+  List<Widget> get _screens => const [
+        if (!kIsWeb) PdfReaderScreen(),
+        DailyPhrasesScreen(),
+        WordListScreen(),
+      ];
 
   @override
   void initState() {
@@ -216,11 +218,12 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book),
-            label: s.tabReader,
-          ),
+          if (!kIsWeb)
+            NavigationDestination(
+              icon: const Icon(Icons.menu_book_outlined),
+              selectedIcon: const Icon(Icons.menu_book),
+              label: s.tabReader,
+            ),
           NavigationDestination(
             icon: const Icon(Icons.auto_awesome_outlined),
             selectedIcon: const Icon(Icons.auto_awesome),
@@ -233,7 +236,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: _currentIndex == 2
+      // Add-word FAB shows on the "My Words" tab (always the last tab).
+      floatingActionButton: _currentIndex == _screens.length - 1
           ? FloatingActionButton(
               onPressed: () => _showAddWordDialog(context),
               tooltip: s.addWord,
