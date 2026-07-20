@@ -270,7 +270,8 @@ class DatabaseService {
           srs_last_review = NULL,
           srs_interval = 0,
           srs_ease_factor = 2.5,
-          srs_repetitions = 0
+          srs_repetitions = 0,
+          is_reviewed = 0
       WHERE archived = 0
     ''');
   }

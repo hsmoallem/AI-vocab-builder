@@ -433,7 +433,8 @@ class WordProvider extends ChangeNotifier {
           srs_last_review = NULL,
           srs_interval = 0,
           srs_ease_factor = 2.5,
-          srs_repetitions = 0
+          srs_repetitions = 0,
+          is_reviewed = 0
       WHERE id = ?
     ''', [word.id]);
     // Reload to get the updated word
@@ -443,6 +444,7 @@ class WordProvider extends ChangeNotifier {
         srsInterval: 0,
         srsEaseFactor: 2.5,
         srsRepetitions: 0,
+        isReviewed: false,
         clearSrsNextDue: true,
         clearSrsLastReview: true,
       );
