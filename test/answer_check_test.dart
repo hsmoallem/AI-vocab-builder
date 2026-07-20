@@ -81,7 +81,7 @@ void main() {
 
   group('AnswerCheck.normalize', () {
     test('collapses internal whitespace', () {
-      expect(AnswerCheck.normalize('a   b'), 'a b');
+      expect(AnswerCheck.normalize('hello   world'), 'hello world');
     });
 
     test('non-Latin text is not emptied out', () {

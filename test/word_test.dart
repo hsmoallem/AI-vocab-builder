@@ -66,8 +66,8 @@ void main() {
       expect(map['source_lang'], 'de');
       expect(map['target_lang'], 'en');
       expect(map['is_reviewed'], 0);
-      expect(map['created_at'], '2026-06-07 12:00:00.000');
-      expect(map['updated_at'], '2026-06-07 12:00:00.000');
+      expect(map['created_at'], '2026-06-07T12:00:00.000');
+      expect(map['updated_at'], '2026-06-07T12:00:00.000');
     });
 
     test('toMap excludes null id', () {

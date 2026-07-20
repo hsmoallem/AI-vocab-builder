@@ -103,7 +103,7 @@ void main() {
     testWidgets('handles empty examples without error', (tester) async {
       final noExamples = Word(
         word: 'test',
-        translation: 'test',
+        translation: 'translated',
         exampleSource: '',
         exampleTarget: '',
         sourceLang: 'de',
