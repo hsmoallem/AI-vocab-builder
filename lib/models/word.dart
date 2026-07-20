@@ -106,6 +106,19 @@ class Word {
       }
     }
 
+    // Nullable variant for SRS timestamps: a NULL column MUST stay null.
+    // `srs_next_due == null` is how a card is identified as "new" / never
+    // scheduled (and drives the "Studied" badge + a reset). Coercing null to
+    // now() — as parseDate does — would make every card look scheduled/studied.
+    DateTime? parseNullableDate(String? val) {
+      if (val == null) return null;
+      try {
+        return DateTime.parse(val);
+      } catch (_) {
+        return null;
+      }
+    }
+
     return Word(
       id: map['id'] as int?,
       word: (map['word'] as String?) ?? '',
@@ -128,8 +141,8 @@ class Word {
       srsInterval: (map['srs_interval'] as int?) ?? 0,
       srsEaseFactor: (map['srs_ease_factor'] as num?)?.toDouble() ?? 2.5,
       srsRepetitions: (map['srs_repetitions'] as int?) ?? 0,
-      srsNextDue: parseDate(map['srs_next_due'] as String?),
-      srsLastReview: parseDate(map['srs_last_review'] as String?),
+      srsNextDue: parseNullableDate(map['srs_next_due'] as String?),
+      srsLastReview: parseNullableDate(map['srs_last_review'] as String?),
     );
   }
 

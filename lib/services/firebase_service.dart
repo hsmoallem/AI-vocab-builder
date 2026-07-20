@@ -140,6 +140,12 @@ class FirebaseService {
       if (val == null) return DateTime.now();
       try { return DateTime.parse(val); } catch (_) { return DateTime.now(); }
     }
+    // SRS timestamps must preserve null (null srs_next_due = "new"/unscheduled).
+    // Coercing to now() would restore every card as scheduled/studied.
+    DateTime? parseNullableDate(String? val) {
+      if (val == null) return null;
+      try { return DateTime.parse(val); } catch (_) { return null; }
+    }
 
     return Word(
       word: (data['word'] as String?) ?? '',
@@ -158,8 +164,8 @@ class FirebaseService {
       srsInterval: (data['srs_interval'] as num?)?.toInt() ?? 0,
       srsEaseFactor: (data['srs_ease_factor'] as num?)?.toDouble() ?? 2.5,
       srsRepetitions: (data['srs_repetitions'] as num?)?.toInt() ?? 0,
-      srsNextDue: parseDate(data['srs_next_due'] as String?),
-      srsLastReview: parseDate(data['srs_last_review'] as String?),
+      srsNextDue: parseNullableDate(data['srs_next_due'] as String?),
+      srsLastReview: parseNullableDate(data['srs_last_review'] as String?),
     );
   }
 }
