@@ -264,17 +264,15 @@ class DatabaseService {
   /// ease factors so every card becomes "new" again.
   static Future<void> resetAllSrs() async {
     final db = await database;
-    await db.update(
-      'words',
-      {
-        'srs_next_due': null,
-        'srs_last_review': null,
-        'srs_interval': 0,
-        'srs_ease_factor': 2.5,
-        'srs_repetitions': 0,
-      },
-      where: 'archived = 0',
-    );
+    await db.rawUpdate('''
+      UPDATE words
+      SET srs_next_due = NULL,
+          srs_last_review = NULL,
+          srs_interval = 0,
+          srs_ease_factor = 2.5,
+          srs_repetitions = 0
+      WHERE archived = 0
+    ''');
   }
 
   /// Get non-archived cards that have never been scheduled (new cards).

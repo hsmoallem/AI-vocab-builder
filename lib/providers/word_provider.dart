@@ -426,17 +426,27 @@ class WordProvider extends ChangeNotifier {
   /// Reset a word's SRS state — marks it as never studied so it appears
   /// as a "new" card in the next study session.
   Future<void> resetSrs(Word word) async {
-    final reset = word.copyWith(
-      srsInterval: 0,
-      srsEaseFactor: 2.5,
-      srsRepetitions: 0,
-      clearSrsNextDue: true,
-      clearSrsLastReview: true,
-      updatedAt: DateTime.now(),
-    );
-    await DatabaseService.updateWord(reset);
+    final db = await DatabaseService.database;
+    await db.rawUpdate('''
+      UPDATE words
+      SET srs_next_due = NULL,
+          srs_last_review = NULL,
+          srs_interval = 0,
+          srs_ease_factor = 2.5,
+          srs_repetitions = 0
+      WHERE id = ?
+    ''', [word.id]);
+    // Reload to get the updated word
     final idx = _words.indexWhere((w) => w.id == word.id);
-    if (idx >= 0) _words[idx] = reset;
+    if (idx >= 0) {
+      _words[idx] = _words[idx].copyWith(
+        srsInterval: 0,
+        srsEaseFactor: 2.5,
+        srsRepetitions: 0,
+        clearSrsNextDue: true,
+        clearSrsLastReview: true,
+      );
+    }
     notifyListeners();
   }
 
