@@ -453,11 +453,25 @@ class WordProvider extends ChangeNotifier {
   /// Combine due + new cards into a single ordered session deck.
   ///
   /// Due cards come first (most-overdue first), then new cards (oldest
-  /// first). New cards are capped at [maxNewCards] so a single session
-  /// is not overwhelmed with unfamiliar material.
-  Future<List<Word>> buildSessionDeck({int maxNewCards = 30}) async {
-    await loadDueWords(maxNewCards: maxNewCards);
-    return [..._dueWords, ..._newWords];
+  /// first). The total deck size is capped at [maxCards] — due cards get
+  /// priority, and new cards fill the remaining slots up to the limit.
+  Future<List<Word>> buildSessionDeck({int maxCards = 30}) async {
+    // Load all due and new cards, then slice to maxCards total.
+    _dueWords = await DatabaseService.getDueWords();
+    _newWords = await DatabaseService.getNewWords(); // get all, slice below
+    _dueCount = _dueWords.length;
+    _newCount = _newWords.length;
+    notifyListeners();
+
+    final deck = <Word>[];
+    // Due cards first (capped at maxCards)
+    deck.addAll(_dueWords.take(maxCards));
+    // Fill remaining with new cards
+    final remaining = maxCards - deck.length;
+    if (remaining > 0) {
+      deck.addAll(_newWords.take(remaining));
+    }
+    return deck;
   }
 }
 

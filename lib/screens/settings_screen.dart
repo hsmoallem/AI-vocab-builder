@@ -74,8 +74,8 @@ class SettingsScreen extends StatelessWidget {
           // ── New cards per session ───────────────────────────
           const _Section(
             icon: Icons.layers_outlined,
-            title: 'New cards per session',
-            subtitle: 'How many new words a review introduces (choose All to study them all)',
+            title: 'Cards per session',
+            subtitle: 'Max total cards in a study session (due + new). All = no limit',
             child: _NewCardsControl(),
           ),
 

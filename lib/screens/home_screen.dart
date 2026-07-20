@@ -360,7 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(kStudyModePrefKey, mode.index);
     final maxNew = await StudyPrefs.newCardsPerSession();
-    final deck = await provider.buildSessionDeck(maxNewCards: maxNew);
+    final deck = await provider.buildSessionDeck(maxCards: maxNew);
     if (!context.mounted) return;
     if (deck.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
