@@ -19,12 +19,16 @@ class UserGuideScreen extends StatelessWidget {
             icon: Icons.school_outlined,
             title: 'How review (spaced repetition) works',
             body:
-                'Tap the flashcards icon to start a review. You only see cards '
-                'that are DUE plus a batch of NEW cards — not your whole list at '
-                'once. After you reveal a card, you rate how well you knew it, and '
-                'the app schedules when to show it again. Easy cards come back in '
-                'weeks; forgotten cards come back soon. That spacing is what makes '
-                'words stick.',
+                'Tap the flashcards icon and choose Study Mode or View '
+                'Flashcards.\n\n'
+                '• Study Mode — spaced repetition. You only see cards that are '
+                'DUE plus a batch of NEW cards, not your whole list at once. '
+                'After you reveal a card you rate how well you knew it, and the '
+                'app schedules when to show it again. Easy cards come back in '
+                'weeks; forgotten cards come back soon. That spacing is what '
+                'makes words stick.\n'
+                '• View Flashcards — flip through your whole list freely, with '
+                'no scheduling, whenever you just want to browse.',
           ),
           _Guide(
             icon: Icons.touch_app_outlined,
@@ -46,7 +50,8 @@ class UserGuideScreen extends StatelessWidget {
                 'which language to answer in (the one the word is translated '
                 'to). If a card has more than one translation, any is accepted.\n'
                 '• Reverse — see the translation, recall the word.\n\n'
-                'Pick a mode when you start a session.',
+                'Pick a mode when you start a session. In Flip and Reverse, tap '
+                'anywhere on the card to reveal the answer (or use Show answer).',
           ),
           _Guide(
             icon: Icons.credit_card,
@@ -55,7 +60,9 @@ class UserGuideScreen extends StatelessWidget {
                 'Reveal the answer to see the translation, example sentences, an '
                 'AI grammar tip, your note, and a "translate to another language" '
                 'tool. Every field has a 🔊 listen button and a copy icon, and you '
-                'can regenerate the example or copy the whole card.',
+                'can regenerate the example or copy the whole card. Your note, '
+                'grammar tip, and any extra-language translation are saved to the '
+                'card and shown again next time you open it.',
           ),
           _Guide(
             icon: Icons.add_circle_outline,
@@ -81,6 +88,19 @@ class UserGuideScreen extends StatelessWidget {
                 'Archive a card (top-right on a review card) to hide it from your '
                 'list and reviews. Find archived words under Saved Words → ⋮ → '
                 'Archived words, where you can restore or delete them.',
+          ),
+          _Guide(
+            icon: Icons.tune,
+            title: 'Settings',
+            body:
+                '• Cards per session — the maximum number of cards (due + new '
+                'combined) in one study session. Choose a number to keep '
+                'sessions short, or All for no limit.\n'
+                '• Reset all study progress — clears the spaced-repetition '
+                'schedule for every card so you can study them all fresh again. '
+                'Your words, notes, and translations are kept.\n'
+                '• App language, translation target language, and automatic '
+                'backup are also set here.',
           ),
           _Guide(
             icon: Icons.cloud_upload_outlined,

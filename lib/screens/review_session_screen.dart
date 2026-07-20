@@ -17,6 +17,7 @@ import '../services/srs_service.dart';
 import '../services/tts_service.dart';
 import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
+import '../utils/answer_check.dart';
 import 'review_summary_screen.dart';
 
 class ReviewSessionScreen extends StatefulWidget {
@@ -91,22 +92,8 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
 
   // ── Answer checking (typing mode) ──────────────────────────────────
   bool _checkTyped(Word w, String typed) {
-    // Unicode-aware: keep letters of ANY script (Arabic, CJK, Cyrillic, …)
-    // and digits, drop punctuation/diacritic marks. The old [a-z…] filter
-    // erased non-Latin answers to empty, so e.g. Arabic could never match.
-    String norm(String s) => s
-        .toLowerCase()
-        .replaceAll(RegExp(r'^(der|die|das|the|a|an|to)\s+'), '')
-        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    final t = norm(typed);
-    if (t.isEmpty) return false;
-    final options = w.translation
-        .split(RegExp(r'[,/;]'))
-        .map(norm)
-        .where((e) => e.isNotEmpty);
-    return options.contains(t);
+    // Pure, unit-tested matching lives in AnswerCheck.
+    return AnswerCheck.matches(w.translation, typed);
   }
 
   /// Hint under the typing box: which language to answer in (the language the

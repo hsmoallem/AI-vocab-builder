@@ -75,7 +75,11 @@ class MainActivity : FlutterActivity() {
                 if (call.method == "shareFile") {
                     try {
                         val content = call.argument<String>("content") ?: ""
-                        val filename = call.argument<String>("filename") ?: "export.txt"
+                        val rawFilename = call.argument<String>("filename") ?: "export.txt"
+                        // Base name only — never let a filename escape the cache dir.
+                        val filename = rawFilename.substringAfterLast('/')
+                            .substringAfterLast('\\')
+                            .ifBlank { "export.txt" }
                         val mime = call.argument<String>("mime") ?: "text/plain"
 
                         val file = File(cacheDir, filename)
@@ -114,8 +118,14 @@ class MainActivity : FlutterActivity() {
                         } else "document.pdf"
                     } ?: "document.pdf"
 
+                    // Sanitize: a content provider could supply a display name
+                    // containing path separators ("../…"). Keep only the base
+                    // name so the copy can never escape the cache directory.
+                    val safeName = name.substringAfterLast('/')
+                        .substringAfterLast('\\')
+                        .ifBlank { "document.pdf" }
                     val inputStream = contentResolver.openInputStream(uri)
-                    val cacheFile = File(cacheDir, "picked_$name")
+                    val cacheFile = File(cacheDir, "picked_$safeName")
                     inputStream?.use { input ->
                         FileOutputStream(cacheFile).use { output ->
                             input.copyTo(output)

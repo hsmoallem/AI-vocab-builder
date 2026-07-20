@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/auto_backup.dart';
-import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../services/study_prefs.dart';
 import 'user_guide_screen.dart';

@@ -169,5 +169,27 @@ void main() {
       expect(restored.exampleTarget, word.exampleTarget);
       expect(restored.isReviewed, word.isReviewed);
     });
+
+    test('saved 2nd-language translation survives toMap/fromMap (DB v5)', () {
+      final w = word.copyWith(secondLang: 'fr', secondTranslation: 'argent');
+      final map = w.toMap();
+      expect(map['second_lang'], 'fr');
+      expect(map['second_translation'], 'argent');
+      final restored = Word.fromMap(map);
+      expect(restored.secondLang, 'fr');
+      expect(restored.secondTranslation, 'argent');
+    });
+
+    test('2nd-language fields are null when absent (pre-v5 rows)', () {
+      final w = Word.fromMap({
+        'word': 'Haus',
+        'translation': 'house',
+        'source_lang': 'de',
+        'target_lang': 'en',
+        // no second_lang / second_translation columns
+      });
+      expect(w.secondLang, isNull);
+      expect(w.secondTranslation, isNull);
+    });
   });
 }
