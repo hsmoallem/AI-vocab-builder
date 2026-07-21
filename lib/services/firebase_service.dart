@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../firebase_options.dart';
 import '../models/word.dart';
 
 class FirebaseService {
@@ -23,7 +24,11 @@ class FirebaseService {
 
   Future<bool> init() async {
     try {
-      await Firebase.initializeApp();
+      // Platform-specific options from flutterfire configure — required on
+      // web (there is no google-services.json there); harmless on Android.
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       _initialized = true;
       return true;
     } catch (e) {
