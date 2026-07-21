@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import '../models/word.dart';
 import '../services/database_service.dart';
 import '../services/translation_service.dart';
@@ -124,7 +124,7 @@ class WordProvider extends ChangeNotifier {
       sourceLang: from,
       targetLang: to,
       level: level,
-      firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+      firebaseUid: FirebaseService.instance.currentUser?.uid,
     );
   }
 
@@ -176,7 +176,7 @@ class WordProvider extends ChangeNotifier {
         sourceLang: from,
         targetLang: to,
         level: level,
-        firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
       );
 
       // Corrected spelling — replace the typed word with the server's fix.
@@ -314,7 +314,7 @@ class WordProvider extends ChangeNotifier {
       targetLang: word.targetLang,
       level: level,
       avoid: avoid.isEmpty ? null : avoid,
-      firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+      firebaseUid: FirebaseService.instance.currentUser?.uid,
     );
     final exampleSource = result.meanings
         .where((m) => m.exampleSource.trim().isNotEmpty)
@@ -341,7 +341,7 @@ class WordProvider extends ChangeNotifier {
       sourceLang: word.sourceLang,
       targetLang: word.targetLang,
       level: level,
-      firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+      firebaseUid: FirebaseService.instance.currentUser?.uid,
     );
     await DatabaseService.updateWord(word.copyWith(grammarTip: tip));
     await loadWords();

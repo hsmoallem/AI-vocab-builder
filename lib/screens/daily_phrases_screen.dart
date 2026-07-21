@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import '../config/app_strings.dart';
 import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
@@ -108,7 +108,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       }
 
       // Generate phrases, filter blocked ones, retry if < 5 (max 3 attempts)
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = FirebaseService.instance.currentUser?.uid;
       List<DailyPhrase> phrases = [];
       // Tell the server which phrases NOT to repeat: blocked ones, the batch
       // currently on screen, and anything gathered so far this run.
@@ -218,7 +218,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
         word: phrase.phrase,
         sourceLang: _phraseLang,
         targetLang: targetLang,
-        firebaseUid: FirebaseAuth.instance.currentUser?.uid,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
       );
       final m = result.meanings.isNotEmpty ? result.meanings.first : Meaning(text: phrase.phrase, article: null, exampleSource: '', exampleTarget: '');
 

@@ -18,8 +18,8 @@
 ///   - Change _baseUrl if the proxy moves to a different host/domain
 
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'firebase_service.dart';
 
 class TranslationService {
   static const String _baseUrl = 'https://api.houssammoallem.com/translate';
@@ -33,7 +33,7 @@ class TranslationService {
   Future<Map<String, String>> _authHeaders() async {
     final headers = <String, String>{'Content-Type': 'application/json'};
     try {
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final token = await FirebaseService.instance.currentUser?.getIdToken();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
         return headers;
