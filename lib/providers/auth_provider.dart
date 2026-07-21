@@ -14,6 +14,12 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
 
   AuthProvider() {
+    // Local-only mode (e.g. web without a Firebase config): no auth backend,
+    // so don't wait on an auth stream — report signed-out immediately.
+    if (!_firebase.isInitialized) {
+      _isLoading = false;
+      return;
+    }
     _firebase.authStateChanges().listen((User? user) {
       _user = user;
       _isLoading = false;

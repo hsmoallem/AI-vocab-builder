@@ -26,21 +26,20 @@ void main() async {
     debugPrint('⚠ Firebase not initialized — running in local-only mode');
   }
 
-  runApp(VocabBuilderApp(firebaseReady: firebaseReady));
+  runApp(const VocabBuilderApp());
 }
 
 class VocabBuilderApp extends StatelessWidget {
-  final bool firebaseReady;
-
-  const VocabBuilderApp({super.key, required this.firebaseReady});
+  const VocabBuilderApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
-        if (firebaseReady)
-          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        // Always provided — AuthProvider self-guards when Firebase isn't
+        // initialized (local-only mode), so consumers always find it.
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => WordProvider()),
       ],
       child: MaterialApp(
@@ -73,7 +72,9 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final firebaseReady = FirebaseService.instance.isInitialized;
     if (!firebaseReady) {
-      return const LoginScreen();
+      // Local-only mode (e.g. web without a Firebase config): skip the login
+      // gate entirely — the app works with the local DB and no cloud backup.
+      return const HomeScreen();
     }
 
     return Consumer<AuthProvider>(

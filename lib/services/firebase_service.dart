@@ -33,10 +33,15 @@ class FirebaseService {
     }
   }
 
-  User? get currentUser => auth.currentUser;
+  // Guard every Firebase-Auth access with [_initialized]: on web without a
+  // firebase_options config, Firebase never initializes and touching
+  // FirebaseAuth.instance would throw. In that "local-only" mode we simply
+  // report signed-out.
+  User? get currentUser => _initialized ? auth.currentUser : null;
   bool get isSignedIn => currentUser != null;
   bool get isAnonymous => currentUser?.isAnonymous ?? false;
-  Stream<User?> authStateChanges() => auth.authStateChanges();
+  Stream<User?> authStateChanges() =>
+      _initialized ? auth.authStateChanges() : const Stream<User?>.empty();
 
   // ── Google Sign-In ──────────────────────────────────────────────────
 
