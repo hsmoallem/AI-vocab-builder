@@ -52,6 +52,14 @@ class FirebaseService {
 
   Future<User?> signInWithGoogle() async {
     try {
+      // Web: Firebase's own popup flow — no OAuth client-ID meta tag needed
+      // (the google_sign_in plugin's web path requires one and throws without
+      // it). The popup uses the authDomain from firebase_options.
+      if (kIsWeb) {
+        final userCredential = await auth.signInWithPopup(GoogleAuthProvider());
+        return userCredential.user;
+      }
+
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return null;
 
