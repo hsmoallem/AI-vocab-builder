@@ -92,7 +92,11 @@ class FirebaseService {
   // ── Sign Out ────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
-    await GoogleSignIn().signOut();
+    // GoogleSignIn's web path asserts without a client-ID meta tag; on web the
+    // popup flow is used for sign-in, so only Firebase itself needs signing out.
+    if (!kIsWeb) {
+      await GoogleSignIn().signOut();
+    }
     await auth.signOut();
   }
 
