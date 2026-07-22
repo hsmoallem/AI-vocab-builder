@@ -49,6 +49,7 @@ app.*.map.json
 
 # Secrets — API keys, do NOT commit
 /lib/config/secrets.dart
+*.save
 
 # Internal ops docs — kept private (infra/secrets), never in the public repo
 /TECHNICAL.md

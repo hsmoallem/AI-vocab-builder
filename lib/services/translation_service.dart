@@ -143,10 +143,7 @@ class TranslationService {
 
     final response = await http.post(
       Uri.parse(_baseUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-App-Token': _appToken,
-      },
+      headers: await _authHeaders(),
       body: jsonEncode(body),
     );
 

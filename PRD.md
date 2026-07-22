@@ -179,8 +179,6 @@ Open app → AuthGate checks Firebase → Home Screen
 
 - iOS file picker not yet implemented (MethodChannel ready, needs Swift handler)
 - DB migration not handled (uninstall to reset during development)
-- Proxy uses HTTP — HTTPS needed before Play Store submission (+ domain + Let's Encrypt)
-- Hardcoded proxy IP — replace with domain before Play Store
 - No offline AI translation (requires internet for proxy calls)
 - Single-user local database (Firebase sync is manual backup, not real-time)
 
@@ -192,7 +190,7 @@ Open app → AuthGate checks Firebase → Home Screen
 |----------|---------|------------|
 | P0 | AdMob integration (Phase 6) | Medium |
 | P1 | iOS support | Medium |
-| P2 | HTTPS proxy + custom domain | Medium |
+| P2 | ~~HTTPS proxy + custom domain~~ (done) | ~~Medium~~ |
 | P3 | Real-time Firestore sync | High |
 | P4 | Spaced repetition algorithm | High |
 | P5 | OCR (scan physical documents) | Very High |
