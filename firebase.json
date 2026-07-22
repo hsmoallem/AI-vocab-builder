@@ -1,1 +1,46 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ai-vocab-builder","appId":"1:794490258159:android:6505be279108ba258d511a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ai-vocab-builder","configurations":{"android":"1:794490258159:android:6505be279108ba258d511a","web":"1:794490258159:web:9aea18da9d8eb7be8d511a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ai-vocab-builder",
+          "appId": "1:794490258159:android:6505be279108ba258d511a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ai-vocab-builder",
+          "configurations": {
+            "android": "1:794490258159:android:6505be279108ba258d511a",
+            "web": "1:794490258159:web:9aea18da9d8eb7be8d511a"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "index.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
+        "source": "flutter_bootstrap.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
+    ]
+  }
+}
