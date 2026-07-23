@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
+import '../services/database_service.dart';
 import '../models/word.dart';
 
 class AiQuizScreen extends StatefulWidget {
@@ -26,7 +27,9 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
     if (_selectionMode == 0) {
       // Due today
-      selected = provider.dueWords.take(5).toList();
+      // Fetch fresh from the database in case the provider hasn't loaded them yet
+      final dueWords = await DatabaseService.getDueWords();
+      selected = dueWords.take(5).toList();
       if (selected.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No words are due for review today! Try Random or Manual selection.'))
