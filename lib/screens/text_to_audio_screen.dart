@@ -232,21 +232,6 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
                     ),
                   ),
                 ),
-                if (!kIsWeb) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      onPressed: _isSaving ? null : _saveAudioAndText,
-                      icon: _isSaving 
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.save_alt),
-                      label: const Text('Save / Export'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
             if (kIsWeb)
