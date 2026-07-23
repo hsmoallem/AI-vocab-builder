@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../config/app_strings.dart';
 import '../widgets/searchable_dropdown.dart';
+import '../widgets/web_top_bar.dart';
 
 class TextToAudioScreen extends StatefulWidget {
   const TextToAudioScreen({super.key});
@@ -173,6 +174,7 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Text-to-Audio Converter'),
+        actions: kIsWeb ? WebTopBar.buildActions(context) : null,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

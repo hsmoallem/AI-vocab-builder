@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/database_service.dart';
 import '../models/word.dart';
+import '../widgets/web_top_bar.dart';
 
 class AiQuizScreen extends StatefulWidget {
   const AiQuizScreen({super.key});
@@ -19,7 +21,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
   List<Word> _selectedWords = [];
   bool _showAnswers = true;
   
-  int _selectionMode = 0; // 0 = Due Today, 1 = Random, 2 = Manual
+  int _selectionMode = 0; // 0 = Review, 1 = Random, 2 = Manual
   bool _isStoryMode = false;
 
   void _generateQuiz() async {
@@ -27,13 +29,18 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     List<Word> selected = [];
 
     if (_selectionMode == 0) {
-      // Due today
+      // Due today or New words
       final dueWords = await DatabaseService.getDueWords();
-      selected = dueWords.take(5).toList();
+      final newWords = await DatabaseService.getNewWords();
+      final reviewList = [...dueWords, ...newWords];
+      
+      selected = reviewList.take(5).toList();
       if (selected.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No words are due for review today! Try Random or Manual selection.'))
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No words are due for review or learning! Try Random or Manual selection.'))
+          );
+        }
         return;
       }
     } else if (_selectionMode == 1) {
@@ -231,6 +238,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Quizzes & Stories'),
+        actions: kIsWeb ? WebTopBar.buildActions(context) : null,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -263,7 +271,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
             const SizedBox(height: 16),
             SegmentedButton<int>(
               segments: [
-                const ButtonSegment(value: 0, label: Text('Due Today')),
+                const ButtonSegment(value: 0, label: Text('Learning/Due')),
                 ButtonSegment(value: 1, label: Text(_isStoryMode ? 'Random (10)' : 'Random (5)')),
                 const ButtonSegment(value: 2, label: Text('Manual')),
               ],
