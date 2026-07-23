@@ -9,6 +9,7 @@ import '../text_to_audio_screen.dart';
 import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 import '../ai_quiz_screen.dart';
+import '../../widgets/add_word_dialog.dart';
 
 class WebDashboardLayout extends StatefulWidget {
   const WebDashboardLayout({super.key});
@@ -142,6 +143,16 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const AddWordDialog(),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Word'),
       ),
     );
   }

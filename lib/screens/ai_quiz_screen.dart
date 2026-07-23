@@ -331,7 +331,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                               color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
+                            child: SelectableText(
                               _getDisplayText(),
                               style: const TextStyle(fontSize: 18, height: 1.8),
                             ),
