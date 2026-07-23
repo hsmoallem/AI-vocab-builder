@@ -238,7 +238,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
         title: const Text('AI Quizzes & Stories'),
         actions: kIsWeb ? WebTopBar.buildActions(context) : null,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -325,32 +325,35 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                 ),
             ],
             const SizedBox(height: 8),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _generatedStory != null
-                      ? SingleChildScrollView(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: SelectableText(
-                              _getDisplayText(),
-                              style: const TextStyle(fontSize: 18, height: 1.8),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            'Press Generate to create a ${_isStoryMode ? 'story' : 'contextual quiz'} using your vocabulary.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ),
-            ),
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_generatedStory != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SelectableText(
+                  _getDisplayText(),
+                  style: const TextStyle(fontSize: 18, height: 1.8),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Center(
+                  child: Text(
+                    'Press Generate to create a ${_isStoryMode ? 'story' : 'contextual quiz'} using your vocabulary.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
