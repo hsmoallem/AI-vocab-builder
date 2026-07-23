@@ -1,0 +1,125 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import 'web_daily_phrases_screen.dart';
+import 'web_word_list_screen.dart';
+import '../settings_screen.dart'; 
+import '../../config/app_strings.dart';
+import 'web_reader_screen.dart';
+
+class WebDashboardLayout extends StatefulWidget {
+  const WebDashboardLayout({super.key});
+
+  @override
+  State<WebDashboardLayout> createState() => _WebDashboardLayoutState();
+}
+
+class _WebDashboardLayoutState extends State<WebDashboardLayout> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = const [
+    WebReaderScreen(),
+    WebWordListScreen(),
+    WebDailyPhrasesScreen(),
+    SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(2, 0),
+                ),
+              ],
+            ),
+            child: NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              extended: true,
+              minExtendedWidth: 260,
+              backgroundColor: Colors.transparent,
+              indicatorColor: theme.colorScheme.primary.withOpacity(0.15),
+              selectedIconTheme: IconThemeData(color: theme.colorScheme.primary, size: 28),
+              unselectedIconTheme: IconThemeData(color: theme.colorScheme.onSurface.withOpacity(0.6), size: 24),
+              selectedLabelTextStyle: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelTextStyle: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.language,
+                      color: theme.colorScheme.primary,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Vocab Builder',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              destinations: [
+                NavigationRailDestination(
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  selectedIcon: const Icon(Icons.picture_as_pdf),
+                  label: Text(s.tabReader),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.list_alt_outlined),
+                  selectedIcon: const Icon(Icons.list_alt),
+                  label: Text(s.tabMyWords),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  selectedIcon: const Icon(Icons.auto_awesome),
+                  label: Text(s.tabDaily),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: const Icon(Icons.settings),
+                  label: Text(s.settings),
+                ),
+              ],
+            ),
+          ),
+          // Main Content Area
+          Expanded(
+            child: Container(
+              color: theme.scaffoldBackgroundColor,
+              child: _screens[_selectedIndex],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
