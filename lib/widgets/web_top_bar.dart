@@ -24,6 +24,23 @@ class WebTopBar {
     final wordProvider = context.watch<WordProvider>();
 
     return [
+      // Streak Flame
+      Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            children: [
+              const Icon(Icons.local_fire_department, color: Colors.orange),
+              const SizedBox(width: 4),
+              Text(
+                '${wordProvider.streak.current}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
       FilledButton.tonalIcon(
         icon: Badge.count(
           count: wordProvider.dueCount,
