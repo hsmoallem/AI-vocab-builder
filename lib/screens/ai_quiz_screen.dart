@@ -20,6 +20,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
   bool _showAnswers = true;
   
   int _selectionMode = 0; // 0 = Due Today, 1 = Random, 2 = Manual
+  bool _isStoryMode = false;
 
   void _generateQuiz() async {
     final provider = context.read<WordProvider>();
@@ -27,7 +28,6 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
     if (_selectionMode == 0) {
       // Due today
-      // Fetch fresh from the database in case the provider hasn't loaded them yet
       final dueWords = await DatabaseService.getDueWords();
       selected = dueWords.take(5).toList();
       if (selected.isEmpty) {
@@ -39,7 +39,8 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     } else if (_selectionMode == 1) {
       // Random
       final all = List<Word>.from(provider.words)..shuffle();
-      selected = all.take(5).toList();
+      // If story mode, we need at least 10 words for random
+      selected = all.take(_isStoryMode ? 10 : 5).toList();
       if (selected.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Your vocabulary list is empty! Add some words first.'))
@@ -56,20 +57,29 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
       }
       final manualSelection = await _showManualSelectionDialog(provider.words);
       if (manualSelection == null || manualSelection.isEmpty) {
-        return; // User cancelled or selected nothing
+        return; 
       }
       selected = manualSelection;
+    }
+
+    if (_isStoryMode && selected.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Story mode requires at least 10 words! Please select more words.'))
+      );
+      return;
     }
 
     setState(() {
       _isLoading = true;
       _generatedStory = null;
       _selectedWords = selected;
-      _showAnswers = false; // Hide words in text initially for quiz mode
+      _showAnswers = _isStoryMode; // In story mode, don't hide words
     });
 
     final wordsStr = selected.map((w) => w.word).join(', ');
-    final themePrompt = "Write separate educational sentences using these specific words: $wordsStr.";
+    final themePrompt = _isStoryMode 
+        ? "Write a creative short story that includes all of these words: $wordsStr"
+        : "Write separate educational sentences using these specific words: $wordsStr.";
 
     try {
       final phrases = await _api.generateDailyPhrases(
@@ -78,7 +88,9 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
       );
       
       setState(() {
-        _generatedStory = phrases.map((p) => p.phrase).join('\n\n');
+        _generatedStory = _isStoryMode 
+            ? phrases.map((p) => p.phrase).join(' ') // Join as paragraph for story
+            : phrases.map((p) => p.phrase).join('\n\n'); // Separate sentences for quiz
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,41 +107,91 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
   Future<List<Word>?> _showManualSelectionDialog(List<Word> allWords) async {
     final selectedWords = <Word>[];
+    String searchQuery = '';
+    bool sortAlphabetical = false;
+
     return showDialog<List<Word>>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            // Filter and sort words
+            var displayedWords = allWords.where((w) {
+              return w.word.toLowerCase().contains(searchQuery.toLowerCase()) || 
+                     w.translation.toLowerCase().contains(searchQuery.toLowerCase());
+            }).toList();
+
+            if (sortAlphabetical) {
+              displayedWords.sort((a, b) => a.word.toLowerCase().compareTo(b.word.toLowerCase()));
+            } else {
+              // Assuming Word has a createdAt or id we can sort by (fallback to reversing the list since newer is usually at the end)
+              // We'll just reverse the default order as a proxy for "date added" if no date exists
+              displayedWords = displayedWords.reversed.toList();
+            }
+
             return AlertDialog(
               title: const Text('Select Vocabulary'),
               content: SizedBox(
                 width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: allWords.length,
-                  itemBuilder: (context, index) {
-                    final word = allWords[index];
-                    final isSelected = selectedWords.contains(word);
-                    return CheckboxListTile(
-                      title: Text(word.word),
-                      value: isSelected,
-                      onChanged: (bool? checked) {
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search words...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (val) {
                         setState(() {
-                          if (checked == true) {
-                            if (selectedWords.length < 10) {
-                              selectedWords.add(word);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('You can select a maximum of 10 words.'))
-                              );
-                            }
-                          } else {
-                            selectedWords.remove(word);
-                          }
+                          searchQuery = val;
                         });
                       },
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Sort by:'),
+                        DropdownButton<bool>(
+                          value: sortAlphabetical,
+                          items: const [
+                            DropdownMenuItem(value: false, child: Text('Date Added')),
+                            DropdownMenuItem(value: true, child: Text('Alphabetical')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              sortAlphabetical = val ?? false;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: displayedWords.length,
+                        itemBuilder: (context, index) {
+                          final word = displayedWords[index];
+                          final isSelected = selectedWords.contains(word);
+                          return CheckboxListTile(
+                            title: Text(word.word),
+                            subtitle: Text(word.translation),
+                            value: isSelected,
+                            onChanged: (bool? checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  selectedWords.add(word);
+                                } else {
+                                  selectedWords.remove(word);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
               actions: [
@@ -153,12 +215,11 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
   String _getDisplayText() {
     if (_generatedStory == null) return '';
-    if (_showAnswers) return _generatedStory!;
+    if (_showAnswers || _isStoryMode) return _generatedStory!;
 
     String hiddenText = _generatedStory!;
     // Hide the selected words in the text to make it a quiz
     for (final w in _selectedWords) {
-      // Basic case-insensitive replacement with blanks
       final regex = RegExp(w.word, caseSensitive: false);
       hiddenText = hiddenText.replaceAll(regex, '____');
     }
@@ -169,23 +230,42 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Contextual Quiz'),
+        title: const Text('AI Quizzes & Stories'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Quiz Mode')),
+                      ButtonSegment(value: true, label: Text('Story Mode')),
+                    ],
+                    selected: {_isStoryMode},
+                    onSelectionChanged: (Set<bool> newSelection) {
+                      setState(() {
+                        _isStoryMode = newSelection.first;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             const Text(
               'Select vocabulary source:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(value: 0, label: Text('Due Today')),
-                ButtonSegment(value: 1, label: Text('Random')),
-                ButtonSegment(value: 2, label: Text('Manual')),
+              segments: [
+                const ButtonSegment(value: 0, label: Text('Due Today')),
+                ButtonSegment(value: 1, label: Text(_isStoryMode ? 'Random (10)' : 'Random (5)')),
+                const ButtonSegment(value: 2, label: Text('Manual')),
               ],
               selected: {_selectionMode},
               onSelectionChanged: (Set<int> newSelection) {
@@ -197,7 +277,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: const Icon(Icons.auto_awesome),
-              label: Text(_selectionMode == 2 ? 'Select Words & Generate' : 'Generate AI Quiz'),
+              label: Text(_selectionMode == 2 ? 'Select Words & Generate' : 'Generate AI ${_isStoryMode ? 'Story' : 'Quiz'}'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -205,9 +285,9 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
             ),
             const SizedBox(height: 16),
             if (_selectedWords.isNotEmpty && !_isLoading) ...[
-              const Text(
-                'Vocabulary used in this quiz:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                _isStoryMode ? 'Vocabulary used in this story:' : 'Vocabulary used in this quiz:',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -221,21 +301,22 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Fill in the blanks:'),
-                  TextButton.icon(
-                    icon: Icon(_showAnswers ? Icons.visibility_off : Icons.visibility),
-                    label: Text(_showAnswers ? 'Hide Answers' : 'Show Answers'),
-                    onPressed: () {
-                      setState(() {
-                        _showAnswers = !_showAnswers;
-                      });
-                    },
-                  ),
-                ],
-              ),
+              if (!_isStoryMode)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Fill in the blanks:'),
+                    TextButton.icon(
+                      icon: Icon(_showAnswers ? Icons.visibility_off : Icons.visibility),
+                      label: Text(_showAnswers ? 'Hide Answers' : 'Show Answers'),
+                      onPressed: () {
+                        setState(() {
+                          _showAnswers = !_showAnswers;
+                        });
+                      },
+                    ),
+                  ],
+                ),
             ],
             const SizedBox(height: 8),
             Expanded(
@@ -256,11 +337,11 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                             ),
                           ),
                         )
-                      : const Center(
+                      : Center(
                           child: Text(
-                            'Press Generate to create a contextual quiz using your vocabulary.',
+                            'Press Generate to create a ${_isStoryMode ? 'story' : 'contextual quiz'} using your vocabulary.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         ),
             ),
