@@ -238,7 +238,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
         title: const Text('AI Quizzes & Stories'),
         actions: kIsWeb ? WebTopBar.buildActions(context) : null,
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -296,15 +296,27 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _selectedWords.map((w) {
-                  return Chip(
-                    label: Text(w.word),
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  );
-                }).toList(),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 120),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: _selectedWords.map((w) {
+                      return Chip(
+                        label: Text(w.word, style: const TextStyle(fontSize: 12)),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               if (!_isStoryMode)
@@ -331,16 +343,20 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (_generatedStory != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SelectableText(
-                  _getDisplayText(),
-                  style: const TextStyle(fontSize: 18, height: 1.8),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      _getDisplayText(),
+                      style: const TextStyle(fontSize: 18, height: 1.8),
+                    ),
+                  ),
                 ),
               )
             else
