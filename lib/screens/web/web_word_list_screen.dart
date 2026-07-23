@@ -218,7 +218,30 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
                     ),
                   ),
                   DataCell(Text(word.translation)),
-                  DataCell(Text(word.exampleSource.isNotEmpty ? word.exampleSource : '-', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  DataCell(
+                    word.exampleSource.isNotEmpty
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.volume_up, size: 16, color: theme.colorScheme.primary),
+                                onPressed: () => _tts.speak(word.exampleSource, language: word.sourceLang),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                splashRadius: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  word.exampleSource,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          )
+                        : const Text('-'),
+                  ),
                   DataCell(Text(word.srsEaseFactor.toStringAsFixed(1))),
                   DataCell(Row(
                     mainAxisSize: MainAxisSize.min,
