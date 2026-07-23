@@ -54,3 +54,5 @@ app.*.map.json
 # Internal ops docs — kept private (infra/secrets), never in the public repo
 /TECHNICAL.md
 /SETUP.md
+
+.firebase/
