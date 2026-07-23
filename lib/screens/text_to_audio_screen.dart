@@ -194,16 +194,7 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
                     },
                   ),
                 ),
-                if (!kIsWeb) ...[
-                  const SizedBox(width: 8),
-                  FilledButton.tonalIcon(
-                    onPressed: _isDetecting ? null : _detectLanguage,
-                    icon: _isDetecting 
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.auto_awesome, size: 18),
-                    label: const Text('Detect'),
-                  ),
-                ]
+                // Auto-detect button removed per user request
               ],
             ),
             const SizedBox(height: 16),
@@ -241,19 +232,21 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: _isSaving ? null : _saveAudioAndText,
-                    icon: _isSaving 
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.save_alt),
-                    label: const Text('Save / Export'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                if (!kIsWeb) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _isSaving ? null : _saveAudioAndText,
+                      icon: _isSaving 
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.save_alt),
+                      label: const Text('Save / Export'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
             if (kIsWeb)
