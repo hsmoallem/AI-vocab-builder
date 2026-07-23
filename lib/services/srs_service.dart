@@ -169,10 +169,24 @@ class SrsService {
     required double ease,
     required Rating rating,
   }) {
-    // First success after (re)learning → 1 day.
-    if (repetition == 1) return 1;
-    // Second success → 6 days (SM-2 default).
-    if (repetition == 2) return 6;
+    // First success after (re)learning.
+    if (repetition == 1) {
+      switch (rating) {
+        case Rating.hard: return 1;
+        case Rating.good: return 2;
+        case Rating.easy: return 4;
+        default: return 1;
+      }
+    }
+    // Second success.
+    if (repetition == 2) {
+      switch (rating) {
+        case Rating.hard: return 3;
+        case Rating.good: return 6;
+        case Rating.easy: return 8;
+        default: return 6;
+      }
+    }
 
     // Subsequent successes grow the interval multiplicatively.
     // Apply rating-specific modifiers.
