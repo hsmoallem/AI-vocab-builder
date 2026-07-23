@@ -5,7 +5,8 @@ import '../services/database_service.dart';
 import '../services/translation_service.dart';
 import '../services/srs_service.dart';
 
-enum SortMode { newestFirst, alphabetical }
+enum SortMode { newestFirst, oldestFirst, alphabetical }
+
 enum LoadState { idle, loading, loaded, error }
 
 /// Outcome of importing one word during a bulk import.
@@ -93,9 +94,19 @@ class WordProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String orderBy = _sortMode == SortMode.alphabetical
-          ? 'LOWER(word) ASC'
-          : 'created_at DESC';
+      String orderBy;
+      switch (_sortMode) {
+        case SortMode.alphabetical:
+          orderBy = 'LOWER(word) ASC';
+          break;
+        case SortMode.oldestFirst:
+          orderBy = 'created_at ASC';
+          break;
+        case SortMode.newestFirst:
+        default:
+          orderBy = 'created_at DESC';
+          break;
+      }
       _words = await DatabaseService.getWords(orderBy: orderBy);
       _state = LoadState.loaded;
       _error = null;

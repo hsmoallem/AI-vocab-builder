@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
 import '../services/tts_service.dart';
+import '../widgets/note_edit_dialog.dart';
 import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
 
@@ -147,32 +148,10 @@ class _FlashcardScreenState extends State<FlashcardScreen>
   }
 
   Future<void> _editNote(Word word) async {
-    final controller = TextEditingController(text: word.note ?? '');
     final saved = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Note'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 2,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Add a personal note…',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Save')),
-        ],
-      ),
+      builder: (ctx) => NoteEditDialog(initialNote: word.note ?? ''),
     );
-    controller.dispose();
     if (saved == null || !mounted) return;
     await context.read<WordProvider>().updateNote(word, saved);
   }

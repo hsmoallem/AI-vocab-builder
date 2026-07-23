@@ -7,15 +7,22 @@
 /// ([WordProvider.processReview]). "Again" cards re-appear later in the
 /// session. When the deck is exhausted, the [ReviewSummaryScreen] is shown.
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import '../models/study_mode.dart';
 import '../models/word.dart';
+import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/database_service.dart'; // StreakSnapshot
 import '../services/srs_service.dart';
+import '../services/translation_service.dart';
 import '../services/tts_service.dart';
 import '../config/app_strings.dart';
+import '../widgets/note_edit_dialog.dart';
 import '../utils/clipboard_util.dart';
 import '../utils/answer_check.dart';
 import 'review_summary_screen.dart';
@@ -654,29 +661,10 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   }
 
   Future<void> _editNote(Word w) async {
-    final controller = TextEditingController(text: w.note ?? '');
     final saved = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Note'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 2,
-          maxLines: 5,
-          decoration: const InputDecoration(
-              hintText: 'Add a personal note…', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Save')),
-        ],
-      ),
+      builder: (ctx) => NoteEditDialog(initialNote: w.note ?? ''),
     );
-    controller.dispose();
     if (saved == null || !mounted) return;
     await context.read<WordProvider>().updateNote(w, saved);
     if (mounted) {

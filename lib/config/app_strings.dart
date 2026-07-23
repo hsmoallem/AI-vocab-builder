@@ -211,6 +211,11 @@ class AppStrings {
     if (locale == 'ar') return 'الأحدث';
     return 'Newest';
   }
+  String get sortOldest {
+    if (locale == 'de') return 'Älteste';
+    if (locale == 'ar') return 'الأقدم';
+    return 'Oldest';
+  }
   String get sortAlphabetical {
     if (locale == 'de') return 'Alphabetisch';
     if (locale == 'ar') return 'أبجدياً';

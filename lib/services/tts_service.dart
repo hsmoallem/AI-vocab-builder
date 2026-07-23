@@ -19,6 +19,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'tts_stub_impl.dart' if (dart.library.js_interop) 'tts_web_impl.dart';
 
 class TtsService {
   static const _channel = MethodChannel('com.vocabreader/tts');
@@ -30,7 +31,10 @@ class TtsService {
   /// Works offline — no network call, no API key.
   Future<void> speak(String text, {required String language}) async {
     if (text.trim().isEmpty) return;
-    if (kIsWeb) return; // no native TTS channel on web (browser TTS TODO)
+    if (kIsWeb) {
+      speakWeb(text.trim(), language);
+      return;
+    }
 
     await _channel.invokeMethod('speak', {
       'text': text.trim(),
@@ -40,7 +44,10 @@ class TtsService {
 
   /// Stop any currently playing speech.
   Future<void> stop() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      stopWeb();
+      return;
+    }
     await _channel.invokeMethod('stop');
   }
 }

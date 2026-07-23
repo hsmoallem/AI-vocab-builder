@@ -224,10 +224,16 @@ class _WordListScreenState extends State<WordListScreen> {
                   ),
                   const SizedBox(width: 8),
                   _SortChip(
-                    label: s.sortNewest,
-                    icon: Icons.access_time,
-                    selected: provider.sortMode == SortMode.newestFirst,
-                    onTap: () => provider.setSortMode(SortMode.newestFirst),
+                    label: provider.sortMode == SortMode.oldestFirst ? s.sortOldest : s.sortNewest,
+                    icon: provider.sortMode == SortMode.oldestFirst ? Icons.history : Icons.access_time,
+                    selected: provider.sortMode == SortMode.newestFirst || provider.sortMode == SortMode.oldestFirst,
+                    onTap: () {
+                      if (provider.sortMode == SortMode.newestFirst) {
+                        provider.setSortMode(SortMode.oldestFirst);
+                      } else {
+                        provider.setSortMode(SortMode.newestFirst);
+                      }
+                    },
                   ),
                   const Spacer(),
                   Text(
