@@ -12,6 +12,7 @@ import '../config/app_strings.dart';
 import '../services/auto_backup.dart';
 import '../providers/word_provider.dart';
 import '../services/study_prefs.dart';
+import '../widgets/searchable_dropdown.dart';
 import 'user_guide_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -47,15 +48,14 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.translate,
             title: s.translateLanguage,
             subtitle: s.translateLanguageDesc,
-            child: DropdownButtonFormField<String>(
+            child: SearchableDropdown<String>(
               value: locale.targetLang,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              ),
+              labelText: '',
+              hideUnderline: false,
               items: AppStrings.targetLanguages.entries
                   .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                   .toList(),
+              itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
               onChanged: (v) {
                 if (v != null) locale.setTargetLang(v);
               },
@@ -182,15 +182,14 @@ class _NewCardsControlState extends State<_NewCardsControl> {
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
-    return DropdownButtonFormField<int>(
+    return SearchableDropdown<int>(
       value: _value,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      ),
+      labelText: '',
+      hideUnderline: false,
       items: _options
           .map((n) => DropdownMenuItem(value: n, child: Text(_label(n))))
           .toList(),
+      itemAsString: (n) => _label(n),
       onChanged: (v) async {
         if (v == null) return;
         setState(() => _value = v);

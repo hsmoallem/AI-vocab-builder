@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import 'web_daily_phrases_screen.dart';
 import 'web_word_list_screen.dart';
 import '../settings_screen.dart'; 
+import '../text_to_audio_screen.dart';
 import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 
@@ -21,6 +22,7 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
     WebReaderScreen(),
     WebWordListScreen(),
     WebDailyPhrasesScreen(),
+    TextToAudioScreen(),
     SettingsScreen(),
   ];
 
@@ -102,6 +104,11 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                   icon: const Icon(Icons.auto_awesome_outlined),
                   selectedIcon: const Icon(Icons.auto_awesome),
                   label: Text(s.tabDaily),
+                ),
+                const NavigationRailDestination(
+                  icon: Icon(Icons.record_voice_over_outlined),
+                  selectedIcon: Icon(Icons.record_voice_over),
+                  label: Text('Text-to-Audio'),
                 ),
                 NavigationRailDestination(
                   icon: const Icon(Icons.settings_outlined),

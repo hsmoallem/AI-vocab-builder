@@ -23,7 +23,9 @@ import '../services/translation_service.dart';
 import '../services/tts_service.dart';
 import '../config/app_strings.dart';
 import '../widgets/note_edit_dialog.dart';
+import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
+import '../widgets/searchable_dropdown.dart';
 import '../utils/answer_check.dart';
 import 'review_summary_screen.dart';
 
@@ -810,19 +812,15 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         const SizedBox(height: 6),
         Row(children: [
           Expanded(
-            child: DropdownButtonFormField<String>(
+            child: SearchableDropdown<String>(
               value: _secondLang ?? w.secondLang,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(),
-                  hintText: 'Language'),
+              labelText: '',
+              hideUnderline: false,
               items: entries
                   .map((e) =>
                       DropdownMenuItem(value: e.key, child: Text(e.value)))
                   .toList(),
+              itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
               onChanged: _secondLoading
                   ? null
                   : (v) => setState(() => _secondLang = v),

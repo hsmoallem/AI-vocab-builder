@@ -6,6 +6,7 @@ import '../services/tts_service.dart';
 import '../widgets/note_edit_dialog.dart';
 import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class FlashcardScreen extends StatefulWidget {
   const FlashcardScreen({super.key});
@@ -813,20 +814,15 @@ class _FlashcardScreenState extends State<FlashcardScreen>
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
+                child: SearchableDropdown<String>(
                   value: _secondLang ?? word.secondLang,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    border: OutlineInputBorder(),
-                    hintText: 'Language',
-                  ),
+                  labelText: '',
+                  hideUnderline: false,
                   items: entries
                       .map((e) => DropdownMenuItem(
                           value: e.key, child: Text(e.value)))
                       .toList(),
+                  itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
                   onChanged: _secondLoading
                       ? null
                       : (v) => setState(() => _secondLang = v),

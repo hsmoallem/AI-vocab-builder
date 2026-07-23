@@ -42,23 +42,31 @@ class VocabBuilderApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => WordProvider()),
       ],
-      child: MaterialApp(
-        title: 'AI Vocab Builder',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        // Clamp text scaling so a large device font/display size can't blow
-        // labels out of their buttons across the app.
-        builder: (context, child) {
-          final mq = MediaQuery.of(context);
-          return MediaQuery(
-            data: mq.copyWith(
-                textScaler: mq.textScaler.clamp(maxScaleFactor: 1.3)),
-            child: child ?? const SizedBox.shrink(),
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) {
+          return MaterialApp(
+            title: 'AI Vocab Builder',
+            debugShowCheckedModeBanner: false,
+            // Force the locale on the app so built-in widgets can potentially translate
+            // (if localizations delegates are added later), but more importantly,
+            // this Consumer forces a full rebuild of the widget tree when locale changes.
+            locale: Locale(localeProvider.locale),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.system,
+            // Clamp text scaling so a large device font/display size can't blow
+            // labels out of their buttons across the app.
+            builder: (context, child) {
+              final mq = MediaQuery.of(context);
+              return MediaQuery(
+                data: mq.copyWith(
+                    textScaler: mq.textScaler.clamp(maxScaleFactor: 1.3)),
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+            home: const AuthGate(),
           );
         },
-        home: const AuthGate(),
       ),
     );
   }

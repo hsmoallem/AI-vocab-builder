@@ -6,6 +6,7 @@ import '../config/app_strings.dart';
 import '../services/translation_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/cefr_level_dropdown.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class AddWordDialog extends StatefulWidget {
   final String? initialWord;
@@ -168,27 +169,32 @@ class _AddWordDialogState extends State<AddWordDialog> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Row(
-                children: [
-                  const Text(
-                    'Add Word or Phrase',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Row(
+              children: [
+                const Text(
+                  'Add Word or Phrase',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
 
               // Error message
               if (_error != null)
@@ -223,20 +229,15 @@ class _AddWordDialogState extends State<AddWordDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: DropdownButtonFormField<String>(
+                    child: SearchableDropdown<String>(
                       value: _sourceLang,
-                      decoration: const InputDecoration(
-                        labelText: 'From',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      // Same list as "To" so the swap below can never produce
-                      // a value that this dropdown doesn't contain (would crash).
+                      labelText: 'From',
                       items: AppStrings.targetLanguages.entries
                           .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                           .toList(),
+                      itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
                       onChanged: (val) => setState(() {
                         if (val == _targetLang) {
-                          // Swap — never allow same source and target
                           _targetLang = _sourceLang;
                         }
                         _sourceLang = val!;
@@ -248,18 +249,15 @@ class _AddWordDialogState extends State<AddWordDialog> {
                     child: Icon(Icons.arrow_forward, size: 18),
                   ),
                   Expanded(
-                    child: DropdownButtonFormField<String>(
+                    child: SearchableDropdown<String>(
                       value: _targetLang,
-                      decoration: const InputDecoration(
-                        labelText: 'To',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
+                      labelText: 'To',
                       items: AppStrings.targetLanguages.entries
                           .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                           .toList(),
+                      itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
                       onChanged: (val) => setState(() {
                         if (val == _sourceLang) {
-                          // Swap — never allow same source and target
                           _sourceLang = _targetLang;
                         }
                         _targetLang = val!;
@@ -321,28 +319,31 @@ class _AddWordDialogState extends State<AddWordDialog> {
                 }),
               ],
 
-              // Save button (only show after translation)
-              if (_meanings.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _isSaving ? null : _save,
-                  icon: _isSaving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Theme.of(context).colorScheme.onPrimary),
-                        )
-                      : const Icon(Icons.save),
-                  label: Text(_isSaving ? 'Saving...' : 'Save Word'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+                  ],
                 ),
-              ],
+              ),
+            ),
+            // Save button (only show after translation)
+            if (_meanings.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(_isSaving ? 'Saving...' : 'Save Word'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

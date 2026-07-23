@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'searchable_dropdown.dart';
 
 /// CEFR language proficiency levels (Goethe-Institut / telc standard)
 const cefrLevels = {
@@ -37,17 +38,16 @@ class CefrLevelDropdown extends StatelessWidget {
           )),
     ];
 
-    return DropdownButtonFormField<String?>(
+    return SearchableDropdown<String?>(
       value: value,
-      decoration: InputDecoration(
-        labelText: 'CEFR Level',
-        contentPadding: compact
-            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-            : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: const OutlineInputBorder(),
-      ),
+      labelText: 'CEFR Level',
       items: items,
+      itemAsString: (val) {
+        if (val == null) return 'Auto (all levels)';
+        return cefrLevels[val] ?? val;
+      },
       onChanged: onChanged,
     );
   }
 }
+

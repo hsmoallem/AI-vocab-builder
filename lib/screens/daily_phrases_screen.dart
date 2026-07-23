@@ -9,7 +9,9 @@ import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../utils/clipboard_util.dart';
 import '../services/tts_service.dart';
+import '../config/app_strings.dart';
 import '../widgets/cefr_level_dropdown.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class DailyPhrasesScreen extends StatefulWidget {
   const DailyPhrasesScreen({super.key});
@@ -337,24 +339,22 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: AppStrings.targetLanguages.containsKey(_phraseLang)
-                        ? _phraseLang
-                        : 'de',
-                    isDense: true,
-                    isExpanded: true,
-                    style: theme.textTheme.bodyMedium,
-                    items: AppStrings.targetLanguages.entries
-                        .map((e) => DropdownMenuItem(
-                              value: e.key,
-                              child: Text(e.value, style: const TextStyle(fontSize: 13)),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) _onPhraseLanguageChanged(v);
-                    },
-                  ),
+                child: SearchableDropdown<String>(
+                  value: AppStrings.targetLanguages.containsKey(_phraseLang)
+                      ? _phraseLang
+                      : 'de',
+                  labelText: '',
+                  hideUnderline: true,
+                  items: AppStrings.targetLanguages.entries
+                      .map((e) => DropdownMenuItem(
+                            value: e.key,
+                            child: Text(e.value, style: const TextStyle(fontSize: 13)),
+                          ))
+                      .toList(),
+                  itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
+                  onChanged: (v) {
+                    if (v != null) _onPhraseLanguageChanged(v);
+                  },
                 ),
               ),
             ],

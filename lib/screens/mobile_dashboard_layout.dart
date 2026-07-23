@@ -13,6 +13,7 @@ import 'login_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
 import 'bulk_import_screen.dart';
+import 'text_to_audio_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
@@ -78,6 +79,14 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
             ),
             tooltip: s.flashcards,
             onPressed: () => _startReview(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.record_voice_over),
+            tooltip: 'Text-to-Audio',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TextToAudioScreen()),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.playlist_add),

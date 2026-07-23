@@ -10,6 +10,7 @@ import '../../services/translation_service.dart';
 import '../../utils/clipboard_util.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/cefr_level_dropdown.dart';
+import '../../widgets/searchable_dropdown.dart';
 import '../../widgets/web_top_bar.dart';
 
 class WebDailyPhrasesScreen extends StatefulWidget {
@@ -273,13 +274,13 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                     Icon(Icons.translate, size: 20, color: theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: AppStrings.targetLanguages.containsKey(_phraseLang) ? _phraseLang : 'de',
-                          isExpanded: true,
-                          items: AppStrings.targetLanguages.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-                          onChanged: (v) { if (v != null) _onPhraseLanguageChanged(v); },
-                        ),
+                      child: SearchableDropdown<String>(
+                        value: AppStrings.targetLanguages.containsKey(_phraseLang) ? _phraseLang : 'de',
+                        labelText: '',
+                        hideUnderline: true,
+                        items: AppStrings.targetLanguages.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                        itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
+                        onChanged: (v) { if (v != null) _onPhraseLanguageChanged(v); },
                       ),
                     ),
                   ],

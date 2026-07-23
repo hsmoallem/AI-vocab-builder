@@ -15,6 +15,7 @@ import '../providers/word_provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../widgets/cefr_level_dropdown.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class BulkImportScreen extends StatefulWidget {
   const BulkImportScreen({super.key});
@@ -304,17 +305,13 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
     required String value,
     required ValueChanged<String> onChanged,
   }) {
-    return DropdownButtonFormField<String>(
+    return SearchableDropdown<String>(
       value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: const OutlineInputBorder(),
-      ),
+      labelText: label,
       items: AppStrings.targetLanguages.entries
           .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
           .toList(),
+      itemAsString: (key) => AppStrings.targetLanguages[key] ?? key,
       onChanged: _isImporting
           ? null
           : (val) {
