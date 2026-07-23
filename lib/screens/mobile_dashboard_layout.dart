@@ -14,6 +14,7 @@ import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
 import 'bulk_import_screen.dart';
 import 'text_to_audio_screen.dart';
+import 'ai_quiz_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
@@ -62,6 +63,22 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       appBar: AppBar(
         title: Text(s.appName),
         actions: [
+          // Streak Flame
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.local_fire_department, color: Colors.orange),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${context.watch<WordProvider>().streak.current}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
           // Settings gear — always visible
           IconButton(
             icon: const Icon(Icons.settings),
@@ -86,6 +103,14 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const TextToAudioScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_stories),
+            tooltip: 'AI Quizzes & Stories',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiQuizScreen()),
             ),
           ),
           IconButton(

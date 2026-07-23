@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/word_provider.dart';
 import 'web_daily_phrases_screen.dart';
 import 'web_word_list_screen.dart';
 import '../settings_screen.dart'; 
 import '../text_to_audio_screen.dart';
 import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
+import '../ai_quiz_screen.dart';
 
 class WebDashboardLayout extends StatefulWidget {
   const WebDashboardLayout({super.key});
@@ -23,6 +25,7 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
     WebWordListScreen(),
     WebDailyPhrasesScreen(),
     TextToAudioScreen(),
+    AiQuizScreen(),
     SettingsScreen(),
   ];
 
@@ -86,6 +89,14 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                         letterSpacing: -0.5,
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    // Streak Flame
+                    const Icon(Icons.local_fire_department, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${context.watch<WordProvider>().streak.current}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ],
                 ),
               ),
@@ -109,6 +120,11 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                   icon: Icon(Icons.record_voice_over_outlined),
                   selectedIcon: Icon(Icons.record_voice_over),
                   label: Text('Text-to-Audio'),
+                ),
+                const NavigationRailDestination(
+                  icon: Icon(Icons.auto_stories_outlined),
+                  selectedIcon: Icon(Icons.auto_stories),
+                  label: Text('AI Quizzes & Stories'),
                 ),
                 NavigationRailDestination(
                   icon: const Icon(Icons.settings_outlined),

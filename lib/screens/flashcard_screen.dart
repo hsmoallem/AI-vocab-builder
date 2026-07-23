@@ -7,6 +7,7 @@ import '../widgets/note_edit_dialog.dart';
 import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/searchable_dropdown.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class FlashcardScreen extends StatefulWidget {
   const FlashcardScreen({super.key});
@@ -24,6 +25,10 @@ class _FlashcardScreenState extends State<FlashcardScreen>
 
   int _currentIndex = 0;
   late PageController _pageController;
+
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
+  bool _isListening = false;
 
   // Per-card ephemeral state (only the visible card is interactive) — reset on
   // page change so one card's second-language / loading state never leaks to the
@@ -160,6 +165,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
   @override
   void initState() {
     super.initState();
+    _initSpeech();
     _flipController = AnimationController(
       duration: const Duration(milliseconds: 350),
       vsync: this,
@@ -175,6 +181,68 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     _flipController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    if (mounted) setState(() {});
+  }
+
+  void _startListening(Word word) async {
+    // Determine locale from sourceLang if possible
+    String? localeId;
+    if (word.sourceLang.isNotEmpty) {
+      // speech_to_text often expects standard formats like en_US, fr_FR.
+      // We will just pass what we have, if it fails it falls back to default.
+      localeId = word.sourceLang;
+    }
+
+    await _speechToText.listen(
+      onResult: (result) {
+        if (result.finalResult) {
+          _checkPronunciation(result.recognizedWords, word.word);
+          setState(() {
+            _isListening = false;
+          });
+        }
+      },
+      localeId: localeId,
+    );
+    setState(() {
+      _isListening = true;
+    });
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {
+      _isListening = false;
+    });
+  }
+
+  void _checkPronunciation(String spoken, String actual) {
+    final cleanedSpoken = spoken.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
+    final cleanedActual = actual.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
+    
+    if (cleanedSpoken.isEmpty) return;
+
+    if (cleanedSpoken == cleanedActual || cleanedSpoken.contains(cleanedActual) || cleanedActual.contains(cleanedSpoken)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Perfect pronunciation! 🎯', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), 
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        )
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Heard: "$spoken". Try again!', style: const TextStyle(color: Colors.white)), 
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        )
+      );
+    }
   }
 
   void _flip() {
@@ -417,6 +485,24 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                       onPressed: () =>
                           _tts.speak(word.word, language: word.sourceLang),
                     ),
+                    if (_speechEnabled)
+                      GestureDetector(
+                        onTapDown: (_) => _startListening(word),
+                        onTapUp: (_) => _stopListening(),
+                        onTapCancel: () => _stopListening(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isListening ? Colors.red.withOpacity(0.2) : Colors.transparent,
+                          ),
+                          child: Icon(
+                            _isListening ? Icons.mic : Icons.mic_none,
+                            size: 28,
+                            color: _isListening ? Colors.red : Theme.of(context).iconTheme.color,
+                          ),
+                        ),
+                      ),
                     _copyIconBtn(word.word, 'word', size: 22),
                   ],
                 ),
