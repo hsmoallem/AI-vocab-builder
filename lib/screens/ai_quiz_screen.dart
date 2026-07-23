@@ -29,12 +29,10 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     List<Word> selected = [];
 
     if (_selectionMode == 0) {
-      // Due today or New words
-      final dueWords = await DatabaseService.getDueWords();
-      final newWords = await DatabaseService.getNewWords();
-      final reviewList = [...dueWords, ...newWords];
+      // Learning/Due (Flashcard logic)
+      final count = _isStoryMode ? 10 : 5;
+      selected = await provider.buildSessionDeck(maxCards: count);
       
-      selected = reviewList.take(5).toList();
       if (selected.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
