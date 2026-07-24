@@ -320,13 +320,32 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              FilledButton.icon(
-                onPressed: _isRefreshing ? null : _generateNew,
-                icon: _isRefreshing
-                    ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary))
-                    : const Icon(Icons.auto_awesome),
-                label: const Text('Generate Phrases'),
-                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20)),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFDB2777), Color(0xFFBE185D)], // accent-600 to accent-700
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFDB2777).withOpacity(0.2), // shadow-brand-500/20
+                      blurRadius: 6,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: FilledButton.icon(
+                  onPressed: _isRefreshing ? null : _generateNew,
+                  icon: _isRefreshing
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.auto_awesome, color: Colors.white),
+                  label: const Text('Generate Phrases', style: TextStyle(color: Colors.white)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  ),
+                ),
               ),
             ],
           ),
@@ -346,12 +365,18 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                 final phrase = _phrases![index];
                 final isSaved = wordProvider.words.any((w) => w.word == phrase.phrase && w.translation.isNotEmpty);
                 
-                return Card(
-                  elevation: 0,
-                  color: (theme.cardTheme.color ?? theme.cardColor),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: theme.colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(12),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xCCE2E8F0)), // border-slate-200/80
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),

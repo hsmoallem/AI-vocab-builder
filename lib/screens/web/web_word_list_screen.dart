@@ -156,30 +156,39 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
           children: [
             Row(
               children: [
-                FilterChip(
-                  label: Text(s.sortAlphabetical),
-                  selected: provider.sortMode == SortMode.alphabetical,
-                  onSelected: (_) => provider.setSortMode(SortMode.alphabetical),
-                  showCheckmark: false,
-                  avatar: const Icon(Icons.sort_by_alpha, size: 18),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text(provider.sortMode == SortMode.oldestFirst ? s.sortOldest : s.sortNewest),
-                  selected: provider.sortMode == SortMode.newestFirst || provider.sortMode == SortMode.oldestFirst,
-                  onSelected: (_) {
-                    if (provider.sortMode == SortMode.newestFirst) {
-                      provider.setSortMode(SortMode.oldestFirst);
-                    } else {
-                      provider.setSortMode(SortMode.newestFirst);
-                    }
-                  },
-                  showCheckmark: false,
-                  avatar: Icon(
-                    provider.sortMode == SortMode.oldestFirst ? Icons.history : Icons.access_time, 
-                    size: 18
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9), // bg-slate-100
+                borderRadius: BorderRadius.circular(12), // rounded-xl
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSegmentButton(
+                    context,
+                    label: s.sortAlphabetical,
+                    icon: Icons.sort_by_alpha,
+                    isActive: provider.sortMode == SortMode.alphabetical,
+                    onTap: () => provider.setSortMode(SortMode.alphabetical),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  _buildSegmentButton(
+                    context,
+                    label: provider.sortMode == SortMode.oldestFirst ? s.sortOldest : s.sortNewest,
+                    icon: provider.sortMode == SortMode.oldestFirst ? Icons.history : Icons.access_time,
+                    isActive: provider.sortMode == SortMode.newestFirst || provider.sortMode == SortMode.oldestFirst,
+                    onTap: () {
+                      if (provider.sortMode == SortMode.newestFirst) {
+                        provider.setSortMode(SortMode.oldestFirst);
+                      } else {
+                        provider.setSortMode(SortMode.newestFirst);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
                 const Spacer(),
                 Text(
                   '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
@@ -188,17 +197,37 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            SizedBox(
+            Container(
               width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xCCE2E8F0)), // border-slate-200/80
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(const Color(0xCCF8FAFC)), // bg-slate-50/80
+                  headingTextStyle: const TextStyle(
+                    color: Color(0xFF64748B), // text-slate-500
+                    fontSize: 12, // text-xs
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5, // tracking-wider
+                  ),
                   columns: const [
-                    DataColumn(label: Text('Word', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Translation', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Example', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Level', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('WORD')),
+                    DataColumn(label: Text('TRANSLATION')),
+                    DataColumn(label: Text('EXAMPLE')),
+                    DataColumn(label: Text('LEVEL')),
+                    DataColumn(label: Text('ACTIONS')),
                   ],
                   showCheckboxColumn: false,
                   columnSpacing: 24,
@@ -306,4 +335,44 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
       ),
     );
   }
+
+  Widget _buildSegmentButton(BuildContext context, {required String label, required IconData icon, required bool isActive, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isActive ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            )
+          ] : [],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+

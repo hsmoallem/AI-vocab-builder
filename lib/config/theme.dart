@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Modern, vibrant primary colors
-  static const Color primaryColor = Color(0xFF4F46E5); // Vibrant Deep Indigo
-  static const Color accentColor = Color(0xFF0EA5E9); // Modern Sky Blue/Cyan
+  // Modern, vibrant primary colors (Tailwind Brand & Accent)
+  static const Color primaryColor = Color(0xFF7C3AED); // brand-600
+  static const Color accentColor = Color(0xFFDB2777); // accent-600
   static const Color reviewColor = Color(0xFF10B981); // Emerald Green
   static const Color errorColor = Color(0xFFEF4444); // Red
   
   // Softer surfaces
-  static const Color cardColorLight = Color(0xFFF8FAFC); // Slate 50
-  static const Color scaffoldBackgroundLight = Color(0xFFF1F5F9); // Slate 100
+  static const Color cardColorLight = Colors.white;
+  static const Color scaffoldBackgroundLight = Color(0xFFF8FAFC); // Slate 50
 
   static const Color cardColorDark = Color(0xFF1E293B); // Slate 800
   static const Color scaffoldBackgroundDark = Color(0xFF0F172A); // Slate 900

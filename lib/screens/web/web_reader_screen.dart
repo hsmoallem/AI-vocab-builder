@@ -92,33 +92,48 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
           // Toolbar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            decoration: const BoxDecoration(
+              color: Colors.white,
               border: Border(
                   bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.outlineVariant)),
+                      color: Color(0xFFE2E8F0))),
             ),
             child: Row(
               children: [
-                const Icon(Icons.picture_as_pdf, size: 20),
+                const Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFF64748B)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _pdfName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1E293B)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('PDF'), icon: Icon(Icons.picture_as_pdf, size: 16)),
-                    ButtonSegment(value: true, label: Text('Text'), icon: Icon(Icons.text_fields, size: 16)),
-                  ],
-                  selected: {_showText},
-                  onSelectionChanged: (v) => setState(() => _showText = v.first),
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9), // bg-slate-100
+                    borderRadius: BorderRadius.circular(12), // rounded-xl
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildSegmentButton(
+                        context,
+                        label: 'PDF',
+                        icon: Icons.picture_as_pdf,
+                        isActive: !_showText,
+                        onTap: () => setState(() => _showText = false),
+                      ),
+                      const SizedBox(width: 4),
+                      _buildSegmentButton(
+                        context,
+                        label: 'Text',
+                        icon: Icons.text_fields,
+                        isActive: _showText,
+                        onTap: () => setState(() => _showText = true),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -127,6 +142,7 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
                   icon: const Icon(Icons.swap_horiz, size: 18),
                   label: const Text('Change'),
                   style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF64748B),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -222,13 +238,30 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
             if (_isLoading)
               const CircularProgressIndicator()
             else ...[
-              FilledButton.icon(
-                onPressed: _pickAndLoad,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Select PDF'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)], // brand-600 to brand-700
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7C3AED).withOpacity(0.2), // shadow-brand-500/20
+                      blurRadius: 6,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: FilledButton.icon(
+                  onPressed: _pickAndLoad,
+                  icon: const Icon(Icons.upload_file, color: Colors.white),
+                  label: const Text('Select PDF', style: TextStyle(color: Colors.white)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               if (_error != null) ...[
@@ -241,4 +274,44 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
       ),
     );
   }
+
+  Widget _buildSegmentButton(BuildContext context, {required String label, required IconData icon, required bool isActive, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isActive ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            )
+          ] : [],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
