@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../providers/word_provider.dart';
 import 'web_daily_phrases_screen.dart';
@@ -10,7 +13,14 @@ import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 import '../ai_quiz_screen.dart';
 import '../../widgets/add_word_dialog.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+// Colors based on Tailwind Slate palette
+const _slate900 = Color(0xFF0F172A);
+const _slate800 = Color(0xFF1E293B);
+const _slate700 = Color(0xFF334155);
+const _slate500 = Color(0xFF64748B);
+const _slate400 = Color(0xFF94A3B8);
+const _slate300 = Color(0xFFCBD5E1);
 
 class WebDashboardLayout extends StatefulWidget {
   const WebDashboardLayout({super.key});
@@ -33,7 +43,6 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
 
@@ -42,160 +51,221 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
         children: [
           // Sidebar
           Container(
+            width: 256,
+            height: double.infinity,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
+              color: _slate900,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(2, 0),
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(4, 0),
                 ),
               ],
             ),
-            child: NavigationRail(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              extended: true,
-              minExtendedWidth: 260,
-              backgroundColor: Colors.transparent,
-              indicatorColor: theme.colorScheme.primary.withOpacity(0.15),
-              selectedIconTheme: IconThemeData(color: theme.colorScheme.primary, size: 28),
-              unselectedIconTheme: IconThemeData(color: theme.colorScheme.onSurface.withOpacity(0.6), size: 24),
-              selectedLabelTextStyle: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-              unselectedLabelTextStyle: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
-              ),
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.language,
-                      color: theme.colorScheme.primary,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 12),
-                    Row(
-                      children: [
-                        Text(
-                          'Vocab Builder',
-                          style: theme.textTheme.titleLarge?.copyWith(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header / Logo
+                Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: _slate800)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: FaIcon(FontAwesomeIcons.brain, color: Colors.white, size: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Vocab Builder',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'BETA',
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 9,
                             fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.primary,
-                            letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Beta',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-                    // Streak Flame (hidden for anonymous users)
-                    if (!context.watch<AuthProvider>().isAnonymous) ...[
-                      const Icon(Icons.local_fire_department, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${context.watch<WordProvider>().streak.current}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              destinations: [
-                NavigationRailDestination(
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  selectedIcon: const Icon(Icons.picture_as_pdf),
-                  label: Text(s.tabReader),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.list_alt_outlined),
-                  selectedIcon: const Icon(Icons.list_alt),
-                  label: Text(s.tabMyWords),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  selectedIcon: const Icon(Icons.auto_awesome),
-                  label: Text(s.tabDaily),
-                ),
-                const NavigationRailDestination(
-                  icon: Icon(Icons.record_voice_over_outlined),
-                  selectedIcon: Icon(Icons.record_voice_over),
-                  label: Text('Text-to-Audio'),
-                ),
-                const NavigationRailDestination(
-                  icon: Icon(Icons.auto_stories_outlined),
-                  selectedIcon: Icon(Icons.auto_stories),
-                  label: Text('AI Quizzes & Stories'),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.settings_outlined),
-                  selectedIcon: const Icon(Icons.settings),
-                  label: Text(s.settings),
-                ),
-              ],
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, right: 16.0),
+                
+                // Navigation Links
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'developed by Houssam moallem',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        InkWell(
-                          onTap: () => launchUrl(Uri.parse('https://houssammoallem.com/')),
-                          child: Text(
-                            'houssammoallem.com',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontSize: 10,
-                              decoration: TextDecoration.underline,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.filePdf,
+                          label: s.tabReader,
+                          isSelected: _selectedIndex == 0,
+                          onTap: () => setState(() => _selectedIndex = 0),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'feel free to share your feedback to\nmoallem.houssam@gmail.com',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontSize: 10,
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.list,
+                          label: s.tabMyWords,
+                          isSelected: _selectedIndex == 1,
+                          onTap: () => setState(() => _selectedIndex = 1),
+                        ),
+                        const SizedBox(height: 4),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.wandMagicSparkles,
+                          label: s.tabDaily,
+                          isSelected: _selectedIndex == 2,
+                          onTap: () => setState(() => _selectedIndex = 2),
+                        ),
+                        const SizedBox(height: 4),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.volumeHigh,
+                          label: 'Text-to-Audio',
+                          isSelected: _selectedIndex == 3,
+                          onTap: () => setState(() => _selectedIndex = 3),
+                        ),
+                        const SizedBox(height: 4),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.bookOpenReader,
+                          label: 'AI Quizzes',
+                          isSelected: _selectedIndex == 4,
+                          onTap: () => setState(() => _selectedIndex = 4),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 14, bottom: 8),
+                          child: Text(
+                            'ACCOUNT',
+                            style: TextStyle(
+                              color: _slate500,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
+                        ),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.gear,
+                          label: s.settings,
+                          isSelected: _selectedIndex == 5,
+                          onTap: () => setState(() => _selectedIndex = 5),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ),
+                
+                // Footer
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: _slate800)),
+                  ),
+                  child: Column(
+                    children: [
+                      if (!context.watch<AuthProvider>().isAnonymous)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _slate800.withOpacity(0.8),
+                            border: Border.all(color: _slate700.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: FaIcon(FontAwesomeIcons.fireFlameCurved, color: Colors.amber, size: 14),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '${context.watch<WordProvider>().streak.current} Day Streak',
+                                style: const TextStyle(
+                                  color: _slate300,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'developed by Houssam moallem',
+                        style: TextStyle(
+                          color: _slate500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      InkWell(
+                        onTap: () => launchUrl(Uri.parse('https://houssammoallem.com/')),
+                        child: const Text(
+                          'houssammoallem.com',
+                          style: TextStyle(
+                            color: _slate400,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationColor: _slate400,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
+          
           // Main Content Area
           Expanded(
             child: Container(
@@ -214,6 +284,92 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
         },
         icon: const Icon(Icons.add),
         label: const Text('Add Word'),
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatefulWidget {
+  final dynamic icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SidebarItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool active = widget.isSelected;
+    final bool showHover = _isHovering && !active;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: active 
+                ? null 
+                : (showHover ? _slate800 : Colors.transparent),
+            gradient: active 
+                ? const LinearGradient(
+                    colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF7C3AED).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                child: Center(
+                  child: FaIcon(
+                    widget.icon,
+                    size: 16,
+                    color: active || showHover ? Colors.white : _slate400,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: active || showHover ? Colors.white : _slate400,
+                  fontSize: 14,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
