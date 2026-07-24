@@ -6,10 +6,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
 import '../services/auto_backup.dart';
+import '../services/export_service.dart';
+import '../services/database_service.dart';
+
+import 'package:go_router/go_router.dart';
 import '../providers/word_provider.dart';
 import '../services/study_prefs.dart';
 import '../widgets/searchable_dropdown.dart';
@@ -95,10 +98,7 @@ class SettingsScreen extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const UserGuideScreen()),
-                ),
+                onPressed: () => context.push('/guide'),
                 icon: const Icon(Icons.menu_book_outlined),
                 label: const Text('Open guide'),
               ),

@@ -148,12 +148,7 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
     await prefs.setString(_savedKey, jsonEncode(_savedIndices.toList()));
   }
 
-  void _toggleMemorized(int index) {
-    setState(() {
-      _phrases![index].memorized = !_phrases![index].memorized;
-    });
-    _saveToPrefs();
-  }
+
 
   Future<void> _saveToMyWords(int index) async {
     final phrase = _phrases![index];
@@ -256,8 +251,7 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
       );
     }
 
-    final allMemorized = _phrases!.every((p) => p.memorized);
-    final doneCount = _phrases!.where((p) => p.memorized).length;
+
     final loc = context.watch<LocaleProvider>();
 
     return Padding(
@@ -337,22 +331,7 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: allMemorized ? theme.colorScheme.primaryContainer : theme.colorScheme.primaryContainer.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(allMemorized ? Icons.emoji_events : Icons.auto_awesome, color: theme.colorScheme.primary),
-                const SizedBox(width: 12),
-                Expanded(child: Text(allMemorized ? s.allDone : 'Memorize these ${_phrases!.length} phrases today', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
-                Text(s.memorizedCounter(doneCount, _phrases!.length), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-              ],
-            ),
-          ),
+
           const SizedBox(height: 24),
           Expanded(
             child: GridView.builder(
@@ -369,9 +348,9 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                 
                 return Card(
                   elevation: 0,
-                  color: phrase.memorized ? theme.colorScheme.surfaceContainerHighest : (theme.cardTheme.color ?? theme.cardColor),
+                  color: (theme.cardTheme.color ?? theme.cardColor),
                   shape: RoundedRectangleBorder(
-                    side: BorderSide(color: phrase.memorized ? Colors.transparent : theme.colorScheme.outlineVariant),
+                    side: BorderSide(color: theme.colorScheme.outlineVariant),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
@@ -390,28 +369,15 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                               ),
                               child: Text('Phrase ${index + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSecondaryContainer)),
                             ),
-                            Row(
-                              children: [
-                                Tooltip(
-                                  message: 'Never show again',
-                                  child: IconButton(
-                                    icon: Icon(Icons.visibility_off_outlined, size: 18, color: theme.colorScheme.error.withOpacity(0.7)),
-                                    onPressed: () => _blockPhrase(phrase),
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                                Tooltip(
-                                  message: phrase.memorized ? 'Undo' : 'Memorize',
-                                  child: IconButton(
-                                    icon: Icon(phrase.memorized ? Icons.check_circle : Icons.circle_outlined, size: 24, color: phrase.memorized ? theme.colorScheme.primary : theme.colorScheme.outlineVariant),
-                                    onPressed: () => _toggleMemorized(index),
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ],
-                            )
+                            Tooltip(
+                              message: 'Never show again',
+                              child: IconButton(
+                                icon: Icon(Icons.visibility_off_outlined, size: 18, color: theme.colorScheme.error.withOpacity(0.7)),
+                                onPressed: () => _blockPhrase(phrase),
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -420,8 +386,7 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                             phrase.phrase,
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: phrase.memorized ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary,
-                              decoration: phrase.memorized ? TextDecoration.lineThrough : null,
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                         ),

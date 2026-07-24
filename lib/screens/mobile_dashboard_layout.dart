@@ -9,6 +9,7 @@ import 'study_mode_selector.dart';
 import 'daily_phrases_screen.dart';
 import '../models/study_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/add_word_dialog.dart';
@@ -63,30 +64,28 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       appBar: AppBar(
         title: Text(s.appName),
         actions: [
-          // Streak Flame
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.local_fire_department, color: Colors.orange),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${context.watch<WordProvider>().streak.current}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
+          // Streak Flame (hidden for anonymous users)
+          if (!auth.isAnonymous)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_fire_department, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${context.watch<WordProvider>().streak.current}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           // Settings gear — always visible
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: s.settings,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () => context.push('/settings'),
           ),
           IconButton(
             icon: Badge.count(
@@ -100,26 +99,17 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
           IconButton(
             icon: const Icon(Icons.record_voice_over),
             tooltip: 'Text-to-Audio',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const TextToAudioScreen()),
-            ),
+            onPressed: () => context.push('/audio'),
           ),
           IconButton(
             icon: const Icon(Icons.auto_stories),
             tooltip: 'AI Quizzes & Stories',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AiQuizScreen()),
-            ),
+            onPressed: () => context.push('/quiz'),
           ),
           IconButton(
             icon: const Icon(Icons.playlist_add),
             tooltip: 'Bulk import',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const BulkImportScreen()),
-            ),
+            onPressed: () => context.push('/import'),
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -368,10 +358,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     if (choice == null || !context.mounted) return;
 
     if (choice == 'view') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const FlashcardScreen()),
-      );
+      context.push('/flashcards');
       return;
     }
 
@@ -384,10 +371,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
         const SnackBar(
             content: Text('🎉 All caught up — no cards due. Browsing all cards.')),
       );
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const FlashcardScreen()),
-      );
+      context.push('/flashcards');
       return;
     }
     final mode = await showStudyModeSelector(
@@ -407,20 +391,16 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => ReviewSessionScreen(mode: mode, deck: deck)),
+    context.push(
+      '/review',
+      extra: {'mode': mode, 'deck': deck},
     );
   }
 
   Future<void> _handleMenuAction(String value, BuildContext context) async {
     switch (value) {
       case 'settings':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        );
+        context.push('/settings');
         break;
       case 'backup':
         await _backupNow(context);
@@ -431,10 +411,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       case 'signout':
         await context.read<AuthProvider>().signOut();
         if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
+          context.go('/login');
         }
         break;
     }

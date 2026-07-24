@@ -12,6 +12,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/study_mode.dart';
 import '../models/word.dart';
@@ -177,9 +178,9 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       sessionEnd: DateTime.now(),
       streak: _lastStreak ?? context.read<WordProvider>().streak,
     );
-    final result = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => ReviewSummaryScreen(stats: stats)),
+    final result = await context.push<String>(
+      '/summary',
+      extra: stats,
     );
     if (result == 'review_again' && mounted) {
       _resetSession();
@@ -259,8 +260,30 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   Widget build(BuildContext context) {
     final w = _current;
     final remaining = _deck.length - _index;
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit review?'),
+            content: const Text('Are you sure you want to quit? Your progress in this session will be lost.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Review'),
         actions: [
           IconButton(
@@ -349,8 +372,9 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── Prompt (front) ─────────────────────────────────────────────────
   Widget _prompt(Word w) {

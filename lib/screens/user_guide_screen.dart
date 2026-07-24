@@ -21,12 +21,12 @@ class UserGuideScreen extends StatelessWidget {
             body:
                 'Tap the flashcards icon and choose Study Mode or View '
                 'Flashcards.\n\n'
-                '• Study Mode — spaced repetition. You only see cards that are '
+                '• Study Mode — uses the SM-2 spaced repetition algorithm. You only see cards that are '
                 'DUE plus a batch of NEW cards, not your whole list at once. '
                 'After you reveal a card you rate how well you knew it, and the '
-                'app schedules when to show it again. Easy cards come back in '
-                'weeks; forgotten cards come back soon. That spacing is what '
-                'makes words stick.\n'
+                'app schedules when to show it again based on an optimal memory '
+                'curve. Easy cards come back in weeks; forgotten cards come back '
+                'within minutes (learning phase). That spacing is what makes words stick.\n'
                 '• View Flashcards — flip through your whole list freely, with '
                 'no scheduling, whenever you just want to browse.',
           ),
@@ -34,10 +34,11 @@ class UserGuideScreen extends StatelessWidget {
             icon: Icons.touch_app_outlined,
             title: 'The rating buttons',
             body:
-                '• Again — you forgot it. It comes back in this same session.\n'
-                '• Hard — you knew it but struggled. Short interval.\n'
-                '• Good — you knew it. Standard spacing (1 day → 6 days → longer).\n'
-                '• Easy — instant recall. A bigger jump than Good.\n\n'
+                '• Again — you forgot it. It enters a learning phase and comes back '
+                'soon in this same session.\n'
+                '• Hard — you knew it but struggled. Short interval increase (e.g. 1.2x).\n'
+                '• Good — you knew it. Standard SM-2 spacing interval increase.\n'
+                '• Easy — instant recall. A bigger jump than Good (e.g. 1.3x bonus).\n\n'
                 'The small hint on each button (e.g. 1d, 6d, 2mo) shows when that '
                 'choice will bring the card back.',
           ),
@@ -73,6 +74,32 @@ class UserGuideScreen extends StatelessWidget {
                 'from the PDF reader (tap a word) and from Daily Phrases.',
           ),
           _Guide(
+            icon: Icons.auto_awesome_outlined,
+            title: 'Daily Phrases',
+            body:
+                'Every day, AI generates customized phrases based on your learning '
+                'level and language. Read them, listen to them, and easily save '
+                'new vocabulary to your flashcards.',
+          ),
+          _Guide(
+            icon: Icons.quiz_outlined,
+            title: 'AI Quiz & Story',
+            body:
+                'Generate a fun, interactive quiz or a short story using your '
+                'vocabulary! You can use words that are Due for review, pick '
+                'a Random selection, or Manually select the specific words you '
+                'want to practice.',
+          ),
+          _Guide(
+            icon: Icons.record_voice_over_outlined,
+            title: 'Text-to-Audio',
+            body:
+                'Type or paste any text and convert it to spoken audio. The app '
+                'auto-detects the language, or you can choose it manually. Adjust '
+                'the speaking rate to practice listening comprehension, and share or '
+                'save the audio file to your device.',
+          ),
+          _Guide(
             icon: Icons.list_alt,
             title: 'Saved Words',
             body:
@@ -103,12 +130,20 @@ class UserGuideScreen extends StatelessWidget {
                 'backup are also set here.',
           ),
           _Guide(
-            icon: Icons.cloud_upload_outlined,
-            title: 'Backup',
+            icon: Icons.local_fire_department,
+            title: 'Streak',
             body:
-                'Sign in with Google to back up to the cloud. Turn on Automatic '
-                'backup in Settings (Daily / Weekly) to have it happen for you, or '
-                'back up manually from the account menu.',
+                'Keep your learning streak alive by studying at least one card '
+                'every day! Your current and longest streaks are tracked on the '
+                'dashboard and after every session.',
+          ),
+          _Guide(
+            icon: Icons.cloud_upload_outlined,
+            title: 'Backup & Sync',
+            body:
+                'Sign in with Google to back up your vocabulary and sync your '
+                'streak to the cloud. Turn on Automatic backup in Settings '
+                '(Daily / Weekly) or back up manually from the account menu.',
             last: true,
           ),
         ],

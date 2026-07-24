@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../services/firebase_service.dart';
 import 'home_screen.dart';
@@ -193,9 +194,6 @@ class LoginScreen extends StatelessWidget {
   }
 
   void _goToHome(BuildContext context) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    context.go('/');
   }
 }

@@ -6,6 +6,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../services/firebase_service.dart';
+import '../services/database_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseService _firebase = FirebaseService.instance;
@@ -42,7 +43,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> signInWithGoogle() => _guard(() => _firebase.signInWithGoogle());
+  Future<bool> signInWithGoogle() => _guard(() async {
+        final user = await _firebase.signInWithGoogle();
+        if (user != null) {
+          final cloudStreak = await _firebase.getStreak();
+          if (cloudStreak != null) {
+            await DatabaseService.setStreak(cloudStreak);
+          }
+        }
+        return user;
+      });
   Future<bool> signInAnonymously() => _guard(() => _firebase.signInAnonymously());
 
   Future<void> signOut() async {

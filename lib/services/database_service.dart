@@ -375,6 +375,20 @@ class DatabaseService {
     );
   }
 
+  /// Explicitly overwrite the local streak (used when syncing from cloud).
+  static Future<void> setStreak(StreakSnapshot streak) async {
+    final db = await database;
+    await db.update(
+      'app_state',
+      {
+        'current_streak': streak.current,
+        'longest_streak': streak.longest,
+        'last_study_date': streak.lastStudyDate,
+      },
+      where: 'id = 1',
+    );
+  }
+
   /// Format a [DateTime] as a stable `yyyy-MM-dd` string (date only).
   /// Used for streak comparisons where time-of-day must be ignored.
   static String _isoDate(DateTime d) {

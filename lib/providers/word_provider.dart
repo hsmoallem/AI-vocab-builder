@@ -428,6 +428,10 @@ class WordProvider extends ChangeNotifier {
     // Streak recording (idempotent within the same day).
     _streak = await DatabaseService.recordStudyDay();
 
+    if (FirebaseService.instance.isSignedIn && !FirebaseService.instance.isAnonymous) {
+      await FirebaseService.instance.updateStreak(_streak);
+    }
+
     _dueCount = await DatabaseService.getDueCount();
     notifyListeners();
 

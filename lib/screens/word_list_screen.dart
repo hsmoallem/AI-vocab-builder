@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../config/app_strings.dart';
 import '../models/word.dart';
 import '../providers/word_provider.dart';
@@ -19,11 +21,23 @@ class WordListScreen extends StatefulWidget {
 class _WordListScreenState extends State<WordListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TtsService _tts = TtsService();
+  Timer? _debounce;
+  String _searchQuery = '';
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchQuery = query;
+      });
+    });
   }
 
   List<Word> _filter(List<Word> words, String query) {
@@ -181,7 +195,7 @@ class _WordListScreenState extends State<WordListScreen> {
     return Consumer<WordProvider>(
       builder: (context, provider, _) {
         final s = AppStrings.of(context);
-        final filtered = _filter(provider.words, _searchController.text);
+        final filtered = _filter(provider.words, _searchQuery);
 
         return Column(
           children: [
@@ -189,7 +203,7 @@ class _WordListScreenState extends State<WordListScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: TextField(
                 controller: _searchController,
-                onChanged: (_) => setState(() {}),
+                onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: s.searchHint,
                   prefixIcon: const Icon(Icons.search),
@@ -199,7 +213,7 @@ class _WordListScreenState extends State<WordListScreen> {
                           tooltip: s.locale == 'de' ? 'Suche löschen' : 'Clear search',
                           onPressed: () {
                             _searchController.clear();
-                            setState(() {});
+                            _onSearchChanged('');
                           },
                         )
                       : null,
@@ -247,11 +261,7 @@ class _WordListScreenState extends State<WordListScreen> {
                       if (v == 'dedupe') _removeDuplicates(context);
                       if (v == 'export') _export(context);
                       if (v == 'archived') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ArchivedWordsScreen()),
-                        );
+                        context.push('/archived');
                       }
                     },
                     itemBuilder: (_) => [

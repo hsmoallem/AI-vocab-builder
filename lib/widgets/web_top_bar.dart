@@ -13,6 +13,7 @@ import '../screens/review_session_screen.dart';
 import '../screens/study_mode_selector.dart';
 import '../models/study_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 import '../services/study_prefs.dart';
 import '../screens/login_screen.dart';
 import '../screens/web/web_archived_words_screen.dart';
@@ -24,23 +25,6 @@ class WebTopBar {
     final wordProvider = context.watch<WordProvider>();
 
     return [
-      // Streak Flame
-      Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            children: [
-              const Icon(Icons.local_fire_department, color: Colors.orange),
-              const SizedBox(width: 4),
-              Text(
-                '${wordProvider.streak.current}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(width: 8),
       FilledButton.tonalIcon(
         icon: Badge.count(
           count: wordProvider.dueCount,
@@ -57,10 +41,7 @@ class WebTopBar {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
         ),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BulkImportScreen()),
-        ),
+        onPressed: () => context.push('/import'),
       ),
       const SizedBox(width: 8),
       OutlinedButton.icon(
@@ -70,10 +51,7 @@ class WebTopBar {
           side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
         ),
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const WebArchivedWordsScreen()),
-          );
+          context.push('/archived');
         },
       ),
       const SizedBox(width: 8),
@@ -106,7 +84,7 @@ class WebTopBar {
                 ),
           onSelected: (value) async {
             if (value == 'settings') {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              context.push('/settings');
             } else if (value == 'backup') {
               await _backupNow(context);
             } else if (value == 'restore') {
@@ -114,7 +92,7 @@ class WebTopBar {
             } else if (value == 'signout') {
               await context.read<AuthProvider>().signOut();
               if (context.mounted) {
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                context.go('/login');
               }
             }
           },
@@ -298,7 +276,7 @@ class WebTopBar {
     if (choice == null || !context.mounted) return;
 
     if (choice == 'view') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardScreen()));
+      context.push('/flashcards');
       return;
     }
 
@@ -307,7 +285,7 @@ class WebTopBar {
     if (!context.mounted) return;
     if (provider.dueCount == 0 && provider.newCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 All caught up — no cards due. Browsing all cards.')));
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardScreen()));
+      context.push('/flashcards');
       return;
     }
     final mode = await showStudyModeSelector(context: context, dueCount: provider.dueCount, newCount: provider.newCount);
@@ -321,6 +299,6 @@ class WebTopBar {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nothing to review right now.')));
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewSessionScreen(mode: mode, deck: deck)));
+    context.push('/review', extra: {'mode': mode, 'deck': deck});
   }
 }

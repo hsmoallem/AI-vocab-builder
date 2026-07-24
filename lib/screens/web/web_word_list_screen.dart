@@ -190,110 +190,117 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Word', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Translation', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Example', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Level', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-            ],
-            rows: filtered.map((word) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.volume_up, size: 18, color: theme.colorScheme.primary),
-                          onPressed: () => _tts.speak(word.word, language: word.sourceLang),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                          splashRadius: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(word.word, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                  DataCell(Text(word.translation)),
-                  DataCell(
-                    word.exampleSource.isNotEmpty
-                        ? Row(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Word', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Translation', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Example', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Level', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  showCheckboxColumn: false,
+                  columnSpacing: 24,
+                  horizontalMargin: 24,
+                  rows: filtered.map((word) {
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: Icon(Icons.volume_up, size: 16, color: theme.colorScheme.primary),
-                                onPressed: () => _tts.speak(word.exampleSource, language: word.sourceLang),
+                                icon: Icon(Icons.volume_up, size: 18, color: theme.colorScheme.primary),
+                                onPressed: () => _tts.speak(word.word, language: word.sourceLang),
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                                splashRadius: 16,
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                splashRadius: 18,
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  word.exampleSource,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                              const SizedBox(width: 8),
+                              Text(word.word, style: const TextStyle(fontWeight: FontWeight.w600)),
                             ],
-                          )
-                        : const Text('-'),
-                  ),
-                  DataCell(Text(word.srsEaseFactor.toStringAsFixed(1))),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Tooltip(
-                        message: 'Regenerate Example',
-                        child: IconButton(
-                          icon: Icon(Icons.auto_awesome, size: 20, color: theme.colorScheme.primary),
-                          onPressed: () async {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Generating new example...')),
-                            );
-                            await provider.regenerateExample(word);
-                          },
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                      Tooltip(
-                        message: word.isReviewed ? 'Mark unreviewed' : 'Mark reviewed',
-                        child: IconButton(
-                          icon: Icon(
-                            word.isReviewed ? Icons.check_circle : Icons.adjust,
-                            size: 20,
-                            color: word.isReviewed ? Colors.green : Colors.grey,
                           ),
-                          onPressed: () => provider.toggleReview(word),
-                          visualDensity: VisualDensity.compact,
                         ),
-                      ),
-                      Tooltip(
-                        message: 'Archive',
-                        child: IconButton(
-                          icon: const Icon(Icons.archive_outlined, size: 20),
-                          onPressed: () => provider.archiveWord(word),
-                          visualDensity: VisualDensity.compact,
+                        DataCell(Text(word.translation)),
+                        DataCell(
+                          word.exampleSource.isNotEmpty
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.volume_up, size: 16, color: theme.colorScheme.primary),
+                                      onPressed: () => _tts.speak(word.exampleSource, language: word.sourceLang),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                      splashRadius: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 350),
+                                      child: Text(
+                                        word.exampleSource,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const Text('-'),
                         ),
-                      ),
-                      Tooltip(
-                        message: 'Delete',
-                        child: IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                          onPressed: () => _deleteWord(context, word),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
-                  )),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                        DataCell(Text(word.srsEaseFactor.toStringAsFixed(1))),
+                        DataCell(Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Tooltip(
+                              message: 'Regenerate Example',
+                              child: IconButton(
+                                icon: Icon(Icons.auto_awesome, size: 20, color: theme.colorScheme.primary),
+                                onPressed: () async {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Generating new example...')),
+                                  );
+                                  await provider.regenerateExample(word);
+                                },
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            Tooltip(
+                              message: word.isReviewed ? 'Mark unreviewed' : 'Mark reviewed',
+                              child: IconButton(
+                                icon: Icon(
+                                  word.isReviewed ? Icons.check_circle : Icons.adjust,
+                                  size: 20,
+                                  color: word.isReviewed ? Colors.green : Colors.grey,
+                                ),
+                                onPressed: () => provider.toggleReview(word),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            Tooltip(
+                              message: 'Archive',
+                              child: IconButton(
+                                icon: const Icon(Icons.archive_outlined, size: 20),
+                                onPressed: () => provider.archiveWord(word),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            Tooltip(
+                              message: 'Delete',
+                              child: IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                onPressed: () => _deleteWord(context, word),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                        )),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
           ],
         ),
       ),

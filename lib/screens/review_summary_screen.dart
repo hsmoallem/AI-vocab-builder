@@ -5,6 +5,9 @@
 /// streak update, and action buttons.
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/srs_service.dart';
 import '../services/database_service.dart';
 
@@ -135,8 +138,8 @@ class ReviewSummaryScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Streak ────────────────────────────────────────────
-                  if (stats.streak.current > 0) ...[
+                  // ── Streak (hidden for anonymous users) ────────────────────────────────────────────
+                  if (!context.read<AuthProvider>().isAnonymous && stats.streak.current > 0) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
@@ -178,10 +181,7 @@ class ReviewSummaryScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () => Navigator.popUntil(
-                        context,
-                        (route) => route.isFirst,
-                      ),
+                      onPressed: () => context.go('/'),
                       icon: const Icon(Icons.home_outlined),
                       label: const Text('Back to Home'),
                     ),
@@ -190,7 +190,7 @@ class ReviewSummaryScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pop(context, 'review_again'),
+                      onPressed: () => context.pop('review_again'),
                       icon: const Icon(Icons.replay_outlined),
                       label: const Text('Review again'),
                     ),

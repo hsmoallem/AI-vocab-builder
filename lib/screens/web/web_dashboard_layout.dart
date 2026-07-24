@@ -10,6 +10,7 @@ import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 import '../ai_quiz_screen.dart';
 import '../../widgets/add_word_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class WebDashboardLayout extends StatefulWidget {
   const WebDashboardLayout({super.key});
@@ -82,22 +83,40 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                       size: 32,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      'Vocab Builder',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.primary,
-                        letterSpacing: -0.5,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Vocab Builder',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Beta',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 16),
-                    // Streak Flame
-                    const Icon(Icons.local_fire_department, color: Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${context.watch<WordProvider>().streak.current}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+                    // Streak Flame (hidden for anonymous users)
+                    if (!context.watch<AuthProvider>().isAnonymous) ...[
+                      const Icon(Icons.local_fire_department, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${context.watch<WordProvider>().streak.current}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -133,6 +152,48 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                   label: Text(s.settings),
                 ),
               ],
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, right: 16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'developed by Houssam moallem',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        InkWell(
+                          onTap: () => launchUrl(Uri.parse('https://houssammoallem.com/')),
+                          child: Text(
+                            'houssammoallem.com',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontSize: 10,
+                              decoration: TextDecoration.underline,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'feel free to share your feedback to\nmoallem.houssam@gmail.com',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           // Main Content Area

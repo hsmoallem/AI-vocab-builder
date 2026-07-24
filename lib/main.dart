@@ -13,6 +13,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/firebase_service.dart';
 import 'services/db_bootstrap.dart';
+import 'config/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +45,7 @@ class VocabBuilderApp extends StatelessWidget {
       ],
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, _) {
-          return MaterialApp(
+          return MaterialApp.router(
             title: 'AI Vocab Builder',
             debugShowCheckedModeBanner: false,
             // Force the locale on the app so built-in widgets can potentially translate
@@ -64,7 +65,7 @@ class VocabBuilderApp extends StatelessWidget {
                 child: child ?? const SizedBox.shrink(),
               );
             },
-            home: const AuthGate(),
+            routerConfig: appRouter,
           );
         },
       ),

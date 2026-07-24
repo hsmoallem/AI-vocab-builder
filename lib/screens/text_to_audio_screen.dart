@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -10,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../config/app_strings.dart';
 import '../widgets/searchable_dropdown.dart';
 import '../widgets/web_top_bar.dart';
+import '../services/tts_service.dart';
 
 class TextToAudioScreen extends StatefulWidget {
   const TextToAudioScreen({super.key});
@@ -20,13 +20,11 @@ class TextToAudioScreen extends StatefulWidget {
 
 class _TextToAudioScreenState extends State<TextToAudioScreen> {
   final TextEditingController _textController = TextEditingController();
-  final FlutterTts _tts = FlutterTts();
+  final TtsService _tts = TtsService();
   
   LanguageIdentifier? _languageIdentifier;
   String _selectedLang = 'en'; // Default
   bool _isDetecting = false;
-  bool _isPlaying = false;
-  bool _isSaving = false;
 
   @override
   void initState() {
@@ -80,9 +78,7 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    setState(() => _isPlaying = true);
     try {
-      // Some TTS engines (like flutter_tts on certain devices) require the full BCP-47 tag.
       String langCode = _selectedLang;
       if (langCode == 'ar') langCode = 'ar-SA';
       else if (langCode == 'en') langCode = 'en-US';
@@ -90,94 +86,13 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
       else if (langCode == 'ja') langCode = 'ja-JP';
       else if (langCode == 'ru') langCode = 'ru-RU';
       
-      await _tts.setLanguage(langCode);
-      await _tts.speak(text);
-      
-      _tts.setCompletionHandler(() {
-        if (mounted) setState(() => _isPlaying = false);
-      });
+      await _tts.speak(text, language: langCode);
     } catch (e) {
-      if (mounted) setState(() => _isPlaying = false);
-    }
-  }
-
-  Future<void> _saveAudioAndText() async {
-    final text = _textController.text.trim();
-    if (text.isEmpty) return;
-
-    if (kIsWeb) {
-      // share_plus on web can share text, but we cannot generate an audio file via flutter_tts natively on web.
-      await Share.share(text, subject: 'Text-to-Audio Export');
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    try {
-      final dir = await getTemporaryDirectory();
-      
-      // Save Text
-      final txtPath = '${dir.path}/export_${DateTime.now().millisecondsSinceEpoch}.txt';
-      final txtFile = File(txtPath);
-      await txtFile.writeAsString(text);
-
-      // Save Audio
-      // flutter_tts synthesizeToFile generates a .wav or .mp3 file
-      final audioFileName = 'export_${DateTime.now().millisecondsSinceEpoch}.mp3';
-      
-      String langCode = _selectedLang;
-      if (langCode == 'ar') langCode = 'ar-SA';
-      else if (langCode == 'en') langCode = 'en-US';
-      else if (langCode == 'zh') langCode = 'zh-CN';
-      else if (langCode == 'ja') langCode = 'ja-JP';
-      else if (langCode == 'ru') langCode = 'ru-RU';
-
-      await _tts.setLanguage(langCode);
-      
-      // synthesizeToFile returns 1 on success
-      final result = await _tts.synthesizeToFile(text, audioFileName);
-      
-      if (result == 1) {
-        // The file is typically saved in the app's standard directory.
-        // On Android, it's usually getExternalStorageDirectory() or similar.
-        // We need to locate the file depending on the platform.
-        // Actually flutter_tts synthesizeToFile saves to getApplicationDocumentsDirectory on iOS,
-        // and external storage on Android. This is highly unreliable for sharing.
-        // We can just share the text if it fails or if the file cannot be found.
-        
-        // Wait for TTS to finish saving
-        await Future.delayed(const Duration(seconds: 2));
-        
-        final PlatformFilePaths = <String>[];
-        if (Platform.isIOS) {
-           final appDir = await getApplicationDocumentsDirectory();
-           PlatformFilePaths.add('${appDir.path}/$audioFileName');
-        } else if (Platform.isAndroid) {
-           final appDir = await getExternalStorageDirectory();
-           if (appDir != null) PlatformFilePaths.add('${appDir.path}/$audioFileName');
-        }
-        
-        final filesToShare = <XFile>[XFile(txtPath)];
-        for (final p in PlatformFilePaths) {
-          if (File(p).existsSync()) {
-            filesToShare.add(XFile(p));
-            break;
-          }
-        }
-
-        await Share.shareXFiles(filesToShare, text: 'Here is your text and audio export.');
-      } else {
-        // Fallback to sharing only text if audio generation failed
-        await Share.shareXFiles([XFile(txtPath)], text: 'Here is your text export (Audio generation failed).');
-      }
-    } catch (e) {
-      debugPrint('Save error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text('TTS error: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -218,11 +133,13 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
             Expanded(
               child: TextField(
                 controller: _textController,
+                textDirection: _selectedLang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
                 decoration: InputDecoration(
                   hintText: 'Type or paste text here to convert to audio...',
+                  hintTextDirection: _selectedLang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.all(16),
                 ),
@@ -236,16 +153,24 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: _isPlaying ? () {
-                      _tts.stop();
-                      setState(() => _isPlaying = false);
-                    } : _playAudio,
-                    icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-                    label: Text(_isPlaying ? 'Stop' : 'Play Audio'),
+                    onPressed: _playAudio,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Play Audio'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: _isPlaying ? cs.error : cs.primary,
-                      foregroundColor: _isPlaying ? cs.onError : cs.onPrimary,
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _tts.stop(),
+                    icon: const Icon(Icons.stop),
+                    label: const Text('Stop'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),

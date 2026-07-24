@@ -4,7 +4,7 @@
 translates it with real example sentences — then drills it back to you with flashcards,
 spaced review, and daily practice.
 
-Built with Flutter for Android. Focused on a fast, offline-first learning loop with a
+Built with Flutter for Android and Web. Focused on a fast, offline-first learning loop with a
 security-conscious AI backend.
 
 > **Status:** v1.0 shipped · actively iterating
@@ -27,8 +27,12 @@ security-conscious AI backend.
   - **Free-text notes**, **on-demand 2nd-language translation**, and **copy** on every field.
 - **📝 Saved words** — search, sort, per-field copy, **regenerate examples**, and **remove duplicates**.
 - **📅 Daily phrases** — five fresh AI phrases a day, theme-based generation, save to your list.
-- **🔊 Text-to-speech** — native Android pronunciation for words, translations, and examples.
-- **☁️ Cloud backup** — Google sign-in → Firestore backup/restore, with per-user data isolation.
+- **🎮 AI Quiz & Story** — practice your vocabulary by generating an interactive AI quiz or a short story.
+- **🔥 Streak tracking** — keeps your learning streak alive by tracking your daily study sessions, synchronized across devices.
+- **🗣️ Text-to-Audio tool** — paste any text and listen to native-sounding pronunciation at adjustable speeds.
+- **🔊 Text-to-speech** — native pronunciation for words, translations, and examples.
+- **☁️ Cloud backup & Sync** — Google sign-in → Firestore backup/restore, with per-user data isolation.
+- **🌐 Web version** — full access from any browser with responsive layouts.
 - **🌍 Multilingual UI** — English, Deutsch, العربية (incl. full RTL support).
 
 ---

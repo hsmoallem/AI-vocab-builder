@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_pdf/pdf.dart' as sync;
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../services/web_file_picker.dart';
 import '../../widgets/add_word_dialog.dart';
+import '../../widgets/web_top_bar.dart';
 
 class WebReaderScreen extends StatefulWidget {
   const WebReaderScreen({super.key});
@@ -73,7 +74,10 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
   Widget build(BuildContext context) {
     if (_pdfBytes == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('PDF Reader')),
+        appBar: AppBar(
+          title: const Text('PDF Reader'),
+          actions: WebTopBar.buildActions(context),
+        ),
         body: _buildEmptyState(),
       );
     }
@@ -81,6 +85,7 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('PDF Reader'),
+        actions: WebTopBar.buildActions(context),
       ),
       body: Column(
         children: [

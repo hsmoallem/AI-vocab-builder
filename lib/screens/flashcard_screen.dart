@@ -140,6 +140,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
       final result = await context
           .read<WordProvider>()
           .translateWord(word.word, from: word.sourceLang, to: lang);
+      if (!mounted) return;
       // Persist so it's still shown when the card is reopened.
       await context
           .read<WordProvider>()
@@ -208,16 +209,20 @@ class _FlashcardScreenState extends State<FlashcardScreen>
       },
       localeId: localeId,
     );
-    setState(() {
-      _isListening = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isListening = true;
+      });
+    }
   }
 
   void _stopListening() async {
     await _speechToText.stop();
-    setState(() {
-      _isListening = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+      });
+    }
   }
 
   void _checkPronunciation(String spoken, String actual) {

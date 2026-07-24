@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../firebase_options.dart';
 import '../models/word.dart';
+import 'database_service.dart';
 
 class FirebaseService {
   static final FirebaseService instance = FirebaseService._();
@@ -130,6 +131,32 @@ class FirebaseService {
         .get();
 
     return snapshot.docs.map((doc) => _wordFromFirestore(doc.data())).toList();
+  }
+
+  // ── Firestore Streak Sync ───────────────────────────────────────────
+
+  Future<void> updateStreak(StreakSnapshot streak) async {
+    final uid = currentUser?.uid;
+    if (uid == null) return;
+    await firestore.collection('users').doc(uid).set({
+      'current_streak': streak.current,
+      'longest_streak': streak.longest,
+      'last_study_date': streak.lastStudyDate,
+    }, SetOptions(merge: true));
+  }
+
+  Future<StreakSnapshot?> getStreak() async {
+    final uid = currentUser?.uid;
+    if (uid == null) return null;
+    final doc = await firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    final data = doc.data();
+    if (data == null) return null;
+    return StreakSnapshot(
+      current: data['current_streak'] as int? ?? 0,
+      longest: data['longest_streak'] as int? ?? 0,
+      lastStudyDate: data['last_study_date'] as String?,
+    );
   }
 
   Map<String, dynamic> _wordToFirestore(Word word) => {

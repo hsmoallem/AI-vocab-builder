@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/word_provider.dart';
 import '../services/translation_service.dart';
 import '../services/database_service.dart';
@@ -172,7 +173,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
                       ],
                     ),
                     const Divider(),
-                    Expanded(
+                    Flexible(
                       child: ListView.builder(
                         shrinkWrap: true,
                         itemCount: displayedWords.length,
@@ -233,8 +234,30 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: _generatedStory == null,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit?'),
+            content: const Text('Are you sure you want to leave? Your generated quiz/story will be lost.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Leave'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('AI Quizzes & Stories'),
         actions: (kIsWeb && MediaQuery.of(context).size.width > 800) ? WebTopBar.buildActions(context) : null,
       ),
@@ -373,6 +396,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
