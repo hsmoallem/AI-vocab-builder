@@ -82,7 +82,15 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
 
     setState(() => _isPlaying = true);
     try {
-      await _tts.setLanguage(_selectedLang);
+      // Some TTS engines (like flutter_tts on certain devices) require the full BCP-47 tag.
+      String langCode = _selectedLang;
+      if (langCode == 'ar') langCode = 'ar-SA';
+      else if (langCode == 'en') langCode = 'en-US';
+      else if (langCode == 'zh') langCode = 'zh-CN';
+      else if (langCode == 'ja') langCode = 'ja-JP';
+      else if (langCode == 'ru') langCode = 'ru-RU';
+      
+      await _tts.setLanguage(langCode);
       await _tts.speak(text);
       
       _tts.setCompletionHandler(() {
@@ -116,7 +124,14 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
       // flutter_tts synthesizeToFile generates a .wav or .mp3 file
       final audioFileName = 'export_${DateTime.now().millisecondsSinceEpoch}.mp3';
       
-      await _tts.setLanguage(_selectedLang);
+      String langCode = _selectedLang;
+      if (langCode == 'ar') langCode = 'ar-SA';
+      else if (langCode == 'en') langCode = 'en-US';
+      else if (langCode == 'zh') langCode = 'zh-CN';
+      else if (langCode == 'ja') langCode = 'ja-JP';
+      else if (langCode == 'ru') langCode = 'ru-RU';
+
+      await _tts.setLanguage(langCode);
       
       // synthesizeToFile returns 1 on success
       final result = await _tts.synthesizeToFile(text, audioFileName);
