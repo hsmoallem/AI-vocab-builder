@@ -174,7 +174,7 @@ class _TextToAudioScreenState extends State<TextToAudioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Text-to-Audio Converter'),
-        actions: kIsWeb ? WebTopBar.buildActions(context) : null,
+        actions: (kIsWeb && MediaQuery.of(context).size.width > 800) ? WebTopBar.buildActions(context) : null,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

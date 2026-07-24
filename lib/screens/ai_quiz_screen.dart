@@ -236,7 +236,7 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Quizzes & Stories'),
-        actions: kIsWeb ? WebTopBar.buildActions(context) : null,
+        actions: (kIsWeb && MediaQuery.of(context).size.width > 800) ? WebTopBar.buildActions(context) : null,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

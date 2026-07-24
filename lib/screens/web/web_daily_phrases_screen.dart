@@ -426,16 +426,16 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.start,
                           children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _tts.speak(phrase.phrase, language: _phraseLang),
-                                icon: const Icon(Icons.volume_up, size: 18),
-                                label: const Text('Listen'),
-                              ),
+                            OutlinedButton.icon(
+                              onPressed: () => _tts.speak(phrase.phrase, language: _phraseLang),
+                              icon: const Icon(Icons.volume_up, size: 18),
+                              label: const Text('Listen'),
                             ),
-                            const SizedBox(width: 8),
                             Tooltip(
                               message: 'Copy',
                               child: IconButton.outlined(
@@ -443,14 +443,11 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
                                 icon: const Icon(Icons.copy, size: 18),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: isSaved ? null : () => _saveToMyWords(index),
-                                icon: Icon(isSaved ? Icons.bookmark_added : Icons.bookmark_add, size: 18),
-                                label: Text(isSaved ? 'Saved' : 'Save'),
-                                style: isSaved ? FilledButton.styleFrom(backgroundColor: theme.colorScheme.primaryContainer, foregroundColor: theme.colorScheme.onPrimaryContainer) : null,
-                              ),
+                            FilledButton.icon(
+                              onPressed: isSaved ? null : () => _saveToMyWords(index),
+                              icon: Icon(isSaved ? Icons.bookmark_added : Icons.bookmark_add, size: 18),
+                              label: Text(isSaved ? 'Saved' : 'Save'),
+                              style: isSaved ? FilledButton.styleFrom(backgroundColor: theme.colorScheme.primaryContainer, foregroundColor: theme.colorScheme.onPrimaryContainer) : null,
                             ),
                           ],
                         ),
