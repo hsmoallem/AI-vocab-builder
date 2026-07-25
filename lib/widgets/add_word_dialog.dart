@@ -110,7 +110,8 @@ class _AddWordDialogState extends State<AddWordDialog> {
         }
       }
     } catch (e) {
-      setState(() => _error = 'Translation failed: $e');
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+      setState(() => _error = msg);
     }
 
     setState(() => _isTranslating = false);
@@ -158,7 +159,8 @@ class _AddWordDialogState extends State<AddWordDialog> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      setState(() => _error = 'Save failed: $e');
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+      setState(() => _error = 'Unable to save vocabulary item: $msg');
     }
 
     setState(() => _isSaving = false);

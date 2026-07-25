@@ -89,6 +89,24 @@ class WordProvider extends ChangeNotifier {
     return _streak;
   }
 
+  /// Synchronize the local streak with Firebase cloud streak.
+  Future<void> syncCloudStreak() async {
+    final fb = FirebaseService.instance;
+    if (fb.isSignedIn && !fb.isAnonymous) {
+      try {
+        final cloudStreak = await fb.getStreak();
+        if (cloudStreak != null) {
+          await DatabaseService.setStreak(cloudStreak);
+          _streak = cloudStreak;
+          notifyListeners();
+        }
+      } catch (_) {}
+    }
+  }
+
+  /// Get ALL words (including archived words) for cloud backups.
+  Future<List<Word>> getAllWordsForBackup() => DatabaseService.getAllWordsForBackup();
+
   Future<void> loadWords() async {
     _state = LoadState.loading;
     notifyListeners();
@@ -255,10 +273,62 @@ class WordProvider extends ChangeNotifier {
       note: word.note,
       grammarTip: word.grammarTip,
       archived: word.archived,
+      isReviewed: word.isReviewed,
+      srsInterval: word.srsInterval,
+      srsEaseFactor: word.srsEaseFactor,
+      srsRepetitions: word.srsRepetitions,
+      srsNextDue: word.srsNextDue,
+      srsLastReview: word.srsLastReview,
+      createdAt: word.createdAt,
+      updatedAt: word.updatedAt,
     );
     await DatabaseService.insertWord(w);
     await loadWords();
     return true;
+  }
+
+  /// Restore and sync words from cloud backup, updating archived status & SRS state of existing words.
+  Future<int> syncRestoredWords(List<Word> cloudWords) async {
+    final allLocal = await DatabaseService.getAllWordsForBackup();
+    final localMap = {for (var w in allLocal) w.word.trim().toLowerCase(): w};
+    int addedOrUpdated = 0;
+
+    for (final cloudWord in cloudWords) {
+      final key = cloudWord.word.trim().toLowerCase();
+      final existing = localMap[key];
+      if (existing == null) {
+        await addWordObject(cloudWord);
+        addedOrUpdated++;
+      } else {
+        bool needsUpdate = false;
+        Word updated = existing;
+        if (existing.archived != cloudWord.archived && cloudWord.archived) {
+          updated = updated.copyWith(archived: true);
+          needsUpdate = true;
+        }
+        if (cloudWord.srsRepetitions > existing.srsRepetitions ||
+            (cloudWord.srsLastReview != null && (existing.srsLastReview == null || cloudWord.srsLastReview!.isAfter(existing.srsLastReview!)))) {
+          updated = updated.copyWith(
+            srsInterval: cloudWord.srsInterval,
+            srsEaseFactor: cloudWord.srsEaseFactor,
+            srsRepetitions: cloudWord.srsRepetitions,
+            srsNextDue: cloudWord.srsNextDue,
+            srsLastReview: cloudWord.srsLastReview,
+            isReviewed: cloudWord.isReviewed,
+          );
+          needsUpdate = true;
+        }
+        if (needsUpdate && updated.id != null) {
+          await DatabaseService.updateWord(updated);
+          addedOrUpdated++;
+        }
+      }
+    }
+    if (addedOrUpdated > 0) {
+      await loadWords();
+      await refreshSrs();
+    }
+    return addedOrUpdated;
   }
 
   Future<void> deleteWord(int id) async {
@@ -357,6 +427,16 @@ class WordProvider extends ChangeNotifier {
     await DatabaseService.updateWord(word.copyWith(grammarTip: tip));
     await loadWords();
     return tip;
+  }
+
+  /// Evaluate a user's original sentence using [word].
+  Future<List<String>> evaluateSentence(Word word, String userSentence) async {
+    return _translationService.evaluateSentence(
+      word: word.word,
+      userSentence: userSentence,
+      lang: word.targetLang.isNotEmpty ? word.targetLang : 'en',
+      firebaseUid: FirebaseService.instance.currentUser?.uid,
+    );
   }
 
   /// Remove duplicate words (same text + same language pair, case-insensitive),

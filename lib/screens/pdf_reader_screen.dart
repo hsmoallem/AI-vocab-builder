@@ -48,8 +48,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
       setState(() {
-        _error = 'Failed to open PDF: $e';
+        _error = 'Unable to open PDF: $msg';
         _isLoading = false;
       });
     }

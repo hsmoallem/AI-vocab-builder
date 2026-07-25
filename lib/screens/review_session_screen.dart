@@ -53,7 +53,10 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   bool _revealed = false;
 
   final _typeController = TextEditingController();
+  final _sentenceController = TextEditingController();
   bool? _typedCorrect; // null = not yet checked (typing mode)
+  List<String>? _aiSentenceFeedback;
+  bool _evaluatingSentence = false;
 
   final _tts = TtsService();
 
@@ -79,6 +82,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
   @override
   void dispose() {
     _typeController.dispose();
+    _sentenceController.dispose();
     super.dispose();
   }
 
@@ -88,7 +92,10 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _index = 0;
       _revealed = false;
       _typeController.clear();
+      _sentenceController.clear();
       _typedCorrect = null;
+      _aiSentenceFeedback = null;
+      _evaluatingSentence = false;
       _again = 0;
       _hard = 0;
       _good = 0;
@@ -127,6 +134,33 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _typedCorrect = _checkTyped(_current, _typeController.text);
       _revealed = true;
     });
+    final customSentence = _sentenceController.text.trim();
+    if (customSentence.isNotEmpty && !_evaluatingSentence) {
+      _evaluateCustomSentence(_current, customSentence);
+    }
+  }
+
+  Future<void> _evaluateCustomSentence(Word w, String customSentence) async {
+    setState(() => _evaluatingSentence = true);
+    try {
+      final provider = context.read<WordProvider>();
+      final feedback = await provider.evaluateSentence(w, customSentence);
+      if (mounted) {
+        setState(() {
+          _aiSentenceFeedback = feedback;
+          _evaluatingSentence = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _aiSentenceFeedback = [
+            'Could not evaluate sentence: ${e.toString().replaceFirst('Exception: ', '')}'
+          ];
+          _evaluatingSentence = false;
+        });
+      }
+    }
   }
 
   Future<void> _rate(Rating rating) async {
@@ -161,6 +195,9 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _revealed = false;
       _typedCorrect = null;
       _typeController.clear();
+      _sentenceController.clear();
+      _aiSentenceFeedback = null;
+      _evaluatingSentence = false;
       _grammarLoading = false;
       _regenLoading = false;
       _secondLang = null;
@@ -226,8 +263,8 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not generate new example: $msg')));
       }
     }
     if (mounted) setState(() => _regenLoading = false);
@@ -249,6 +286,9 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       _revealed = false;
       _typedCorrect = null;
       _typeController.clear();
+      _sentenceController.clear();
+      _aiSentenceFeedback = null;
+      _evaluatingSentence = false;
       _grammarLoading = false;
       _regenLoading = false;
       _secondLang = null;
@@ -386,16 +426,29 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       case StudyMode.typing:
         return Column(
           children: [
-            _bigPrompt(w.word, w.sourceLang, 'Type the translation'),
+            _bigPrompt(w.word, w.sourceLang, 'Type translation & practice in a sentence'),
             const SizedBox(height: 16),
             TextField(
               controller: _typeController,
               autofocus: true,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Translation answer',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.translate, size: 20),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _sentenceController,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submitTyped(),
-              decoration: const InputDecoration(
-                labelText: 'Your answer',
-                border: OutlineInputBorder(),
+              maxLines: null,
+              decoration: InputDecoration(
+                labelText: 'Write your own sentence using "${w.word}" (Optional)',
+                hintText: 'AI checks grammar, natural tone & usage!',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.auto_awesome, size: 20, color: Colors.purple),
               ),
             ),
             const SizedBox(height: 8),
@@ -449,6 +502,77 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     );
   }
 
+  Widget _aiSentenceFeedbackCard(ColorScheme cs) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.purple.withAlpha(80), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.purple.withAlpha(20),
+              blurRadius: 8,
+              offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.purple, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('AI Sentence Studio Evaluation',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+              if (_evaluatingSentence)
+                const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '"${_sentenceController.text.trim()}"',
+            style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: cs.onSurfaceVariant,
+                fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          if (_evaluatingSentence)
+            const Text('Analyzing grammar, natural tone & usage...',
+                style: TextStyle(fontSize: 13))
+          else if (_aiSentenceFeedback != null) ...[
+            for (final f in _aiSentenceFeedback!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.purple)),
+                    Expanded(
+                        child: Text(f,
+                            style: const TextStyle(
+                                fontSize: 13, height: 1.35))),
+                  ],
+                ),
+              ),
+          ] else
+            const Text('No feedback received.',
+                style: TextStyle(fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
   // ── Answer (back) ──────────────────────────────────────────────────
   Widget _answer(Word w) {
     final cs = Theme.of(context).colorScheme;
@@ -480,6 +604,9 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
               ],
             ),
           ),
+        if (widget.mode == StudyMode.typing &&
+            _sentenceController.text.trim().isNotEmpty)
+          _aiSentenceFeedbackCard(cs),
         // The answer: word / translation + TTS + copy
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -607,7 +734,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       return FilledButton.icon(
         onPressed: _submitTyped,
         icon: const Icon(Icons.check),
-        label: const Text('Check answer'),
+        label: const Text('Check answer & evaluate'),
         style: style,
       );
     }
@@ -679,8 +806,8 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load grammar tip: $msg')));
       }
     }
     if (mounted) setState(() => _grammarLoading = false);
@@ -716,8 +843,8 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not translate: $msg')));
       }
     }
     if (mounted) setState(() => _secondLoading = false);

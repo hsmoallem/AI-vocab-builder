@@ -271,8 +271,9 @@ class _ResetAllButtonState extends State<_ResetAllButton> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Unable to clear progress: $msg'), backgroundColor: Colors.red),
         );
       }
     }

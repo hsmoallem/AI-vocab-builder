@@ -174,14 +174,14 @@ class WebTopBar {
       return;
     }
     try {
-      final words = context.read<WordProvider>().words;
+      final words = await context.read<WordProvider>().getAllWordsForBackup();
       await FirebaseService.instance.backupWords(words);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backed up ${words.length} words to cloud'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backup failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to complete cloud backup. Please check your network connection and try again.'), backgroundColor: Colors.red));
       }
     }
   }
@@ -196,7 +196,7 @@ class WebTopBar {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Restore from cloud?'),
-        content: const Text('This will merge cloud words with your local words. Duplicate words (same word text) will be skipped.'),
+        content: const Text('This will restore words and sync your study streak from the cloud. Existing words will be updated with your latest study progress.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
@@ -207,25 +207,20 @@ class WebTopBar {
 
     try {
       final cloudWords = await FirebaseService.instance.restoreWords();
-      if (cloudWords.isEmpty) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No words found in cloud backup')));
-        return;
-      }
       final provider = context.read<WordProvider>();
-      final existingWords = provider.words.map((w) => w.word.toLowerCase()).toSet();
-      int added = 0;
-      for (final word in cloudWords) {
-        if (!existingWords.contains(word.word.toLowerCase())) {
-          await provider.addWordObject(word);
-          added++;
-        }
+      
+      int addedOrUpdated = 0;
+      if (cloudWords.isNotEmpty) {
+        addedOrUpdated = await provider.syncRestoredWords(cloudWords);
       }
+      await provider.syncCloudStreak();
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Restored $added new words (${cloudWords.length - added} duplicates skipped)'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully synced $addedOrUpdated vocabulary items and streak from cloud backup.'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Restore failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to restore from cloud. Please check your network connection and try again.'), backgroundColor: Colors.red));
       }
     }
   }

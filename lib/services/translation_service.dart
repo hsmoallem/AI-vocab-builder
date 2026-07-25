@@ -65,11 +65,7 @@ class TranslationService {
     // When regenerating, the current example(s) are sent so the server produces
     // a genuinely new example in a different context — not a reworded copy.
     if (avoid != null && avoid.isNotEmpty) body['avoid'] = avoid;
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: await _authHeaders(),
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 30));
+    final response = await _postWithRetry(body);
 
     if (response.statusCode != 200) {
       final msg = _friendlyError(response.statusCode, response.body);
@@ -101,13 +97,7 @@ class TranslationService {
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (level != null) body['level'] = level;
 
-    final response = await http
-        .post(
-          Uri.parse(_baseUrl),
-          headers: await _authHeaders(),
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 30));
+    final response = await _postWithRetry(body);
 
     if (response.statusCode != 200) {
       throw Exception(_friendlyError(response.statusCode, response.body));
@@ -141,11 +131,7 @@ class TranslationService {
       body['exclude'] = exclude.take(40).toList();
     }
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: await _authHeaders(),
-      body: jsonEncode(body),
-    );
+    final response = await _postWithRetry(body);
 
     if (response.statusCode != 200) {
       final msg = _friendlyError(response.statusCode, response.body);
@@ -157,15 +143,67 @@ class TranslationService {
     return phrases.map((p) => DailyPhrase(phrase: p)).toList();
   }
 
+  /// Evaluate an original user sentence using a target vocabulary word.
+  /// Evaluates grammar, natural tone, and correct word usage.
+  Future<List<String>> evaluateSentence({
+    required String word,
+    required String userSentence,
+    String lang = 'de',
+    String? firebaseUid,
+  }) async {
+    final prompt =
+        "The language learning student wrote an original sentence attempting to use the vocabulary item '$word': '$userSentence'. Please grade and evaluate their sentence for: 1) Grammatical correctness, 2) Natural tone and phrasing, and 3) Correct vocabulary word usage. Provide 2-4 friendly, concise feedback bullet points explaining any mistakes and suggesting corrections, or praising accurate usage.";
+    final phrases = await generateDailyPhrases(
+      lang: lang,
+      theme: prompt,
+      firebaseUid: firebaseUid,
+    );
+    return phrases.map((p) => p.phrase).toList();
+  }
+
+  /// Helper method to execute POST requests with 60-second timeouts and automatic retries.
+  Future<http.Response> _postWithRetry(Map<String, dynamic> body) async {
+    int attempts = 0;
+    while (true) {
+      attempts++;
+      try {
+        final response = await http
+            .post(
+              Uri.parse(_baseUrl),
+              headers: await _authHeaders(),
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 60));
+        return response;
+      } catch (e) {
+        if (attempts < 2) {
+          await Future.delayed(const Duration(seconds: 1));
+          continue; // Automatically retry once on timeout or connection drop
+        }
+        final errStr = e.toString();
+        if (errStr.contains('TimeoutException')) {
+          throw Exception('The AI translation server took too long to respond. Please check your connection and try again.');
+        }
+        if (errStr.contains('SocketException') || errStr.contains('ClientException') || errStr.contains('Network') || errStr.contains('Failed host lookup')) {
+          throw Exception('Unable to reach translation server. Please check your internet connection and try again.');
+        }
+        throw Exception(errStr.replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
   /// Map HTTP errors to user-friendly messages.
   String _friendlyError(int statusCode, String body) {
-    if (statusCode == 503 || statusCode == 502) {
-      return 'Translation server unavailable — try again in a moment';
+    if (statusCode == 503 || statusCode == 502 || statusCode == 500) {
+      return 'The translation service is temporarily busy. Please try again in a moment.';
     }
     if (statusCode == 429) {
-      return 'Too many requests — please wait a moment';
+      return 'Too many translation requests. Please pause for a moment and try again.';
     }
-    return 'Translation failed (code $statusCode)';
+    if (statusCode == 401 || statusCode == 403) {
+      return 'Authentication failed with the translation server. Please sign in again.';
+    }
+    return 'We encountered an unexpected error (Code $statusCode). Please try again later.';
   }
 }
 

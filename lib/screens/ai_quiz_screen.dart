@@ -99,8 +99,9 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
             : phrases.map((p) => p.phrase).join('\n\n'); // Separate sentences for quiz
       });
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to generate: $e'))
+        SnackBar(content: Text('Could not generate practice material: $msg')),
       );
     } finally {
       if (mounted) {

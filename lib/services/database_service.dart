@@ -178,6 +178,16 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
   }
 
+  /// Get ALL words (active and archived) for cloud backup and restoration sync.
+  static Future<List<Word>> getAllWordsForBackup() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'words',
+      orderBy: 'created_at DESC',
+    );
+    return List.generate(maps.length, (i) => Word.fromMap(maps[i]));
+  }
+
   /// Get a single word by its primary key. Returns null if not found.
   static Future<Word?> getWord(int id) async {
     final db = await database;

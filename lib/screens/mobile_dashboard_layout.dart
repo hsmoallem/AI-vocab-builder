@@ -19,9 +19,9 @@ import 'ai_quiz_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
-import '../services/auto_backup.dart';
 import '../services/study_prefs.dart';
 import '../config/app_strings.dart';
+
 
 class MobileDashboardLayout extends StatefulWidget {
   const MobileDashboardLayout({super.key});
@@ -41,19 +41,6 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
         DailyPhrasesScreen(),
         WordListScreen(),
       ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Run an automatic backup on launch if it's enabled + due (silent).
-    // Delay so the word list has time to load first.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (!mounted) return;
-        AutoBackup.maybeRun(context.read<WordProvider>().words);
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -429,7 +416,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     setState(() => _isBackingUp = true);
 
     try {
-      final words = context.read<WordProvider>().words;
+      final words = await context.read<WordProvider>().getAllWordsForBackup();
       await FirebaseService.instance.backupWords(words);
 
       if (mounted) {
@@ -443,7 +430,10 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Unable to complete cloud backup. Please check your network connection and try again.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -465,8 +455,8 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       builder: (ctx) => AlertDialog(
         title: const Text('Restore from cloud?'),
         content: const Text(
-          'This will merge cloud words with your local words. '
-          'Duplicate words (same word text) will be skipped.',
+          'This will restore words and sync your study streak from the cloud. '
+          'Existing words will be updated with your latest study progress.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
@@ -479,30 +469,18 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
 
     try {
       final cloudWords = await FirebaseService.instance.restoreWords();
-      if (cloudWords.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No words found in cloud backup')),
-          );
-        }
-        return;
-      }
-
       final provider = context.read<WordProvider>();
-      final existingWords = provider.words.map((w) => w.word.toLowerCase()).toSet();
-      int added = 0;
-
-      for (final word in cloudWords) {
-        if (!existingWords.contains(word.word.toLowerCase())) {
-          await provider.addWordObject(word);
-          added++;
-        }
+      
+      int addedOrUpdated = 0;
+      if (cloudWords.isNotEmpty) {
+        addedOrUpdated = await provider.syncRestoredWords(cloudWords);
       }
+      await provider.syncCloudStreak();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Restored $added new words (${cloudWords.length - added} duplicates skipped)'),
+            content: Text('Successfully synced $addedOrUpdated vocabulary items and streak from cloud backup.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -510,9 +488,13 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restore failed: $e'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Unable to restore from cloud. Please check your network connection and try again.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 }
+

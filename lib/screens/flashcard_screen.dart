@@ -100,8 +100,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
       await context.read<WordProvider>().regenerateExample(word);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not generate new example: $msg')));
       }
     }
     if (mounted) setState(() => _regenLoading = false);
@@ -125,8 +125,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
       await context.read<WordProvider>().generateGrammarTipFor(word);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load grammar tip: $msg')));
       }
     }
     if (mounted) setState(() => _grammarLoading = false);
@@ -147,8 +147,8 @@ class _FlashcardScreenState extends State<FlashcardScreen>
           .updateSecondTranslation(word, lang, result.translation);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not translate: $msg')));
       }
     }
     if (mounted) setState(() => _secondLoading = false);

@@ -9,6 +9,7 @@ import '../services/tts_service.dart';
 import '../services/export_service.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/word_card.dart';
+import '../widgets/study_heatmap_card.dart';
 import 'archived_words_screen.dart';
 
 class WordListScreen extends StatefulWidget {
@@ -81,8 +82,9 @@ class _WordListScreenState extends State<WordListScreen> {
         }
       } catch (e) {
         if (mounted) {
+          final msg = e.toString().replaceFirst("Exception: ", "").replaceFirst("Error: ", "");
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${s.locale == "de" ? "Löschen fehlgeschlagen" : "Delete failed"}: $e')),
+            SnackBar(content: Text('${s.locale == "de" ? "Löschen fehlgeschlagen" : "Could not delete vocabulary item"}: $msg')),
           );
         }
       }
@@ -106,8 +108,8 @@ class _WordListScreenState extends State<WordListScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+        final msg = e.toString().replaceFirst("Exception: ", "").replaceFirst("Error: ", "");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not regenerate example: $msg')));
       }
     }
   }
@@ -184,8 +186,8 @@ class _WordListScreenState extends State<WordListScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        final msg = e.toString().replaceFirst("Exception: ", "").replaceFirst("Error: ", "");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not export word list: $msg')));
       }
     }
   }
@@ -199,6 +201,10 @@ class _WordListScreenState extends State<WordListScreen> {
 
         return Column(
           children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: StudyHeatmapCard(),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: TextField(

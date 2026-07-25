@@ -44,8 +44,9 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
       setState(() {
-        _error = 'Failed to open PDF: $e';
+        _error = 'Unable to open PDF: $msg';
         _isLoading = false;
       });
     }
@@ -59,7 +60,7 @@ class _WebReaderScreenState extends State<WebReaderScreen> {
       document.dispose();
       return text.trim();
     } catch (e) {
-      return '(Could not extract text: $e)';
+      return '(Could not read text from this PDF file. Please ensure it is not password protected or corrupted.)';
     }
   }
 

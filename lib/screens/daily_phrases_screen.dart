@@ -143,8 +143,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
 
       await _saveToPrefs();
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
       setState(() {
-        _error = 'Failed to load phrases: $e';
+        _error = 'Unable to load daily phrases: $msg';
         _isLoading = false;
         _isRefreshing = false;
       });
@@ -243,8 +244,9 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('Error: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red, duration: const Duration(seconds: 5)),
+          SnackBar(content: Text('Could not save phrase: $msg'), backgroundColor: Colors.red, duration: const Duration(seconds: 5)),
         );
       }
     }

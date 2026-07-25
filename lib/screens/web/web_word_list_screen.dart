@@ -5,6 +5,7 @@ import '../../config/app_strings.dart';
 import '../../models/word.dart';
 import '../../widgets/web_top_bar.dart';
 import '../../widgets/add_word_dialog.dart';
+import '../../widgets/study_heatmap_card.dart';
 import '../../services/tts_service.dart';
 import '../../services/export_service.dart';
 
@@ -154,6 +155,8 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StudyHeatmapCard(),
+            const SizedBox(height: 16),
             Row(
               children: [
             Container(
