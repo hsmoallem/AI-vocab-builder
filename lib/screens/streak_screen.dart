@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
-import '../widgets/study_heatmap_card.dart';
+import '../widgets/streak_calendar_card.dart';
 import '../config/app_strings.dart';
 
 class StreakScreen extends StatelessWidget {
@@ -119,8 +119,8 @@ class StreakScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Heatmap card
-          const StudyHeatmapCard(),
+          // Calendar card
+          const StreakCalendarCard(),
           const SizedBox(height: 16),
         ],
       ),
