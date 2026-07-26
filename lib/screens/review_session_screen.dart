@@ -163,7 +163,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     }
   }
 
-  Future<void> _rate(Rating rating) async {
+  void _rate(Rating rating) {
     final word = _current;
     switch (rating) {
       case Rating.again:
@@ -179,9 +179,17 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         _easy++;
         break;
     }
-    final result = await context.read<WordProvider>().processReview(word, rating);
-    _lastStreak = result.streak;
-    if (!mounted) return;
+
+    // Run SRS database and streak sync in the background so card transitions immediately!
+    context.read<WordProvider>().processReview(word, rating).then((result) {
+      if (mounted) {
+        setState(() {
+          _lastStreak = result.streak;
+        });
+      }
+    }).catchError((e) {
+      debugPrint('Error processing card review: $e');
+    });
 
     // "Again" cards return later in the session (learning step).
     if (rating == Rating.again) _deck.add(word);

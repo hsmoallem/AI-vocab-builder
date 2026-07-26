@@ -482,40 +482,61 @@ class WordProvider extends ChangeNotifier {
   /// Returns a [ReviewResult] with the remaining due count and the
   /// (possibly updated) streak, so the UI can react without re-querying.
   Future<ReviewResult> processReview(Word word, Rating rating) async {
-    final next = SrsService.next(
-      repetitions: word.srsRepetitions,
-      easeFactor: word.srsEaseFactor,
-      interval: word.srsInterval,
-      rating: rating,
-    );
+    try {
+      final next = SrsService.next(
+        repetitions: word.srsRepetitions,
+        easeFactor: word.srsEaseFactor,
+        interval: word.srsInterval,
+        rating: rating,
+      );
 
-    final updated = word.copyWith(
-      isReviewed: true,
-      srsInterval: next.intervalDays,
-      srsEaseFactor: next.easeFactor,
-      srsRepetitions: next.repetitions,
-      srsNextDue: next.nextDue,
-      srsLastReview: next.lastReview,
-      updatedAt: DateTime.now(),
-    );
+      final updated = word.copyWith(
+        isReviewed: true,
+        srsInterval: next.intervalDays,
+        srsEaseFactor: next.easeFactor,
+        srsRepetitions: next.repetitions,
+        srsNextDue: next.nextDue,
+        srsLastReview: next.lastReview,
+        updatedAt: DateTime.now(),
+      );
 
-    await DatabaseService.updateWord(updated);
+      try {
+        await DatabaseService.updateWord(updated);
+      } catch (e) {
+        debugPrint('Failed to update word in database: $e');
+      }
 
-    // Update the cached word in _words so the UI shows new SRS state.
-    final idx = _words.indexWhere((w) => w.id == word.id);
-    if (idx >= 0) _words[idx] = updated;
+      // Update the cached word in _words so the UI shows new SRS state.
+      final idx = _words.indexWhere((w) => w.id == word.id);
+      if (idx >= 0) _words[idx] = updated;
 
-    // Streak recording (idempotent within the same day).
-    _streak = await DatabaseService.recordStudyDay();
+      // Streak recording (idempotent within the same day).
+      try {
+        _streak = await DatabaseService.recordStudyDay();
+      } catch (e) {
+        debugPrint('Failed to record study day: $e');
+      }
 
-    if (FirebaseService.instance.isSignedIn && !FirebaseService.instance.isAnonymous) {
-      await FirebaseService.instance.updateStreak(_streak);
+      try {
+        if (FirebaseService.instance.isSignedIn && !FirebaseService.instance.isAnonymous) {
+          await FirebaseService.instance.updateStreak(_streak).timeout(const Duration(seconds: 3));
+        }
+      } catch (e) {
+        debugPrint('Failed or timed out syncing streak to Firebase: $e');
+      }
+
+      try {
+        _dueCount = await DatabaseService.getDueCount();
+      } catch (e) {
+        debugPrint('Failed to get due count: $e');
+      }
+      notifyListeners();
+
+      return ReviewResult(remainingDue: _dueCount, streak: _streak);
+    } catch (e) {
+      debugPrint('Error in processReview: $e');
+      return ReviewResult(remainingDue: _dueCount, streak: _streak);
     }
-
-    _dueCount = await DatabaseService.getDueCount();
-    notifyListeners();
-
-    return ReviewResult(remainingDue: _dueCount, streak: _streak);
   }
 
   /// Reset a word's SRS state — marks it as never studied so it appears
