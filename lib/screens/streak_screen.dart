@@ -14,9 +14,9 @@ class StreakScreen extends StatelessWidget {
         context: context,
         builder: (_) => Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: const ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 500),
-            child: Padding(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: const Padding(
               padding: EdgeInsets.all(24.0),
               child: StreakScreen(),
             ),
