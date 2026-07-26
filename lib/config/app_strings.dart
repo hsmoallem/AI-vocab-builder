@@ -95,6 +95,29 @@ class AppStrings {
       return 'تسجيل Apple غير متاح — Firebase غير مهيأ';
     return 'Apple sign-in not available — Firebase not configured';
   }
+  String get appleNote {
+    if (locale == 'de') return '(Verfügbar auf iOS- & Apple-Geräten)';
+    if (locale == 'ar') return '(متاح على أجهزة iOS و Apple)';
+    return '(available on iOS and Apple devices)';
+  }
+  String get appleLimitTitle {
+    if (locale == 'de') return 'Hinweis zur Apple-Anmeldung';
+    if (locale == 'ar') return 'تنبيه تسجيل الدخول بـ Apple';
+    return 'Apple Sign-In Notice';
+  }
+  String get appleLimitBody {
+    if (locale == 'de')
+      return 'Derzeit ist die „Anmeldung mit Apple“ nur direkt von iOS-Geräten und Apple-Computern (Mac/iPhone) aus verfügbar.\n\nBitte nutze auf Android oder Windows „Mit Google anmelden“, um dich einloggen und deinen Fortschritt geräteübergreifend sichern zu können!';
+    if (locale == 'ar')
+      return 'حالياً، „تسجيل الدخول بـ Apple“ متاح فقط من أجهزة iOS وأجهزة كمبيوتر Apple (iPhone / Mac).\n\nإذا كنت تستخدم أندرويد أو ويندوز، يُرجى استخدام „تسجيل الدخول بـ Google“ لمزامنة وحفظ تقدمك عبر جميع الأجهزة!';
+    return 'Currently, "Continue with Apple" is only available directly from iOS devices and Apple computers (iPhone / Mac).\n\nIf you are on Android or Windows, please use "Continue with Google" to sign in and back up your progress across all devices!';
+  }
+  String get gotIt {
+    if (locale == 'de') return 'Verstanden';
+    if (locale == 'ar') return 'حسناً';
+    return 'Got it';
+  }
+
 
   // ── Home ──────────────────────────────────────────────────────────
   String get tabReader {

@@ -4,6 +4,8 @@
 /// or Anonymous (no credentials).
 /// Anonymous users see a warning dialog first.
 
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -100,6 +102,15 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        Text(
+                          AppStrings.of(context).appleNote,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: 24),
                         Row(
                           children: [
@@ -179,6 +190,30 @@ class LoginScreen extends StatelessWidget {
   }
 
   Future<void> _handleAppleSignIn(BuildContext context) async {
+    final isAppleNative = !kIsWeb && (Platform.isIOS || Platform.isMacOS);
+    if (!isAppleNative) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.amber),
+              const SizedBox(width: 8),
+              Expanded(child: Text(AppStrings.of(ctx).appleLimitTitle)),
+            ],
+          ),
+          content: Text(AppStrings.of(ctx).appleLimitBody),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(AppStrings.of(ctx).gotIt),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (!FirebaseService.instance.isInitialized) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.of(context).appleNotAvailable)),
@@ -189,6 +224,7 @@ class LoginScreen extends StatelessWidget {
     final success = await auth.signInWithApple();
     if (success && context.mounted) _goToHome(context);
   }
+
 
   Future<void> _handleAnonymousSignIn(BuildContext context) async {
     // If Firebase not available, skip auth entirely and go to HomeScreen.
