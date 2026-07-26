@@ -84,14 +84,29 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
     final wordsStr = selected.map((w) => w.word).join(', ');
     final themePrompt = _isStoryMode 
-        ? "Write a creative short story that includes all of these words: $wordsStr"
-        : "Write separate educational sentences using these specific words: $wordsStr.";
+        ? "A creative short story told across 5 to 6 sequential sentences that incorporate these vocabulary words: $wordsStr. Each item in the phrases list must be the next sentence of the story."
+        : "5 individual example sentences demonstrating the correct usage of these vocabulary words: $wordsStr.";
 
     try {
-      final phrases = await _api.generateDailyPhrases(
-        lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
-        theme: themePrompt,
-      );
+      List<DailyPhrase> phrases;
+      try {
+        phrases = await _api.generateDailyPhrases(
+          lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
+          theme: themePrompt,
+          level: 'B1',
+        );
+      } catch (_) {
+        // Fallback retry with a simplified theme prompt if the first attempt faced a temporary server or timeout hiccup
+        await Future.delayed(const Duration(milliseconds: 1000));
+        final fallbackPrompt = _isStoryMode
+            ? "Short cohesive story in 5 sentences using words: $wordsStr"
+            : "5 educational example sentences using words: $wordsStr";
+        phrases = await _api.generateDailyPhrases(
+          lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
+          theme: fallbackPrompt,
+          level: 'B1',
+        );
+      }
       
       setState(() {
         _generatedStory = _isStoryMode 

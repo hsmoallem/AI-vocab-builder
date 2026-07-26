@@ -1,85 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
-import '../screens/login_screen.dart';
-import '../screens/settings_screen.dart';
 import '../services/firebase_service.dart';
 import '../config/app_strings.dart';
 import '../widgets/add_word_dialog.dart';
-import '../screens/bulk_import_screen.dart';
-import '../screens/flashcard_screen.dart';
-import '../screens/review_session_screen.dart';
-import '../screens/study_mode_selector.dart';
-import '../models/study_mode.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:go_router/go_router.dart';
-import '../services/study_prefs.dart';
-import '../screens/login_screen.dart';
-import '../screens/web/web_archived_words_screen.dart';
 
 class WebTopBar {
   static List<Widget> buildActions(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final s = AppStrings.of(context);
-    final wordProvider = context.watch<WordProvider>();
 
     return [
-      MenuAnchor(
-        builder: (BuildContext context, MenuController controller, Widget? child) {
-          return FilledButton.tonalIcon(
-            icon: Badge.count(
-              count: wordProvider.dueCount,
-              isLabelVisible: wordProvider.dueCount > 0,
-              child: const Icon(Icons.style_outlined),
-            ),
-            label: Text(s.flashcards),
-            onPressed: () {
-              if (controller.isOpen) {
-                controller.close();
-              } else {
-                controller.open();
-              }
-            },
-          );
-        },
-        menuChildren: [
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.school, size: 22),
-            onPressed: () => _handleFlashcardsChoice(context, 'study'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Study Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  SizedBox(height: 2),
-                  Text('Spaced repetition with SRS — due + new cards', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.flip, size: 22),
-            onPressed: () => _handleFlashcardsChoice(context, 'view'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('View Flashcards', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  SizedBox(height: 2),
-                  Text('Browse all cards — flip, edit notes, grammar tips', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(width: 8),
       OutlinedButton.icon(
         icon: const Icon(Icons.playlist_add),
         label: const Text('Bulk Import'),
@@ -272,33 +205,5 @@ class WebTopBar {
 
   static void _showAddWordDialog(BuildContext context) {
     showDialog(context: context, builder: (_) => const AddWordDialog());
-  }
-
-  static Future<void> _handleFlashcardsChoice(BuildContext context, String choice) async {
-    if (choice == 'view') {
-      context.push('/flashcards');
-      return;
-    }
-
-    final provider = context.read<WordProvider>();
-    await provider.refreshSrs();
-    if (!context.mounted) return;
-    if (provider.dueCount == 0 && provider.newCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎉 All caught up — no cards due. Browsing all cards.')));
-      context.push('/flashcards');
-      return;
-    }
-    final mode = await showStudyModeSelector(context: context, dueCount: provider.dueCount, newCount: provider.newCount);
-    if (mode == null || !context.mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(kStudyModePrefKey, mode.index);
-    final maxNew = await StudyPrefs.newCardsPerSession();
-    final deck = await provider.buildSessionDeck(maxCards: maxNew);
-    if (!context.mounted) return;
-    if (deck.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nothing to review right now.')));
-      return;
-    }
-    context.push('/review', extra: {'mode': mode, 'deck': deck});
   }
 }

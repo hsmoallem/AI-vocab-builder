@@ -79,59 +79,14 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
             tooltip: s.settings,
             onPressed: () => context.push('/settings'),
           ),
-          MenuAnchor(
-            builder: (BuildContext context, MenuController controller, Widget? child) {
-              return IconButton(
-                icon: Badge.count(
-                  count: context.watch<WordProvider>().dueCount,
-                  isLabelVisible: context.watch<WordProvider>().dueCount > 0,
-                  child: const Icon(Icons.style_outlined),
-                ),
-                tooltip: s.flashcards,
-                onPressed: () {
-                  if (controller.isOpen) {
-                    controller.close();
-                  } else {
-                    controller.open();
-                  }
-                },
-              );
-            },
-            menuChildren: [
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.school, size: 22),
-                onPressed: () => _handleFlashcardsChoice(context, 'study'),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Study Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      SizedBox(height: 2),
-                      Text('Spaced repetition with SRS — due + new cards', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.flip, size: 22),
-                onPressed: () => _handleFlashcardsChoice(context, 'view'),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('View Flashcards', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      SizedBox(height: 2),
-                      Text('Browse all cards — flip, edit notes, grammar tips', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          IconButton(
+            icon: Badge.count(
+              count: context.watch<WordProvider>().dueCount,
+              isLabelVisible: context.watch<WordProvider>().dueCount > 0,
+              child: const Icon(Icons.style_outlined),
+            ),
+            tooltip: s.flashcards,
+            onPressed: () => _startReview(context),
           ),
           IconButton(
             icon: const Icon(Icons.record_voice_over),
@@ -338,45 +293,75 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     );
   }
 
-  /// Handles dropdown menu selection: Study Mode or View Flashcards.
-  Future<void> _handleFlashcardsChoice(BuildContext context, String choice) async {
-    if (choice == 'view') {
-      context.push('/flashcards');
-      return;
-    }
-
-    // Study Mode path
-    final provider = context.read<WordProvider>();
-    await provider.refreshSrs();
-    if (!context.mounted) return;
-    if (provider.dueCount == 0 && provider.newCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('🎉 All caught up — no cards due. Browsing all cards.')),
-      );
-      context.push('/flashcards');
-      return;
-    }
-    final mode = await showStudyModeSelector(
+  /// Opens a bottom sheet asking if the user wants Spaced Repetition Study or just viewing cards.
+  void _startReview(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      dueCount: provider.dueCount,
-      newCount: provider.newCount,
-    );
-    if (mode == null || !context.mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(kStudyModePrefKey, mode.index);
-    final maxNew = await StudyPrefs.newCardsPerSession();
-    final deck = await provider.buildSessionDeck(maxCards: maxNew);
-    if (!context.mounted) return;
-    if (deck.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nothing to review right now.')),
-      );
-      return;
-    }
-    context.push(
-      '/review',
-      extra: {'mode': mode, 'deck': deck},
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.school, size: 28),
+                  title: const Text('Study Mode', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Spaced repetition with SRS — due + new cards'),
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    final provider = context.read<WordProvider>();
+                    await provider.refreshSrs();
+                    if (!context.mounted) return;
+                    if (provider.dueCount == 0 && provider.newCount == 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('🎉 All caught up — no cards due. Browsing all cards.')),
+                      );
+                      context.push('/flashcards');
+                      return;
+                    }
+                    final mode = await showStudyModeSelector(
+                      context: context,
+                      dueCount: provider.dueCount,
+                      newCount: provider.newCount,
+                    );
+                    if (mode == null || !context.mounted) return;
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setInt(kStudyModePrefKey, mode.index);
+                    final maxNew = await StudyPrefs.newCardsPerSession();
+                    final deck = await provider.buildSessionDeck(maxCards: maxNew);
+                    if (!context.mounted) return;
+                    if (deck.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nothing to review right now.')),
+                      );
+                      return;
+                    }
+                    context.push(
+                      '/review',
+                      extra: {'mode': mode, 'deck': deck},
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.flip, size: 28),
+                  title: const Text('View Flashcards', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Browse all cards — flip, edit notes, grammar tips'),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    context.push('/flashcards');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

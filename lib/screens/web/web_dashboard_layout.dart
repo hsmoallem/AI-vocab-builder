@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/word_provider.dart';
 import 'web_daily_phrases_screen.dart';
 import 'web_word_list_screen.dart';
+import 'web_flashcards_review_screen.dart';
 import '../settings_screen.dart'; 
 import '../text_to_audio_screen.dart';
 import '../../config/app_strings.dart';
@@ -36,6 +37,7 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
   final List<Widget> _screens = const [
     WebReaderScreen(),
     WebWordListScreen(),
+    WebFlashcardsReviewScreen(),
     WebDailyPhrasesScreen(),
     TextToAudioScreen(),
     AiQuizScreen(),
@@ -150,24 +152,32 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
-                          icon: FontAwesomeIcons.wandMagicSparkles,
-                          label: s.tabDaily,
+                          icon: FontAwesomeIcons.clone,
+                          label: 'Flashcards review',
+                          badgeCount: context.watch<WordProvider>().dueCount,
                           isSelected: _selectedIndex == 2,
                           onTap: () => setState(() => _selectedIndex = 2),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
-                          icon: FontAwesomeIcons.volumeHigh,
-                          label: 'Text-to-Audio',
+                          icon: FontAwesomeIcons.wandMagicSparkles,
+                          label: s.tabDaily,
                           isSelected: _selectedIndex == 3,
                           onTap: () => setState(() => _selectedIndex = 3),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
-                          icon: FontAwesomeIcons.bookOpenReader,
-                          label: 'AI Quizzes',
+                          icon: FontAwesomeIcons.volumeHigh,
+                          label: 'Text-to-Audio',
                           isSelected: _selectedIndex == 4,
                           onTap: () => setState(() => _selectedIndex = 4),
+                        ),
+                        const SizedBox(height: 4),
+                        _SidebarItem(
+                          icon: FontAwesomeIcons.bookOpenReader,
+                          label: 'AI Quizzes',
+                          isSelected: _selectedIndex == 5,
+                          onTap: () => setState(() => _selectedIndex = 5),
                         ),
                         
                         const SizedBox(height: 24),
@@ -186,8 +196,8 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                         _SidebarItem(
                           icon: FontAwesomeIcons.gear,
                           label: s.settings,
-                          isSelected: _selectedIndex == 5,
-                          onTap: () => setState(() => _selectedIndex = 5),
+                          isSelected: _selectedIndex == 6,
+                          onTap: () => setState(() => _selectedIndex = 6),
                         ),
                       ],
                     ),
@@ -299,12 +309,14 @@ class _SidebarItem extends StatefulWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
@@ -364,14 +376,28 @@ class _SidebarItemState extends State<_SidebarItem> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color: active || showHover ? Colors.white : _slate400,
-                  fontSize: 14,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: active || showHover ? Colors.white : _slate400,
+                    fontSize: 14,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                  ),
                 ),
               ),
+              if (widget.badgeCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: active ? Colors.white.withAlpha(50) : const Color(0xFF7C3AED),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${widget.badgeCount}',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
             ],
           ),
         ),
