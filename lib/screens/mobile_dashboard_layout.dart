@@ -21,6 +21,7 @@ import '../providers/word_provider.dart';
 import '../services/firebase_service.dart';
 import '../services/study_prefs.dart';
 import '../config/app_strings.dart';
+import 'streak_screen.dart';
 
 
 class MobileDashboardLayout extends StatefulWidget {
@@ -54,17 +55,21 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
           // Streak Flame (hidden for anonymous users)
           if (!auth.isAnonymous)
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.local_fire_department, color: Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${context.watch<WordProvider>().streak.current}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ],
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => StreakScreen.show(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_fire_department, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${context.watch<WordProvider>().streak.current}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

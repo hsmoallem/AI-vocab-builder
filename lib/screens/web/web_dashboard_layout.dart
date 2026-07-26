@@ -13,6 +13,7 @@ import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 import '../ai_quiz_screen.dart';
 import '../../widgets/add_word_dialog.dart';
+import '../streak_screen.dart';
 
 // Colors based on Tailwind Slate palette
 const _slate900 = Color(0xFF0F172A);
@@ -202,36 +203,40 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                   child: Column(
                     children: [
                       if (!context.watch<AuthProvider>().isAnonymous)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _slate800.withOpacity(0.8),
-                            border: Border.all(color: _slate700.withOpacity(0.5)),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => StreakScreen.show(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _slate800.withOpacity(0.8),
+                              border: Border.all(color: _slate700.withOpacity(0.5)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(
+                                    child: FaIcon(FontAwesomeIcons.fireFlameCurved, color: Colors.amber, size: 14),
+                                  ),
                                 ),
-                                child: const Center(
-                                  child: FaIcon(FontAwesomeIcons.fireFlameCurved, color: Colors.amber, size: 14),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '${context.watch<WordProvider>().streak.current} Day Streak',
+                                  style: const TextStyle(
+                                    color: _slate300,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${context.watch<WordProvider>().streak.current} Day Streak',
-                                style: const TextStyle(
-                                  color: _slate300,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       const SizedBox(height: 16),
