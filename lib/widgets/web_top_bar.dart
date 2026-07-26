@@ -25,14 +25,59 @@ class WebTopBar {
     final wordProvider = context.watch<WordProvider>();
 
     return [
-      FilledButton.tonalIcon(
-        icon: Badge.count(
-          count: wordProvider.dueCount,
-          isLabelVisible: wordProvider.dueCount > 0,
-          child: const Icon(Icons.style_outlined),
-        ),
-        label: Text(s.flashcards),
-        onPressed: () => _startReview(context),
+      MenuAnchor(
+        builder: (BuildContext context, MenuController controller, Widget? child) {
+          return FilledButton.tonalIcon(
+            icon: Badge.count(
+              count: wordProvider.dueCount,
+              isLabelVisible: wordProvider.dueCount > 0,
+              child: const Icon(Icons.style_outlined),
+            ),
+            label: Text(s.flashcards),
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+          );
+        },
+        menuChildren: [
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.school, size: 22),
+            onPressed: () => _handleFlashcardsChoice(context, 'study'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Study Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  SizedBox(height: 2),
+                  Text('Spaced repetition with SRS — due + new cards', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.flip, size: 22),
+            onPressed: () => _handleFlashcardsChoice(context, 'view'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('View Flashcards', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  SizedBox(height: 2),
+                  Text('Browse all cards — flip, edit notes, grammar tips', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       const SizedBox(width: 8),
       OutlinedButton.icon(
@@ -229,47 +274,7 @@ class WebTopBar {
     showDialog(context: context, builder: (_) => const AddWordDialog());
   }
 
-  static Future<void> _startReview(BuildContext context) async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(color: Theme.of(ctx).colorScheme.onSurfaceVariant.withAlpha(80), borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(height: 20),
-              Text('Flashcards', style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.school),
-                title: const Text('Study Mode'),
-                subtitle: const Text('Spaced repetition with SRS — due + new cards'),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: Theme.of(ctx).colorScheme.primaryContainer.withAlpha(80),
-                onTap: () => Navigator.pop(ctx, 'study'),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.flip),
-                title: const Text('View Flashcards'),
-                subtitle: const Text('Browse all cards — flip, edit notes, grammar tips'),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: Theme.of(ctx).colorScheme.surfaceContainerLow,
-                onTap: () => Navigator.pop(ctx, 'view'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (choice == null || !context.mounted) return;
-
+  static Future<void> _handleFlashcardsChoice(BuildContext context, String choice) async {
     if (choice == 'view') {
       context.push('/flashcards');
       return;
