@@ -5,7 +5,7 @@
 /// Anonymous users see a warning dialog first.
 
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -190,8 +190,9 @@ class LoginScreen extends StatelessWidget {
   }
 
   Future<void> _handleAppleSignIn(BuildContext context) async {
-    final isAppleNative = !kIsWeb && (Platform.isIOS || Platform.isMacOS);
-    if (!isAppleNative) {
+    final isAndroidOrWindows = defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.windows;
+    if (isAndroidOrWindows) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
