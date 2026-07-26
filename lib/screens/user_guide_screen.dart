@@ -82,13 +82,12 @@ class UserGuideScreen extends StatelessWidget {
                 'new vocabulary to your flashcards.',
           ),
           _Guide(
-            icon: Icons.quiz_outlined,
-            title: 'AI Quiz & Story',
+            icon: Icons.auto_stories_outlined,
+            title: 'Story Mode',
             body:
-                'Generate a fun, interactive quiz or a short story using your '
-                'vocabulary! You can use words that are Due for review, pick '
-                'a Random selection, or Manually select the specific words you '
-                'want to practice.',
+                'Generate a creative AI short story incorporating your '
+                'vocabulary! You can use words from your Due and learning list, or '
+                'Manually select the specific words you want to practice in context.',
           ),
           _Guide(
             icon: Icons.record_voice_over_outlined,

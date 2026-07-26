@@ -175,7 +175,7 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                         const SizedBox(height: 4),
                         _SidebarItem(
                           icon: FontAwesomeIcons.bookOpenReader,
-                          label: 'AI Quizzes',
+                          label: 'Story Mode',
                           isSelected: _selectedIndex == 5,
                           onTap: () => setState(() => _selectedIndex = 5),
                         ),

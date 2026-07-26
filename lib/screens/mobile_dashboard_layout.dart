@@ -95,7 +95,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
           ),
           IconButton(
             icon: const Icon(Icons.auto_stories),
-            tooltip: 'AI Quizzes & Stories',
+            tooltip: 'Story Mode',
             onPressed: () => context.push('/quiz'),
           ),
           IconButton(
