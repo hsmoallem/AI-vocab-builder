@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../services/firebase_service.dart';
+import '../config/app_strings.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -72,9 +73,30 @@ class LoginScreen extends StatelessWidget {
                           child: FilledButton.icon(
                             onPressed: () => _handleGoogleSignIn(context),
                             icon: const Icon(Icons.login),
-                            label: const Text(
-                              'Continue with Google',
-                              style: TextStyle(fontSize: 16),
+                            label: Text(
+                              AppStrings.of(context).signInWithGoogle,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                              foregroundColor: theme.brightness == Brightness.dark
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                            onPressed: () => _handleAppleSignIn(context),
+                            icon: const Icon(Icons.apple, size: 24),
+                            label: Text(
+                              AppStrings.of(context).signInWithApple,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
@@ -147,12 +169,24 @@ class LoginScreen extends StatelessWidget {
   Future<void> _handleGoogleSignIn(BuildContext context) async {
     if (!FirebaseService.instance.isInitialized) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google sign-in not available — Firebase not configured')),
+        SnackBar(content: Text(AppStrings.of(context).googleNotAvailable)),
       );
       return;
     }
     final auth = context.read<AuthProvider>();
     final success = await auth.signInWithGoogle();
+    if (success && context.mounted) _goToHome(context);
+  }
+
+  Future<void> _handleAppleSignIn(BuildContext context) async {
+    if (!FirebaseService.instance.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).appleNotAvailable)),
+      );
+      return;
+    }
+    final auth = context.read<AuthProvider>();
+    final success = await auth.signInWithApple();
     if (success && context.mounted) _goToHome(context);
   }
 
@@ -166,21 +200,16 @@ class LoginScreen extends StatelessWidget {
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Continue without account?'),
-        content: const Text(
-          'You can use the app, but your words will only be saved on this '
-          'device. If you delete the app or get a new phone, your data will '
-          'be lost.\n\n'
-          'Sign in with Google to back up your words to the cloud.',
-        ),
+        title: Text(AppStrings.of(ctx).anonymousWarningTitle),
+        content: Text(AppStrings.of(ctx).anonymousWarningBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Go back'),
+            child: Text(AppStrings.of(ctx).goBack),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continue anyway'),
+            child: Text(AppStrings.of(ctx).continueAnyway),
           ),
         ],
       ),

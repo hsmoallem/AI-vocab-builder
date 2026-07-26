@@ -41,6 +41,11 @@ class AppStrings {
     if (locale == 'ar') return 'تسجيل الدخول بـ Google';
     return 'Sign in with Google';
   }
+  String get signInWithApple {
+    if (locale == 'de') return 'Mit Apple anmelden';
+    if (locale == 'ar') return 'تسجيل الدخول بـ Apple';
+    return 'Continue with Apple';
+  }
   String get continueWithoutAccount {
     if (locale == 'de') return 'Ohne Konto fortfahren';
     if (locale == 'ar') return 'متابعة بدون حساب';
@@ -56,15 +61,15 @@ class AppStrings {
       return 'Du kannst die App nutzen, aber deine Wörter werden nur auf diesem '
           'Gerät gespeichert. Wenn du die App löschst oder ein neues Handy '
           'bekommst, gehen deine Daten verloren.\n\n'
-          'Melde dich mit Google an, um deine Wörter in der Cloud zu sichern.';
+          'Melde dich mit Google oder Apple an, um deine Wörter in der Cloud zu sichern.';
     if (locale == 'ar')
       return 'يمكنك استخدام التطبيق، لكن كلماتك ستحفظ فقط على هذا الجهاز. '
           'إذا حذفت التطبيق أو حصلت على هاتف جديد، ستفقد بياناتك.\n\n'
-          'سجل الدخول بـ Google لحفظ كلماتك في السحابة.';
+          'سجل الدخول بـ Google أو Apple لحفظ كلماتك في السحابة.';
     return 'You can use the app, but your words will only be saved on this '
         'device. If you delete the app or get a new phone, your data will '
         'be lost.\n\n'
-        'Sign in with Google to back up your words to the cloud.';
+        'Sign in with Google or Apple to back up your words to the cloud.';
   }
   String get goBack {
     if (locale == 'de') return 'Zurück';
@@ -82,6 +87,13 @@ class AppStrings {
     if (locale == 'ar')
       return 'تسجيل Google غير متاح — Firebase غير مهيأ';
     return 'Google sign-in not available — Firebase not configured';
+  }
+  String get appleNotAvailable {
+    if (locale == 'de')
+      return 'Apple-Anmeldung nicht verfügbar — Firebase nicht konfiguriert';
+    if (locale == 'ar')
+      return 'تسجيل Apple غير متاح — Firebase غير مهيأ';
+    return 'Apple sign-in not available — Firebase not configured';
   }
 
   // ── Home ──────────────────────────────────────────────────────────

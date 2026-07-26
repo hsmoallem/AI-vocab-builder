@@ -79,6 +79,28 @@ class FirebaseService {
     }
   }
 
+  // ── Apple Sign-In ───────────────────────────────────────────────────
+
+  Future<User?> signInWithApple() async {
+    try {
+      final appleProvider = AppleAuthProvider();
+      appleProvider.addScope('email');
+      appleProvider.addScope('name');
+
+      if (kIsWeb) {
+        final userCredential = await auth.signInWithPopup(appleProvider);
+        return userCredential.user;
+      } else {
+        final userCredential = await auth.signInWithProvider(appleProvider);
+        return userCredential.user;
+      }
+    } on FirebaseAuthException catch (e) {
+      throw Exception('Apple sign-in failed: ${e.message}');
+    } catch (e) {
+      throw Exception('Apple sign-in failed: $e');
+    }
+  }
+
   // ── Anonymous ───────────────────────────────────────────────────────
 
   Future<User> signInAnonymously() async {

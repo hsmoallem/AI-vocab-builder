@@ -53,6 +53,16 @@ class AuthProvider extends ChangeNotifier {
         }
         return user;
       });
+  Future<bool> signInWithApple() => _guard(() async {
+        final user = await _firebase.signInWithApple();
+        if (user != null) {
+          final cloudStreak = await _firebase.getStreak();
+          if (cloudStreak != null) {
+            await DatabaseService.setStreak(cloudStreak);
+          }
+        }
+        return user;
+      });
   Future<bool> signInAnonymously() => _guard(() => _firebase.signInAnonymously());
 
   Future<void> signOut() async {
