@@ -144,6 +144,22 @@ class DatabaseService {
           await db.execute(
               'ALTER TABLE words ADD COLUMN second_translation TEXT');
         }
+        if (oldVersion < 6) {
+          // Grammar enrichment fields (plural, feminine/masculine, verb forms, POS).
+          await db.execute('ALTER TABLE words ADD COLUMN article TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN plural TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN feminine_form TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN masculine_form TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN part_of_speech TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN infinitive TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN past_tense TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN past_participle TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN auxiliary_verb TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN verb_type TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN is_reflexive INTEGER NOT NULL DEFAULT 0');
+          await db.execute('ALTER TABLE words ADD COLUMN is_separable INTEGER NOT NULL DEFAULT 0');
+          await db.execute('ALTER TABLE words ADD COLUMN pos_prepositions TEXT');
+        }
       },
     );
   }

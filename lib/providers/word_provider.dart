@@ -165,6 +165,7 @@ class WordProvider extends ChangeNotifier {
     required String exampleTarget,
     required String sourceLang,
     required String targetLang,
+    GrammarData? grammar,
   }) async {
     final w = Word(
       word: word,
@@ -173,6 +174,19 @@ class WordProvider extends ChangeNotifier {
       exampleTarget: exampleTarget,
       sourceLang: sourceLang,
       targetLang: targetLang,
+      article: grammar?.article,
+      plural: grammar?.plural,
+      feminineForm: grammar?.feminineForm,
+      masculineForm: grammar?.masculineForm,
+      partOfSpeech: grammar?.partOfSpeech,
+      infinitive: grammar?.infinitive,
+      pastTense: grammar?.pastTense,
+      pastParticiple: grammar?.pastParticiple,
+      auxiliaryVerb: grammar?.auxiliaryVerb,
+      verbType: grammar?.verbType,
+      isReflexive: grammar?.isReflexive ?? false,
+      isSeparable: grammar?.isSeparable ?? false,
+      posPrepositions: grammar?.posPrepositions,
     );
     await DatabaseService.insertWord(w);
     await loadWords();
@@ -228,6 +242,10 @@ class WordProvider extends ChangeNotifier {
       }
 
       // Build stored fields exactly like the Add dialog's _save().
+
+      // Auto-enriched grammar data from the proxy.
+      final g = result.grammar;
+
       final translation = result.meanings
           .where((m) => m.text.trim().isNotEmpty)
           .map((m) => m.text.trim())
@@ -253,6 +271,19 @@ class WordProvider extends ChangeNotifier {
         exampleTarget: exampleTarget,
         sourceLang: from,
         targetLang: to,
+        article: g?.article,
+        plural: g?.plural,
+        feminineForm: g?.feminineForm,
+        masculineForm: g?.masculineForm,
+        partOfSpeech: g?.partOfSpeech,
+        infinitive: g?.infinitive,
+        pastTense: g?.pastTense,
+        pastParticiple: g?.pastParticiple,
+        auxiliaryVerb: g?.auxiliaryVerb,
+        verbType: g?.verbType,
+        isReflexive: g?.isReflexive ?? false,
+        isSeparable: g?.isSeparable ?? false,
+        posPrepositions: g?.posPrepositions,
       ));
       return ImportOutcome(input, ImportStatus.added, savedWord: finalWord);
     } catch (e) {
@@ -272,6 +303,19 @@ class WordProvider extends ChangeNotifier {
       targetLang: word.targetLang,
       note: word.note,
       grammarTip: word.grammarTip,
+      article: word.article,
+      plural: word.plural,
+      feminineForm: word.feminineForm,
+      masculineForm: word.masculineForm,
+      partOfSpeech: word.partOfSpeech,
+      infinitive: word.infinitive,
+      pastTense: word.pastTense,
+      pastParticiple: word.pastParticiple,
+      auxiliaryVerb: word.auxiliaryVerb,
+      verbType: word.verbType,
+      isReflexive: word.isReflexive,
+      isSeparable: word.isSeparable,
+      posPrepositions: word.posPrepositions,
       archived: word.archived,
       isReviewed: word.isReviewed,
       srsInterval: word.srsInterval,

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../providers/locale_provider.dart';
 import '../config/app_strings.dart';
-import '../services/translation_service.dart';
+import '../services/translation_service.dart' show GrammarData, TranslationService;
 import '../services/tts_service.dart';
 import '../widgets/cefr_level_dropdown.dart';
 import '../widgets/searchable_dropdown.dart';
@@ -27,6 +27,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
   bool _isTranslating = false;
   bool _isSaving = false;
   String? _error;
+  GrammarData? _grammarData;  // auto-enriched grammar from proxy
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
         level: _level,
       );
 
+      _grammarData = result.grammar;
       setState(() {
         _meanings = result.meanings.map((m) => _MeaningEntry(
           article: m.article,
@@ -149,6 +151,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
       final success = await provider.addWord(
         word: word,
         translation: translation,
+        grammar: _grammarData,
         exampleSource: exampleSource,
         exampleTarget: exampleTarget,
         sourceLang: _sourceLang,
