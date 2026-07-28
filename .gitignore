@@ -56,3 +56,4 @@ app.*.map.json
 /SETUP.md
 
 .firebase/
+.npm-cache/
