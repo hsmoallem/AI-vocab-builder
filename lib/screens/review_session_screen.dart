@@ -11,12 +11,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/study_mode.dart';
 import '../models/word.dart';
 import '../providers/auth_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/word_provider.dart';
 import '../services/database_service.dart'; // StreakSnapshot
 import '../services/srs_service.dart';
@@ -24,7 +26,7 @@ import '../services/translation_service.dart';
 import '../services/tts_service.dart';
 import '../config/app_strings.dart';
 import '../widgets/note_edit_dialog.dart';
-import '../config/app_strings.dart';
+import '../widgets/grammar_tutor_sheet.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/searchable_dropdown.dart';
 import '../utils/answer_check.dart';
@@ -804,13 +806,17 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     );
   }
 
-  // ── Rich content (grammar tip / note / 2nd-language) ───────────────
+  // ── Rich content (grammar tip / note / 2nd-language / AI Tutor) ─────
   Future<void> _generateGrammar(Word w) async {
     setState(() => _grammarLoading = true);
     try {
-      final tip = await context.read<WordProvider>().generateGrammarTipFor(w);
+      await context.read<WordProvider>().generateGrammarTipFor(w);
+      final updated = context
+          .read<WordProvider>()
+          .words
+          .firstWhere((x) => x.id == w.id, orElse: () => w);
       if (mounted) {
-        setState(() => _deck[_index] = _deck[_index].copyWith(grammarTip: tip));
+        setState(() => _deck[_index] = updated);
       }
     } catch (e) {
       if (mounted) {
@@ -868,14 +874,24 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
     if (tip == null || tip.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: OutlinedButton.icon(
-          onPressed: _grammarLoading ? null : () => _generateGrammar(w),
-          icon: _grammarLoading
-              ? spinner
-              : const Icon(Icons.lightbulb_outline, size: 18),
-          label: Text(_grammarLoading
-              ? 'Generating…'
-              : (tip == null ? 'Grammar tip' : 'No tip — try again')),
+        child: Wrap(
+          spacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _grammarLoading ? null : () => _generateGrammar(w),
+              icon: _grammarLoading
+                  ? spinner
+                  : const Icon(Icons.auto_awesome, size: 18),
+              label: Text(_grammarLoading
+                  ? 'Analyzing Grammar…'
+                  : (tip == null ? 'Enrich with AI Tutor' : 'No tip — try again')),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => showGrammarTutorSheet(context, w),
+              icon: const Icon(Icons.school, size: 18),
+              label: const Text('Tutor Console'),
+            ),
+          ],
         ),
       );
     }
@@ -889,12 +905,19 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
         Row(children: [
           Icon(Icons.lightbulb, size: 16, color: cs.tertiary),
           const SizedBox(width: 6),
-          Text('Grammar tip',
+          Text('Teacher Grammar Rule',
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: cs.tertiary)),
           const Spacer(),
+          IconButton(
+              icon: const Icon(Icons.school, size: 18),
+              tooltip: 'Open AI Language Tutor',
+              onPressed: () => showGrammarTutorSheet(context, w),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28)),
           IconButton(
               icon: const Icon(Icons.copy, size: 16),
               tooltip: 'Copy',
@@ -910,7 +933,7 @@ class _ReviewSessionScreenState extends State<ReviewSessionScreen> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 28, minHeight: 28)),
         ]),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(tip, style: const TextStyle(fontSize: 13)),
       ]),
     );

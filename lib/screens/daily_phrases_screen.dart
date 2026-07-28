@@ -12,6 +12,7 @@ import '../services/tts_service.dart';
 import '../config/app_strings.dart';
 import '../widgets/cefr_level_dropdown.dart';
 import '../widgets/searchable_dropdown.dart';
+import '../services/analytics_service.dart';
 
 class DailyPhrasesScreen extends StatefulWidget {
   const DailyPhrasesScreen({super.key});
@@ -161,6 +162,7 @@ class _DailyPhrasesScreenState extends State<DailyPhrasesScreen> {
       });
     }
     setState(() => _isRefreshing = true);
+    AnalyticsService.trackEvent('generate_ai_phrases', {'platform': 'mobile'});
     _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
 

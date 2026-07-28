@@ -47,6 +47,7 @@ class AutoBackup {
       final last = await lastBackup();
       if (last != null && DateTime.now().difference(last) < interval) return;
       await fb.backupWords(words);
+      await fb.backupSettings();
       final p = await SharedPreferences.getInstance();
       await p.setInt(_lastKey, DateTime.now().millisecondsSinceEpoch);
     } catch (_) {

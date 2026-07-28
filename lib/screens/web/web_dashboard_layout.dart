@@ -13,8 +13,8 @@ import '../text_to_audio_screen.dart';
 import '../../config/app_strings.dart';
 import 'web_reader_screen.dart';
 import '../ai_quiz_screen.dart';
-import '../../widgets/add_word_dialog.dart';
 import '../streak_screen.dart';
+import '../../services/analytics_service.dart';
 
 // Colors based on Tailwind Slate palette
 const _slate900 = Color(0xFF0F172A);
@@ -33,6 +33,39 @@ class WebDashboardLayout extends StatefulWidget {
 
 class _WebDashboardLayoutState extends State<WebDashboardLayout> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsService.trackView('/web/reader', 'Web PDF Reader');
+      AnalyticsService.trackEvent('web_app_open');
+    });
+  }
+
+  void _selectTab(int index) {
+    setState(() => _selectedIndex = index);
+    const urls = [
+      '/web/reader',
+      '/web/my-words',
+      '/web/flashcards-review',
+      '/web/daily-phrases',
+      '/web/text-to-audio',
+      '/web/story-mode',
+      '/web/settings',
+    ];
+    const titles = [
+      'Web PDF Reader',
+      'Web My Words',
+      'Web Flashcards Review',
+      'Web Daily Phrases',
+      'Web Text-to-Audio',
+      'Web Story Mode',
+      'Web Settings',
+    ];
+    AnalyticsService.trackView(urls[index], titles[index]);
+    AnalyticsService.trackEvent('web_navigation', {'tab': titles[index]});
+  }
 
   final List<Widget> _screens = const [
     WebReaderScreen(),
@@ -141,14 +174,14 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                           icon: FontAwesomeIcons.filePdf,
                           label: s.tabReader,
                           isSelected: _selectedIndex == 0,
-                          onTap: () => setState(() => _selectedIndex = 0),
+                          onTap: () => _selectTab(0),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
                           icon: FontAwesomeIcons.list,
                           label: s.tabMyWords,
                           isSelected: _selectedIndex == 1,
-                          onTap: () => setState(() => _selectedIndex = 1),
+                          onTap: () => _selectTab(1),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
@@ -156,28 +189,28 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                           label: 'Flashcards review',
                           badgeCount: context.watch<WordProvider>().dueCount,
                           isSelected: _selectedIndex == 2,
-                          onTap: () => setState(() => _selectedIndex = 2),
+                          onTap: () => _selectTab(2),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
                           icon: FontAwesomeIcons.wandMagicSparkles,
                           label: s.tabDaily,
                           isSelected: _selectedIndex == 3,
-                          onTap: () => setState(() => _selectedIndex = 3),
+                          onTap: () => _selectTab(3),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
                           icon: FontAwesomeIcons.volumeHigh,
                           label: 'Text-to-Audio',
                           isSelected: _selectedIndex == 4,
-                          onTap: () => setState(() => _selectedIndex = 4),
+                          onTap: () => _selectTab(4),
                         ),
                         const SizedBox(height: 4),
                         _SidebarItem(
                           icon: FontAwesomeIcons.bookOpenReader,
                           label: 'Story Mode',
                           isSelected: _selectedIndex == 5,
-                          onTap: () => setState(() => _selectedIndex = 5),
+                          onTap: () => _selectTab(5),
                         ),
                         
                         const SizedBox(height: 24),
@@ -197,7 +230,7 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
                           icon: FontAwesomeIcons.gear,
                           label: s.settings,
                           isSelected: _selectedIndex == 6,
-                          onTap: () => setState(() => _selectedIndex = 6),
+                          onTap: () => _selectTab(6),
                         ),
                       ],
                     ),
@@ -285,20 +318,13 @@ class _WebDashboardLayoutState extends State<WebDashboardLayout> {
           Expanded(
             child: Container(
               color: theme.scaffoldBackgroundColor,
-              child: _screens[_selectedIndex],
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _screens,
+              ),
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => const AddWordDialog(),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Word'),
       ),
     );
   }

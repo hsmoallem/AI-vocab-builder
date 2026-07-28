@@ -3,11 +3,13 @@
 /// Handles Firebase initialization, Google Sign-In + Anonymous auth,
 /// and Firestore cloud backup/restore of vocabulary words.
 
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../firebase_options.dart';
 import '../models/word.dart';
 import 'database_service.dart';
@@ -155,6 +157,41 @@ class FirebaseService {
     return snapshot.docs.map((doc) => _wordFromFirestore(doc.data())).toList();
   }
 
+  // ── Firestore Settings Backup / Restore ───────────────────────────────
+
+  Future<void> backupSettings() async {
+    final uid = currentUser?.uid;
+    if (uid == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final settingsMap = <String, dynamic>{
+      'app_locale': prefs.getString('app_locale') ?? 'en',
+      'translate_target_lang': prefs.getString('translate_target_lang') ?? 'en',
+      'new_cards_per_session': prefs.getInt('new_cards_per_session') ?? 30,
+      'study_mode_default': prefs.getInt('study_mode_default') ?? 0,
+      'auto_backup_frequency': prefs.getString('auto_backup_frequency') ?? 'off',
+    };
+    await firestore.collection('users').doc(uid).set({
+      'settings': settingsMap,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> restoreSettings() async {
+    final uid = currentUser?.uid;
+    if (uid == null) return;
+    final doc = await firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return;
+    final data = doc.data();
+    if (data == null || data['settings'] == null || data['settings'] is! Map) return;
+
+    final s = Map<String, dynamic>.from(data['settings'] as Map);
+    final prefs = await SharedPreferences.getInstance();
+    if (s['app_locale'] != null) await prefs.setString('app_locale', s['app_locale'].toString());
+    if (s['translate_target_lang'] != null) await prefs.setString('translate_target_lang', s['translate_target_lang'].toString());
+    if (s['new_cards_per_session'] != null) await prefs.setInt('new_cards_per_session', (s['new_cards_per_session'] as num).toInt());
+    if (s['study_mode_default'] != null) await prefs.setInt('study_mode_default', (s['study_mode_default'] as num).toInt());
+    if (s['auto_backup_frequency'] != null) await prefs.setString('auto_backup_frequency', s['auto_backup_frequency'].toString());
+  }
+
   // ── Firestore Streak Sync ───────────────────────────────────────────
 
   Future<void> updateStreak(StreakSnapshot streak) async {
@@ -192,6 +229,8 @@ class FirebaseService {
         'note': word.note,
         'grammar_tip': word.grammarTip,
         'archived': word.archived,
+        'second_lang': word.secondLang,
+        'second_translation': word.secondTranslation,
         'created_at': word.createdAt.toIso8601String(),
         'updated_at': word.updatedAt.toIso8601String(),
         // SRS state (DB v4) — preserves spaced-repetition progress across
@@ -204,6 +243,12 @@ class FirebaseService {
           'srs_next_due': word.srsNextDue!.toIso8601String(),
         if (word.srsLastReview != null)
           'srs_last_review': word.srsLastReview!.toIso8601String(),
+        // AI Tutor canonical grammar fields (DB v6)
+        if (word.partOfSpeech != null) 'part_of_speech': word.partOfSpeech,
+        if (word.grammarData != null) 'grammar_data': jsonEncode(word.grammarData),
+        if (word.usageNote != null) 'usage_note': word.usageNote,
+        if (word.grammarVersion != 0) 'grammar_version': word.grammarVersion,
+        if (word.grammarConfidence != null) 'grammar_confidence': word.grammarConfidence,
       };
 
   Word _wordFromFirestore(Map<String, dynamic> data) {
@@ -217,6 +262,20 @@ class FirebaseService {
       if (val == null) return null;
       try { return DateTime.parse(val); } catch (_) { return null; }
     }
+    Map<String, dynamic>? parseGrammarData(dynamic val) {
+      if (val == null) return null;
+      if (val is Map<String, dynamic>) return val;
+      if (val is Map) return Map<String, dynamic>.from(val);
+      if (val is String && val.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(val);
+          if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
+    }
 
     return Word(
       word: (data['word'] as String?) ?? '',
@@ -229,6 +288,8 @@ class FirebaseService {
       note: data['note'] as String?,
       grammarTip: data['grammar_tip'] as String?,
       archived: (data['archived'] as bool?) ?? false,
+      secondLang: data['second_lang'] as String?,
+      secondTranslation: data['second_translation'] as String?,
       createdAt: parseDate(data['created_at'] as String?),
       updatedAt: parseDate(data['updated_at'] as String?),
       // SRS — absent in older backups → defaults via the model.
@@ -237,6 +298,12 @@ class FirebaseService {
       srsRepetitions: (data['srs_repetitions'] as num?)?.toInt() ?? 0,
       srsNextDue: parseNullableDate(data['srs_next_due'] as String?),
       srsLastReview: parseNullableDate(data['srs_last_review'] as String?),
+      // AI Tutor enrichment (DB v6)
+      partOfSpeech: data['part_of_speech'] as String?,
+      grammarData: parseGrammarData(data['grammar_data']),
+      usageNote: data['usage_note'] as String?,
+      grammarVersion: (data['grammar_version'] as num?)?.toInt() ?? 0,
+      grammarConfidence: (data['grammar_confidence'] as num?)?.toDouble(),
     );
   }
 }

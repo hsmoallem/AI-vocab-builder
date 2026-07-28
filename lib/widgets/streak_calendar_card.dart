@@ -65,6 +65,11 @@ class _StreakCalendarCardState extends State<StreakCalendarCard> {
   Widget build(BuildContext context) {
     final provider = context.watch<WordProvider>();
     final activeDates = _buildActiveDateSet(provider);
+    String? earliestDateStr;
+    if (activeDates.isNotEmpty) {
+      final sorted = activeDates.toList()..sort();
+      earliestDateStr = sorted.first;
+    }
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = AppStrings.of(context);
@@ -190,54 +195,88 @@ class _StreakCalendarCardState extends State<StreakCalendarCard> {
                       final currentDayStr = _isoDate(_focusedMonth.year, _focusedMonth.month, dayIndex);
                       final isStudied = activeDates.contains(currentDayStr);
                       final isToday = currentDayStr == todayStr;
+                      final isPast = currentDayStr.compareTo(todayStr) < 0;
+                      final isAfterEarliest = earliestDateStr != null && currentDayStr.compareTo(earliestDateStr) >= 0;
+                      final isFrozen = !isStudied && isPast && isAfterEarliest;
 
                       return Expanded(
                         child: Center(
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isStudied
-                                  ? const Color(0xFFFF9600) // Duolingo Bright Orange
-                                  : (isToday ? cs.primary.withAlpha(20) : Colors.transparent),
-                              shape: BoxShape.circle,
-                              border: isToday
-                                  ? Border.all(color: cs.primary, width: 2)
-                                  : null,
-                              boxShadow: isStudied
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFFFF9600).withAlpha(80),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Text(
-                                  '$dayIndex',
-                                  style: TextStyle(
-                                    color: isStudied ? Colors.white : cs.onSurface,
-                                    fontWeight: isStudied || isToday ? FontWeight.w800 : FontWeight.w500,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                if (isStudied)
-                                  Positioned(
-                                    bottom: 2,
-                                    child: Container(
-                                      width: 4,
-                                      height: 4,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
+                          child: Tooltip(
+                            message: isFrozen
+                                ? (s.locale == 'de' ? 'Tag $dayIndex: Streak eingefroren' : 'Day $dayIndex: Streak Freeze')
+                                : (isStudied ? (s.locale == 'de' ? 'Tag $dayIndex: Gelernt' : 'Day $dayIndex: Studied') : 'Tag $dayIndex'),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isStudied
+                                    ? const Color(0xFFFF9600) // Duolingo Bright Orange
+                                    : (isFrozen
+                                        ? const Color(0xFF00C7E5) // Duolingo Ice Blue (Streak Freeze)
+                                        : (isToday ? cs.primary.withAlpha(20) : Colors.transparent)),
+                                shape: BoxShape.circle,
+                                border: isToday && !isStudied && !isFrozen
+                                    ? Border.all(color: cs.primary, width: 2)
+                                    : null,
+                                boxShadow: isStudied
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFFFF9600).withAlpha(80),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ]
+                                    : (isFrozen
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF00C7E5).withAlpha(80),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : null),
+                              ),
+                              child: isFrozen
+                                  ? Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.ac_unit, color: Colors.white, size: 16),
+                                        Text(
+                                          '$dayIndex',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Text(
+                                          '$dayIndex',
+                                          style: TextStyle(
+                                            color: isStudied ? Colors.white : cs.onSurface,
+                                            fontWeight: isStudied || isToday ? FontWeight.w800 : FontWeight.w500,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        if (isStudied)
+                                          Positioned(
+                                            bottom: 3,
+                                            child: Container(
+                                              width: 4,
+                                              height: 4,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
-                                  ),
-                              ],
                             ),
                           ),
                         ),
@@ -245,8 +284,66 @@ class _StreakCalendarCardState extends State<StreakCalendarCard> {
                     }),
                   ),
                 ),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              // Calendar Legend
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildLegendItem(
+                    color: const Color(0xFFFF9600),
+                    icon: Icons.local_fire_department,
+                    label: s.locale == 'de' ? 'Gelernt' : 'Studied',
+                    cs: cs,
+                  ),
+                  _buildLegendItem(
+                    color: const Color(0xFF00C7E5),
+                    icon: Icons.ac_unit,
+                    label: s.locale == 'de' ? 'Eingefroren' : 'Freeze',
+                    cs: cs,
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: cs.primary, width: 2),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        s.locale == 'de' ? 'Heute' : 'Today',
+                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem({required Color color, required IconData icon, required String label, required ColorScheme cs}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, size: 13, color: Colors.white),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, fontWeight: FontWeight.w600),
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/firebase_service.dart';
 import '../config/app_strings.dart';
 import '../widgets/add_word_dialog.dart';
@@ -20,17 +21,6 @@ class WebTopBar {
           side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
         ),
         onPressed: () => context.push('/import'),
-      ),
-      const SizedBox(width: 8),
-      OutlinedButton.icon(
-        icon: const Icon(Icons.archive),
-        label: const Text('Archived'),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
-        ),
-        onPressed: () {
-          context.push('/archived');
-        },
       ),
       const SizedBox(width: 8),
       FilledButton.icon(
@@ -152,10 +142,17 @@ class WebTopBar {
       return;
     }
     try {
-      final words = await context.read<WordProvider>().getAllWordsForBackup();
+      final provider = context.read<WordProvider>();
+      final words = await provider.getAllWordsForBackup();
       await FirebaseService.instance.backupWords(words);
+      try {
+        await FirebaseService.instance.backupSettings();
+        await FirebaseService.instance.updateStreak(provider.streak);
+      } catch (e) {
+        debugPrint('Non-fatal error backing up secondary data: $e');
+      }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backed up ${words.length} words to cloud'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backed up ${words.length} words, streak, and settings to cloud'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
@@ -191,10 +188,18 @@ class WebTopBar {
       if (cloudWords.isNotEmpty) {
         addedOrUpdated = await provider.syncRestoredWords(cloudWords);
       }
-      await provider.syncCloudStreak();
+      try {
+        await provider.syncCloudStreak();
+        await FirebaseService.instance.restoreSettings();
+        if (context.mounted) {
+          await context.read<LocaleProvider>().load();
+        }
+      } catch (e) {
+        debugPrint('Non-fatal error restoring secondary data: $e');
+      }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully synced $addedOrUpdated vocabulary items and streak from cloud backup.'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully synced $addedOrUpdated words, streak, and settings from cloud backup.'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {

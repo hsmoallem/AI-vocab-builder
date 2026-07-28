@@ -28,6 +28,14 @@ class _AddWordDialogState extends State<AddWordDialog> {
   bool _isSaving = false;
   String? _error;
 
+  // AI Tutor linguistic attributes
+  String? _partOfSpeech;
+  Map<String, dynamic>? _grammarData;
+  String? _grammarTip;
+  String? _usageNote;
+  int _grammarVersion = 0;
+  double? _grammarConfidence;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +97,12 @@ class _AddWordDialogState extends State<AddWordDialog> {
           exampleSource: TextEditingController(text: m.exampleSource),
           exampleTarget: TextEditingController(text: m.exampleTarget),
         )).toList();
+        _partOfSpeech = result.partOfSpeech;
+        _grammarData = result.grammarData;
+        _grammarTip = result.grammarTip;
+        _usageNote = result.usageNote;
+        _grammarVersion = result.grammarVersion;
+        _grammarConfidence = result.grammarConfidence;
       });
 
       // If the server returned a corrected spelling, replace the typed word
@@ -124,6 +138,19 @@ class _AddWordDialogState extends State<AddWordDialog> {
       return;
     }
 
+    final provider = context.read<WordProvider>();
+    final wordLower = word.toLowerCase();
+    final isDuplicate = provider.words.any((w) => 
+      w.word.trim().toLowerCase() == wordLower && 
+      w.sourceLang == _sourceLang && 
+      w.targetLang == _targetLang
+    );
+    
+    if (isDuplicate) {
+      setState(() => _error = 'This word already exists in your list');
+      return;
+    }
+
     final translation = _meanings
         .where((m) => m.meaning.text.trim().isNotEmpty)
         .map((m) => m.meaning.text.trim())
@@ -145,7 +172,6 @@ class _AddWordDialogState extends State<AddWordDialog> {
     });
 
     try {
-      final provider = context.read<WordProvider>();
       final success = await provider.addWord(
         word: word,
         translation: translation,
@@ -153,6 +179,12 @@ class _AddWordDialogState extends State<AddWordDialog> {
         exampleTarget: exampleTarget,
         sourceLang: _sourceLang,
         targetLang: _targetLang,
+        partOfSpeech: _partOfSpeech,
+        grammarData: _grammarData,
+        grammarTip: _grammarTip,
+        usageNote: _usageNote,
+        grammarVersion: _grammarVersion,
+        grammarConfidence: _grammarConfidence,
       );
 
       if (success && mounted) {
@@ -169,12 +201,17 @@ class _AddWordDialogState extends State<AddWordDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      alignment: Alignment.center,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Header
             Row(
               children: [
@@ -347,6 +384,7 @@ class _AddWordDialogState extends State<AddWordDialog> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

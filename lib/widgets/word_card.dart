@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/word.dart';
 import '../utils/clipboard_util.dart';
+import 'grammar_tutor_sheet.dart';
 
 class WordCard extends StatelessWidget {
   final Word word;
@@ -72,6 +73,21 @@ class WordCard extends StatelessWidget {
                 ),
                 // Copy the word only
                 _copyIcon(context, word.word, 'word'),
+                // 🎓 AI Language Tutor Console button
+                IconButton(
+                  icon: Icon(
+                    Icons.school,
+                    color: (word.grammarVersion >= 1 || word.grammarTip != null)
+                        ? Colors.amber[700] ?? Colors.amber
+                        : Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  tooltip: 'Open AI Language Tutor',
+                  onPressed: () => showGrammarTutorSheet(context, word),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
                 // Regenerate example sentence(s)
                 if (onRegenerate != null)
                   IconButton(
@@ -131,15 +147,32 @@ class WordCard extends StatelessWidget {
               ),
             const SizedBox(height: 8),
 
-            // Language pair badges
-            Row(
+            // Language pair badges & linguistic traits
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _buildBadge(word.sourceLang, Theme.of(context).colorScheme.primary),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(Icons.arrow_forward, size: 14),
-                ),
+                const Icon(Icons.arrow_forward, size: 14),
                 _buildBadge(word.targetLang, Theme.of(context).colorScheme.tertiary),
+                if (word.partOfSpeech != null && word.partOfSpeech!.isNotEmpty)
+                  _buildGrammarChip(word.partOfSpeech!, Colors.indigo),
+                if (word.ipa != null && word.ipa!.isNotEmpty)
+                  _buildGrammarChip('[${word.ipa!}]', Colors.purple),
+                if (word.grammarData?['article'] != null)
+                  _buildGrammarChip('Art: ${word.grammarData?['article']}', Colors.blue),
+                if (word.grammarData?['plural'] != null && word.grammarData?['plural'].toString().isNotEmpty == true)
+                  _buildGrammarChip('Pl: ${word.grammarData?['plural']}', Colors.teal),
+                if (word.grammarData?['feminine'] != null && word.grammarData?['feminine'].toString().isNotEmpty == true)
+                  _buildGrammarChip('Fem: ${word.grammarData?['feminine']}', Colors.pink),
+                if (word.grammarData?['infinitive'] != null && word.grammarData?['infinitive'].toString().isNotEmpty == true)
+                  _buildGrammarChip('Inf: ${word.grammarData?['infinitive']}', Colors.cyan),
+                if (word.grammarData?['verb_type'] != null && word.grammarData?['verb_type'].toString().isNotEmpty == true)
+                  _buildGrammarChip('${word.grammarData?['verb_type']}', Colors.deepOrange),
+                if (word.isIrregular) _buildGrammarChip('Irregular', Colors.orange),
+                if (word.isReflexive) _buildGrammarChip('Reflexive', Colors.blue),
+                if (word.isSeparable) _buildGrammarChip('Separable', Colors.teal),
               ],
             ),
 
@@ -241,6 +274,25 @@ class WordCard extends StatelessWidget {
           fontSize: 12,
           color: color,
           fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGrammarChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: color,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

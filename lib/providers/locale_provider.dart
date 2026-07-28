@@ -17,10 +17,10 @@ class LocaleProvider extends ChangeNotifier {
   static const _keyTargetLang = 'translate_target_lang';
 
   LocaleProvider() {
-    _load();
+    load();
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _locale = prefs.getString(_keyLocale) ?? 'en';
     _targetLang = prefs.getString(_keyTargetLang) ?? 'en';

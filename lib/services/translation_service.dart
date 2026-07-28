@@ -59,12 +59,51 @@ class TranslationService {
       'sourceLang': sourceLang,
       'targetLang': targetLang,
       'mode': 'translate',
+      'enrich': true,
+      'grammar_version': 1,
+      'teacher_tone': true,
+      'instructions': 'IMPORTANT: If the noun refers to a person or profession, explicitly include the "feminine" and "masculine" forms.',
     };
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (level != null) body['level'] = level;
     // When regenerating, the current example(s) are sent so the server produces
     // a genuinely new example in a different context — not a reworded copy.
     if (avoid != null && avoid.isNotEmpty) body['avoid'] = avoid;
+    final response = await _postWithRetry(body);
+
+    if (response.statusCode != 200) {
+      final msg = _friendlyError(response.statusCode, response.body);
+      throw Exception(msg);
+    }
+
+    final data = jsonDecode(response.body);
+    return TranslationResult.fromMeanings(data);
+  }
+
+  /// Request full AI Teacher linguistic enrichment for an existing vocabulary item.
+  ///
+  /// Retrieves canonical grammatical attributes, part of speech, teacher grammar tips,
+  /// conversational usage notes, pronunciation metadata, and confidence scoring.
+  Future<TranslationResult> enrichGrammar({
+    required String word,
+    String sourceLang = _defaultSourceLang,
+    String targetLang = _defaultTargetLang,
+    String? firebaseUid,
+    String? level,
+  }) async {
+    final body = <String, dynamic>{
+      'word': word,
+      'sourceLang': sourceLang,
+      'targetLang': targetLang,
+      'mode': 'grammar',
+      'enrich': true,
+      'grammar_version': 1,
+      'teacher_tone': true,
+      'instructions': 'IMPORTANT: If the noun refers to a person or profession, explicitly include the "feminine" and "masculine" forms.',
+    };
+    if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
+    if (level != null) body['level'] = level;
+
     final response = await _postWithRetry(body);
 
     if (response.statusCode != 200) {
@@ -93,6 +132,9 @@ class TranslationService {
       'sourceLang': sourceLang,
       'targetLang': targetLang,
       'mode': 'grammar',
+      'enrich': true,
+      'grammar_version': 1,
+      'teacher_tone': true,
     };
     if (firebaseUid != null) body['firebaseUid'] = firebaseUid;
     if (level != null) body['level'] = level;
@@ -104,7 +146,7 @@ class TranslationService {
     }
 
     final data = jsonDecode(response.body);
-    return (data['grammar_tip'] ?? '').toString().trim();
+    return (data['grammar_tip'] ?? data['tip'] ?? '').toString().trim();
   }
 
   /// Generate 5 daily-life phrases in the given language.
@@ -222,13 +264,29 @@ class Meaning {
   });
 }
 
-/// Result from DeepSeek translation — contains one or more meanings.
+/// Result from DeepSeek translation — contains one or more meanings and AI tutor enrichment.
 class TranslationResult {
   final List<Meaning> meanings;
   // Corrected spelling of the source word, if the server provides one.
   final String? corrected;
+  // AI Tutor linguistic attributes (v6)
+  final String? partOfSpeech;
+  final Map<String, dynamic>? grammarData;
+  final String? grammarTip;
+  final String? usageNote;
+  final int grammarVersion;
+  final double? grammarConfidence;
 
-  TranslationResult({required this.meanings, this.corrected});
+  TranslationResult({
+    required this.meanings,
+    this.corrected,
+    this.partOfSpeech,
+    this.grammarData,
+    this.grammarTip,
+    this.usageNote,
+    this.grammarVersion = 0,
+    this.grammarConfidence,
+  });
 
   String get translation => meanings.map((m) => m.text).join(', ');
 
@@ -250,8 +308,10 @@ class TranslationResult {
   factory TranslationResult.fromMeanings(Map<String, dynamic> map) {
     // Optional corrected spelling of the source word (server may include it).
     final corrected = map['corrected']?.toString();
+    
+    List<Meaning> meanings = [];
     if (map['meanings'] is List) {
-      final meanings = (map['meanings'] as List).map((m) {
+      meanings = (map['meanings'] as List).map((m) {
         final article = m['article']?.toString();
         return Meaning(
           text: m['meaning']?.toString() ?? '',
@@ -260,14 +320,75 @@ class TranslationResult {
           exampleTarget: m['example_target']?.toString() ?? '',
         );
       }).toList();
-      if (meanings.isNotEmpty) {
-        return TranslationResult(meanings: meanings, corrected: corrected);
+    }
+    if (meanings.isEmpty) {
+      final fallbackText = map['translation']?.toString() ?? (map.containsKey('grammar_tip') || map.containsKey('grammar_data') ? '' : map.toString());
+      if (fallbackText.isNotEmpty || map.containsKey('grammar_data')) {
+        meanings = [Meaning(text: fallbackText, exampleSource: '', exampleTarget: '')];
       }
     }
-    // Fallback
-    return TranslationResult(meanings: [
-      Meaning(text: map.toString(), exampleSource: '', exampleTarget: ''),
-    ], corrected: corrected);
+
+    // ── AI Tutor Canonical Grammar Parsing ──────────────────────────────
+    final partOfSpeech = map['part_of_speech']?.toString() ?? map['pos']?.toString();
+    final grammarTip = map['grammar_tip']?.toString() ?? map['tip']?.toString();
+    final usageNote = map['usage_note']?.toString() ?? map['usage']?.toString();
+    final grammarConfidence = (map['grammar_confidence'] as num?)?.toDouble() ?? (map['confidence'] as num?)?.toDouble();
+    int grammarVersion = (map['grammar_version'] as num?)?.toInt() ?? 0;
+
+    // Build predictable canonical grammar data map
+    final Map<String, dynamic> compiledGrammarData = {};
+    if (map['grammar_data'] is Map) {
+      compiledGrammarData.addAll(Map<String, dynamic>.from(map['grammar_data'] as Map));
+    }
+    
+    // Normalize potential LLM key variations for feminine and masculine forms
+    final allKeys = <String, dynamic>{...map};
+    if (map['grammar_data'] is Map) {
+      allKeys.addAll(Map<String, dynamic>.from(map['grammar_data'] as Map));
+    }
+
+    final femKey = allKeys.keys.firstWhere((k) => k.toLowerCase().contains('fem') && k.toLowerCase() != 'feminine', orElse: () => '');
+    if (femKey.isNotEmpty && !compiledGrammarData.containsKey('feminine') && allKeys[femKey] != null && allKeys[femKey].toString().isNotEmpty) {
+      compiledGrammarData['feminine'] = allKeys[femKey];
+    }
+    final mascKey = allKeys.keys.firstWhere((k) => k.toLowerCase().contains('masc') && k.toLowerCase() != 'masculine', orElse: () => '');
+    if (mascKey.isNotEmpty && !compiledGrammarData.containsKey('masculine') && allKeys[mascKey] != null && allKeys[mascKey].toString().isNotEmpty) {
+      compiledGrammarData['masculine'] = allKeys[mascKey];
+    }
+
+    // Ensure article from first meaning is captured if present and not yet in grammar_data
+    if (meanings.isNotEmpty && meanings.first.article != null && !compiledGrammarData.containsKey('article')) {
+      compiledGrammarData['article'] = meanings.first.article;
+    }
+
+    // Capture any root-level canonical grammar properties sent by server
+    final canonicalKeys = {
+      'article', 'plural', 'feminine', 'masculine',
+      'infinitive', 'simple_past', 'past_participle', 'auxiliary', 'verb_type',
+      'prepositions', 'comparative', 'superlative', 'requires_case',
+      'pronunciation', 'is_irregular', 'is_reflexive', 'is_separable', 'is_uncountable', 'extra',
+    };
+    for (final key in canonicalKeys) {
+      if (map.containsKey(key) && !compiledGrammarData.containsKey(key)) {
+        compiledGrammarData[key] = map[key];
+      }
+    }
+
+    // If we detected any grammar enrichment, set version to at least 1
+    if (grammarVersion == 0 && (compiledGrammarData.isNotEmpty || partOfSpeech != null || grammarTip != null || usageNote != null)) {
+      grammarVersion = 1;
+    }
+
+    return TranslationResult(
+      meanings: meanings,
+      corrected: corrected,
+      partOfSpeech: (partOfSpeech != null && partOfSpeech.isNotEmpty) ? partOfSpeech : null,
+      grammarData: compiledGrammarData.isNotEmpty ? compiledGrammarData : null,
+      grammarTip: (grammarTip != null && grammarTip.isNotEmpty) ? grammarTip : null,
+      usageNote: (usageNote != null && usageNote.isNotEmpty) ? usageNote : null,
+      grammarVersion: grammarVersion,
+      grammarConfidence: grammarConfidence,
+    );
   }
 }
 

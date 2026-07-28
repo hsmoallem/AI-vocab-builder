@@ -191,5 +191,82 @@ void main() {
       expect(w.secondLang, isNull);
       expect(w.secondTranslation, isNull);
     });
+
+    test('canonical grammar fields survive toMap/fromMap and copyWith (DB v6)', () {
+      final w = word.copyWith(
+        partOfSpeech: 'Verb',
+        usageNote: 'Used across all formal and informal situations.',
+        grammarVersion: 1,
+        grammarConfidence: 0.98,
+        grammarData: {
+          'infinitive': 'arbeiten',
+          'simple_past': 'arbeitete',
+          'past_participle': 'gearbeitet',
+          'auxiliary': 'haben',
+          'is_irregular': false,
+          'is_separable': false,
+          'pronunciation': {
+            'ipa': '/aʁˈbaɪ̯tən/',
+            'stress': '2nd syllable',
+          },
+          'extra': {'register': 'neutral'}
+        },
+      );
+      final map = w.toMap();
+      expect(map['part_of_speech'], 'Verb');
+      expect(map['usage_note'], 'Used across all formal and informal situations.');
+      expect(map['grammar_version'], 1);
+      expect(map['grammar_confidence'], 0.98);
+      expect(map['grammar_data'], isA<String>());
+
+      final restored = Word.fromMap(map);
+      expect(restored.partOfSpeech, 'Verb');
+      expect(restored.usageNote, 'Used across all formal and informal situations.');
+      expect(restored.grammarVersion, 1);
+      expect(restored.grammarConfidence, 0.98);
+      expect(restored.grammarData?['infinitive'], 'arbeiten');
+      expect(restored.grammarData?['extra']?['register'], 'neutral');
+      expect(restored.ipa, '/aʁˈbaɪ̯tən/');
+      expect(restored.stress, '2nd syllable');
+      expect(restored.isIrregular, false);
+      expect(restored.isSeparable, false);
+    });
+
+    test('grammar booleans return correct true flags', () {
+      final w = Word(
+        word: 'aufstehen',
+        translation: 'to get up',
+        exampleSource: 'Ich stehe auf.',
+        exampleTarget: 'I get up.',
+        sourceLang: 'de',
+        targetLang: 'en',
+        grammarData: {
+          'is_irregular': true,
+          'is_separable': true,
+          'is_reflexive': true,
+          'is_uncountable': true,
+        },
+      );
+      expect(w.isIrregular, true);
+      expect(w.isSeparable, true);
+      expect(w.isReflexive, true);
+      expect(w.isUncountable, true);
+    });
+
+    test('v6 fields default cleanly when absent (pre-v6 rows)', () {
+      final w = Word.fromMap({
+        'word': 'Job',
+        'translation': 'job',
+        'source_lang': 'de',
+        'target_lang': 'en',
+      });
+      expect(w.partOfSpeech, isNull);
+      expect(w.grammarData, isNull);
+      expect(w.usageNote, isNull);
+      expect(w.grammarVersion, 0);
+      expect(w.grammarConfidence, isNull);
+      expect(w.isIrregular, false);
+      expect(w.ipa, isNull);
+    });
   });
 }

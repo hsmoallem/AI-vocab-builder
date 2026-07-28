@@ -4,6 +4,7 @@ import '../models/word.dart';
 import '../services/database_service.dart';
 import '../services/translation_service.dart';
 import '../services/srs_service.dart';
+import '../services/analytics_service.dart';
 
 enum SortMode { newestFirst, oldestFirst, alphabetical }
 
@@ -141,13 +142,40 @@ class WordProvider extends ChangeNotifier {
     loadWords();
   }
 
-  /// Translate a word using DeepSeek AI
+  /// Translate a word using DeepSeek AI, utilizing local memory cache when available
   Future<TranslationResult> translateWord(
     String word, {
     required String from,
     required String to,
     String? level,
+    bool force = false,
   }) async {
+    if (!force) {
+      final key = word.trim().toLowerCase();
+      for (final existing in _words) {
+        if (existing.word.trim().toLowerCase() == key &&
+            existing.sourceLang == from &&
+            existing.targetLang == to &&
+            (existing.grammarVersion >= 1 || existing.grammarTip != null || existing.partOfSpeech != null)) {
+          // Re-use cached translation and enrichment metadata without network bill!
+          return TranslationResult(
+            meanings: [
+              Meaning(
+                text: existing.translation,
+                exampleSource: existing.exampleSource.replaceAll(RegExp(r'^[•\-\s]+'), '').trim(),
+                exampleTarget: existing.exampleTarget.replaceAll(RegExp(r'^[•\-\s]+'), '').trim(),
+              )
+            ],
+            partOfSpeech: existing.partOfSpeech,
+            grammarData: existing.grammarData,
+            grammarTip: existing.grammarTip,
+            usageNote: existing.usageNote,
+            grammarVersion: existing.grammarVersion,
+            grammarConfidence: existing.grammarConfidence,
+          );
+        }
+      }
+    }
     return await _translationService.translate(
       word: word,
       sourceLang: from,
@@ -157,7 +185,7 @@ class WordProvider extends ChangeNotifier {
     );
   }
 
-  /// Add a new word with all fields
+  /// Add a new word with all fields and optional AI linguistic enrichment
   Future<bool> addWord({
     required String word,
     required String translation,
@@ -165,6 +193,13 @@ class WordProvider extends ChangeNotifier {
     required String exampleTarget,
     required String sourceLang,
     required String targetLang,
+    String? note,
+    String? grammarTip,
+    String? partOfSpeech,
+    Map<String, dynamic>? grammarData,
+    String? usageNote,
+    int grammarVersion = 0,
+    double? grammarConfidence,
   }) async {
     final w = Word(
       word: word,
@@ -173,9 +208,17 @@ class WordProvider extends ChangeNotifier {
       exampleTarget: exampleTarget,
       sourceLang: sourceLang,
       targetLang: targetLang,
+      note: note,
+      grammarTip: grammarTip,
+      partOfSpeech: partOfSpeech,
+      grammarData: grammarData,
+      usageNote: usageNote,
+      grammarVersion: grammarVersion,
+      grammarConfidence: grammarConfidence,
     );
     await DatabaseService.insertWord(w);
     await loadWords();
+    AnalyticsService.trackEvent('add_word');
     return true;
   }
 
@@ -253,6 +296,12 @@ class WordProvider extends ChangeNotifier {
         exampleTarget: exampleTarget,
         sourceLang: from,
         targetLang: to,
+        partOfSpeech: result.partOfSpeech,
+        grammarData: result.grammarData,
+        grammarTip: result.grammarTip,
+        usageNote: result.usageNote,
+        grammarVersion: result.grammarVersion,
+        grammarConfidence: result.grammarConfidence,
       ));
       return ImportOutcome(input, ImportStatus.added, savedWord: finalWord);
     } catch (e) {
@@ -272,6 +321,13 @@ class WordProvider extends ChangeNotifier {
       targetLang: word.targetLang,
       note: word.note,
       grammarTip: word.grammarTip,
+      partOfSpeech: word.partOfSpeech,
+      grammarData: word.grammarData,
+      usageNote: word.usageNote,
+      grammarVersion: word.grammarVersion,
+      grammarConfidence: word.grammarConfidence,
+      secondLang: word.secondLang,
+      secondTranslation: word.secondTranslation,
       archived: word.archived,
       isReviewed: word.isReviewed,
       srsInterval: word.srsInterval,
@@ -366,6 +422,7 @@ class WordProvider extends ChangeNotifier {
     await DatabaseService.updateWord(word.copyWith(archived: true));
     await loadWords();
     await refreshSrs();
+    AnalyticsService.trackEvent('archive_word');
   }
 
   /// Restore an archived word so it shows again.
@@ -373,6 +430,7 @@ class WordProvider extends ChangeNotifier {
     await DatabaseService.updateWord(word.copyWith(archived: false));
     await loadWords();
     await refreshSrs();
+    AnalyticsService.trackEvent('unarchive_word');
   }
 
   /// Archived words (for the Archived Words screen).
@@ -416,17 +474,77 @@ class WordProvider extends ChangeNotifier {
 
   /// Fetch an AI grammar/usage tip for [word] and persist it. Returns the tip
   /// ('' when there's nothing noteworthy — stored so the UI knows it was tried).
-  Future<String> generateGrammarTipFor(Word word, {String? level}) async {
-    final tip = await _translationService.generateGrammarTip(
-      word: word.word,
-      sourceLang: word.sourceLang,
-      targetLang: word.targetLang,
-      level: level,
-      firebaseUid: FirebaseService.instance.currentUser?.uid,
-    );
-    await DatabaseService.updateWord(word.copyWith(grammarTip: tip));
-    await loadWords();
-    return tip;
+  /// Re-uses local database cache unless force is specified.
+  Future<String> generateGrammarTipFor(Word word, {String? level, bool force = false}) async {
+    if (!force && word.grammarTip != null && word.grammarTip!.isNotEmpty) {
+      return word.grammarTip!;
+    }
+    try {
+      final enrichedResult = await _translationService.enrichGrammar(
+        word: word.word,
+        sourceLang: word.sourceLang,
+        targetLang: word.targetLang,
+        level: level,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
+      );
+      final tip = enrichedResult.grammarTip ?? await _translationService.generateGrammarTip(
+        word: word.word,
+        sourceLang: word.sourceLang,
+        targetLang: word.targetLang,
+        level: level,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
+      );
+      final updated = word.copyWith(
+        grammarTip: tip,
+        partOfSpeech: enrichedResult.partOfSpeech ?? word.partOfSpeech,
+        grammarData: enrichedResult.grammarData ?? word.grammarData,
+        usageNote: enrichedResult.usageNote ?? word.usageNote,
+        grammarVersion: enrichedResult.grammarVersion > word.grammarVersion ? enrichedResult.grammarVersion : (word.grammarVersion == 0 ? 1 : word.grammarVersion),
+        grammarConfidence: enrichedResult.grammarConfidence ?? word.grammarConfidence,
+      );
+      await DatabaseService.updateWord(updated);
+      await loadWords();
+      return tip;
+    } catch (e) {
+      // Fallback to legacy grammar tip generation on error
+      final tip = await _translationService.generateGrammarTip(
+        word: word.word,
+        sourceLang: word.sourceLang,
+        targetLang: word.targetLang,
+        level: level,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
+      );
+      await DatabaseService.updateWord(word.copyWith(grammarTip: tip));
+      await loadWords();
+      return tip;
+    }
+  }
+
+  /// On-demand re-enrichment of a vocabulary flashcard to latest AI Teacher attributes.
+  Future<Word> reEnrichWord(Word word, {String? level}) async {
+    try {
+      final enrichedResult = await _translationService.enrichGrammar(
+        word: word.word,
+        sourceLang: word.sourceLang,
+        targetLang: word.targetLang,
+        level: level,
+        firebaseUid: FirebaseService.instance.currentUser?.uid,
+      );
+      final updatedWord = word.copyWith(
+        partOfSpeech: enrichedResult.partOfSpeech ?? word.partOfSpeech,
+        grammarData: enrichedResult.grammarData ?? word.grammarData,
+        grammarTip: enrichedResult.grammarTip ?? word.grammarTip,
+        usageNote: enrichedResult.usageNote ?? word.usageNote,
+        grammarVersion: enrichedResult.grammarVersion > 0 ? enrichedResult.grammarVersion : 1,
+        grammarConfidence: enrichedResult.grammarConfidence ?? word.grammarConfidence,
+      );
+      await DatabaseService.updateWord(updatedWord);
+      await loadWords();
+      AnalyticsService.trackEvent('reenrich_word');
+      return updatedWord;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Evaluate a user's original sentence using [word].
@@ -439,26 +557,7 @@ class WordProvider extends ChangeNotifier {
     );
   }
 
-  /// Remove duplicate words (same text + same language pair, case-insensitive),
-  /// keeping the OLDEST of each group. Returns how many were removed.
-  Future<int> removeDuplicates() async {
-    final seen = <String>{};
-    final toDelete = <int>[];
-    // Oldest first (lowest id) so the first-added occurrence is the keeper.
-    final sorted = [..._words]..sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
-    for (final w in sorted) {
-      final key =
-          '${w.word.trim().toLowerCase()}|${w.sourceLang}|${w.targetLang}';
-      if (!seen.add(key) && w.id != null) {
-        toDelete.add(w.id!);
-      }
-    }
-    for (final id in toDelete) {
-      await DatabaseService.deleteWord(id);
-    }
-    if (toDelete.isNotEmpty) await loadWords();
-    return toDelete.length;
-  }
+
 
   Future<List<Word>> searchWords(String query) async {
     if (query.trim().isEmpty) {
@@ -482,6 +581,7 @@ class WordProvider extends ChangeNotifier {
   /// Returns a [ReviewResult] with the remaining due count and the
   /// (possibly updated) streak, so the UI can react without re-querying.
   Future<ReviewResult> processReview(Word word, Rating rating) async {
+    AnalyticsService.trackEvent('review_card', {'rating': rating.name});
     try {
       final next = SrsService.next(
         repetitions: word.srsRepetitions,

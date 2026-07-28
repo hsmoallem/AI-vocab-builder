@@ -18,10 +18,12 @@ import 'text_to_audio_screen.dart';
 import 'ai_quiz_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/word_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/firebase_service.dart';
 import '../services/study_prefs.dart';
 import '../config/app_strings.dart';
 import 'streak_screen.dart';
+import '../services/analytics_service.dart';
 
 
 class MobileDashboardLayout extends StatefulWidget {
@@ -34,6 +36,22 @@ class MobileDashboardLayout extends StatefulWidget {
 class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
   int _currentIndex = 0;
   bool _isBackingUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsService.trackView('/mobile/home', 'Mobile App Start');
+      AnalyticsService.trackEvent('mobile_app_open');
+    });
+  }
+
+  void _onTabSelect(int index) {
+    setState(() => _currentIndex = index);
+    final tabName = index == 0 ? 'Reader' : (index == 1 ? 'Daily AI' : 'My Words');
+    AnalyticsService.trackView('/mobile/${tabName.toLowerCase().replaceAll(' ', '_')}', 'Mobile $tabName');
+    AnalyticsService.trackEvent('mobile_navigation', {'tab': tabName});
+  }
 
   // The PDF reader relies on Android-native plugins, so it's omitted on web.
   // kIsWeb is a compile-time constant, so this stays a const list.
@@ -228,12 +246,17 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       body: Column(
         children: [
           if (auth.isSignedIn && auth.isAnonymous) _buildAnonymousBanner(),
-          Expanded(child: _screens[_currentIndex]),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onDestinationSelected: _onTabSelect,
         destinations: [
           if (!kIsWeb)
             NavigationDestination(
@@ -397,13 +420,20 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     setState(() => _isBackingUp = true);
 
     try {
-      final words = await context.read<WordProvider>().getAllWordsForBackup();
+      final provider = context.read<WordProvider>();
+      final words = await provider.getAllWordsForBackup();
       await FirebaseService.instance.backupWords(words);
+      try {
+        await FirebaseService.instance.backupSettings();
+        await FirebaseService.instance.updateStreak(provider.streak);
+      } catch (e) {
+        debugPrint('Non-fatal error backing up secondary data: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Backed up ${words.length} words to cloud'),
+            content: Text('Backed up ${words.length} words, streak, and settings to cloud'),
             backgroundColor: Colors.green,
           ),
         );
@@ -456,12 +486,20 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       if (cloudWords.isNotEmpty) {
         addedOrUpdated = await provider.syncRestoredWords(cloudWords);
       }
-      await provider.syncCloudStreak();
+      try {
+        await provider.syncCloudStreak();
+        await FirebaseService.instance.restoreSettings();
+        if (mounted) {
+          await context.read<LocaleProvider>().load();
+        }
+      } catch (e) {
+        debugPrint('Non-fatal error restoring secondary data: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully synced $addedOrUpdated vocabulary items and streak from cloud backup.'),
+            content: Text('Successfully synced $addedOrUpdated words, streak, and settings from cloud backup.'),
             backgroundColor: Colors.green,
           ),
         );

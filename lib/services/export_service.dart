@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/word.dart';
 import 'web_download.dart';
+import 'analytics_service.dart';
 
 class ExportService {
   static const _channel = MethodChannel('com.vocabreader/share');
@@ -25,44 +26,82 @@ class ExportService {
   }
 
   static const _headers =
-      'Word,Translation,Example (source),Example (target),From,To,Note,Grammar tip,Added';
+      'Word,Translation,Part of speech,IPA,Article,Plural,Feminine,Infinitive,Verb type,Example (source),Example (target),From,To,Note,Grammar tip,Usage note,Added';
 
-  static String _csv(String s) => '"${s.replaceAll('"', '""')}"';
+  static String _csv(Object? s) => '"${(s ?? '').toString().replaceAll('"', '""')}"';
 
   static String toCsv(List<Word> words) {
     final b = StringBuffer()..writeln(_headers);
     for (final w in _newestFirst(words)) {
+      final gd = w.grammarData ?? <String, dynamic>{};
       b.writeln([
         w.word,
         w.translation,
+        w.partOfSpeech ?? '',
+        gd['ipa'] ?? '',
+        gd['article'] ?? '',
+        gd['plural'] ?? '',
+        gd['feminine'] ?? '',
+        gd['infinitive'] ?? '',
+        gd['verb_type'] ?? '',
         w.exampleSource,
         w.exampleTarget,
         w.sourceLang,
         w.targetLang,
         w.note ?? '',
         w.grammarTip ?? '',
+        w.usageNote ?? '',
         w.createdAt.toIso8601String(),
       ].map(_csv).join(','));
     }
     return b.toString();
   }
 
-  /// Tab-separated — paste directly into Excel/Sheets cells.
+  static String _tsv(Object? s) =>
+      (s ?? '').toString().replaceAll('\t', ' ').replaceAll('\n', ' ').replaceAll('\r', '');
+
   static String toTsv(List<Word> words) {
-    String cell(String s) => s.replaceAll('\t', ' ').replaceAll('\n', ' / ');
-    final b = StringBuffer()..writeln(_headers.replaceAll(',', '\t'));
+    final b = StringBuffer()
+      ..writeln([
+        'Word',
+        'Translation',
+        'Part of speech',
+        'IPA',
+        'Article',
+        'Plural',
+        'Feminine',
+        'Infinitive',
+        'Verb type',
+        'Example (source)',
+        'Example (target)',
+        'From',
+        'To',
+        'Note',
+        'Grammar tip',
+        'Usage note',
+        'Added'
+      ].join('\t'));
     for (final w in _newestFirst(words)) {
+      final gd = w.grammarData ?? <String, dynamic>{};
       b.writeln([
         w.word,
         w.translation,
+        w.partOfSpeech ?? '',
+        gd['ipa'] ?? '',
+        gd['article'] ?? '',
+        gd['plural'] ?? '',
+        gd['feminine'] ?? '',
+        gd['infinitive'] ?? '',
+        gd['verb_type'] ?? '',
         w.exampleSource,
         w.exampleTarget,
         w.sourceLang,
         w.targetLang,
         w.note ?? '',
         w.grammarTip ?? '',
+        w.usageNote ?? '',
         w.createdAt.toIso8601String(),
-      ].map(cell).join('\t'));
+      ].map(_tsv).join('\t'));
     }
     return b.toString();
   }
@@ -70,14 +109,32 @@ class ExportService {
   static String toText(List<Word> words) {
     final b = StringBuffer();
     for (final w in _newestFirst(words)) {
-      b.writeln('${w.word} — ${w.translation}  [${w.sourceLang}→${w.targetLang}]');
+      final gd = w.grammarData ?? <String, dynamic>{};
+      b.writeln('${w.word}  →  ${w.translation}');
+      final pos = w.partOfSpeech ?? '';
+      final ipaStr = gd['ipa']?.toString() ?? '';
+      if (pos.isNotEmpty || ipaStr.isNotEmpty) {
+        final ipaDisplay = ipaStr.isNotEmpty ? '[$ipaStr]' : '';
+        b.writeln('  Grammar: ${'$pos $ipaDisplay'.trim()}');
+      }
+      final articleStr = gd['article']?.toString() ?? '';
+      final pluralStr = gd['plural']?.toString() ?? '';
+      final femStr = gd['feminine']?.toString() ?? '';
+      if (articleStr.isNotEmpty || pluralStr.isNotEmpty || femStr.isNotEmpty) {
+        final forms = <String>[];
+        if (articleStr.isNotEmpty) forms.add('Art: $articleStr');
+        if (pluralStr.isNotEmpty) forms.add('Pl: $pluralStr');
+        if (femStr.isNotEmpty) forms.add('Fem: $femStr');
+        b.writeln('  Forms: ${forms.join(', ')}');
+      }
       if (w.exampleSource.isNotEmpty) {
         b.writeln('  ${w.exampleSource.replaceAll('\n', '\n  ')}');
       }
       if (w.exampleTarget.isNotEmpty) {
         b.writeln('  ${w.exampleTarget.replaceAll('\n', '\n  ')}');
       }
-      if ((w.grammarTip ?? '').isNotEmpty) b.writeln('  Grammar: ${w.grammarTip}');
+      if ((w.grammarTip ?? '').isNotEmpty) b.writeln('  Rule: ${w.grammarTip}');
+      if ((w.usageNote ?? '').isNotEmpty) b.writeln('  Usage tip: ${w.usageNote}');
       if ((w.note ?? '').isNotEmpty) b.writeln('  Note: ${w.note}');
       b.writeln();
     }
@@ -90,6 +147,7 @@ class ExportService {
     required String filename,
     required String mime,
   }) async {
+    AnalyticsService.trackEvent('export_file', {'filename': filename, 'format': mime});
     if (kIsWeb) {
       // Browser download instead of the native Android share sheet.
       downloadTextFile(content, filename, mime);

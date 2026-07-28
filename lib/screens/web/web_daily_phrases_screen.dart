@@ -12,6 +12,7 @@ import '../../services/tts_service.dart';
 import '../../widgets/cefr_level_dropdown.dart';
 import '../../widgets/searchable_dropdown.dart';
 import '../../widgets/web_top_bar.dart';
+import '../../services/analytics_service.dart';
 
 class WebDailyPhrasesScreen extends StatefulWidget {
   const WebDailyPhrasesScreen({super.key});
@@ -137,6 +138,7 @@ class _WebDailyPhrasesScreenState extends State<WebDailyPhrasesScreen> {
       });
     }
     setState(() => _isRefreshing = true);
+    AnalyticsService.trackEvent('generate_ai_phrases', {'platform': 'web'});
     _loadPhrases(theme: theme.isNotEmpty ? theme : null, forceRefresh: true);
   }
 

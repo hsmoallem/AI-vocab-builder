@@ -31,6 +31,25 @@
 
   <title>ai_vocab_builder</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Umami Analytics -->
+  <script defer src="https://stats.houssammoallem.com/script.js" data-website-id="b7e25363-f784-45fe-b28a-dfbf61916a4b"></script>
+  <script>
+    function umamiTrackEvent(eventName, eventData) {
+      if (typeof umami !== 'undefined') {
+        try {
+          umami.track(eventName, JSON.parse(eventData || '{}'));
+        } catch(e) {
+          umami.track(eventName);
+        }
+      }
+    }
+    function umamiTrackView(url, title) {
+      if (typeof umami !== 'undefined') {
+        umami.track(props => ({ ...props, url: url, title: title }));
+      }
+    }
+  </script>
 </head>
 <body>
   <!--

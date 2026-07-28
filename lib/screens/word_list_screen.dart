@@ -10,6 +10,8 @@ import '../services/export_service.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/word_card.dart';
 import 'archived_words_screen.dart';
+import '../models/study_mode.dart';
+import 'study_mode_selector.dart';
 
 class WordListScreen extends StatefulWidget {
   const WordListScreen({super.key});
@@ -23,6 +25,20 @@ class _WordListScreenState extends State<WordListScreen> {
   final TtsService _tts = TtsService();
   Timer? _debounce;
   String _searchQuery = '';
+  bool _isSelecting = false;
+  final Set<int> _selectedIds = {};
+
+  Future<void> _startStudySession(BuildContext context, List<Word> selectedWords) async {
+    if (selectedWords.isEmpty) return;
+    final mode = await showStudyModeSelector(
+      context: context,
+      dueCount: selectedWords.length,
+      newCount: 0,
+    );
+    if (mode != null && context.mounted) {
+      context.push('/review', extra: {'mode': mode, 'deck': selectedWords});
+    }
+  }
 
   @override
   void dispose() {
@@ -113,38 +129,6 @@ class _WordListScreenState extends State<WordListScreen> {
     }
   }
 
-  Future<void> _removeDuplicates(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove duplicates?'),
-        content: const Text(
-          'Removes words that repeat the same text and language pair, keeping '
-          'the oldest of each. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove')),
-        ],
-      ),
-    );
-    if (confirm != true || !context.mounted) return;
-    final removed = await context.read<WordProvider>().removeDuplicates();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(removed == 0
-              ? 'No duplicates found'
-              : 'Removed $removed duplicate${removed == 1 ? '' : 's'}'),
-        ),
-      );
-    }
-  }
-
   Future<void> _export(BuildContext context) async {
     final words = context.read<WordProvider>().words;
     if (words.isEmpty) {
@@ -231,26 +215,89 @@ class _WordListScreenState extends State<WordListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
-                  _SortChip(
-                    label: s.sortAlphabetical,
-                    icon: Icons.sort_by_alpha,
-                    selected: provider.sortMode == SortMode.alphabetical,
-                    onTap: () => provider.setSortMode(SortMode.alphabetical),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: PopupMenuButton<SortMode>(
+                        tooltip: 'Sort words',
+                        initialValue: provider.sortMode,
+                        onSelected: (mode) => provider.setSortMode(mode),
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: SortMode.alphabetical,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.sort_by_alpha, size: 20),
+                                const SizedBox(width: 8),
+                                Text(s.sortAlphabetical),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: SortMode.newestFirst,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.access_time, size: 20),
+                                const SizedBox(width: 8),
+                                Text(s.sortNewest),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: SortMode.oldestFirst,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.history, size: 20),
+                                const SizedBox(width: 8),
+                                Text(s.sortOldest),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                provider.sortMode == SortMode.alphabetical
+                                    ? Icons.sort_by_alpha
+                                    : (provider.sortMode == SortMode.oldestFirst ? Icons.history : Icons.access_time),
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                provider.sortMode == SortMode.alphabetical
+                                    ? s.sortAlphabetical
+                                    : (provider.sortMode == SortMode.oldestFirst ? s.sortOldest : s.sortNewest),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).colorScheme.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  _SortChip(
-                    label: provider.sortMode == SortMode.oldestFirst ? s.sortOldest : s.sortNewest,
-                    icon: provider.sortMode == SortMode.oldestFirst ? Icons.history : Icons.access_time,
-                    selected: provider.sortMode == SortMode.newestFirst || provider.sortMode == SortMode.oldestFirst,
-                    onTap: () {
-                      if (provider.sortMode == SortMode.newestFirst) {
-                        provider.setSortMode(SortMode.oldestFirst);
-                      } else {
-                        provider.setSortMode(SortMode.newestFirst);
-                      }
+                  IconButton(
+                    icon: Icon(_isSelecting ? Icons.check_box : Icons.check_box_outline_blank, color: _isSelecting ? Theme.of(context).colorScheme.primary : null),
+                    tooltip: 'Select to Study',
+                    onPressed: () {
+                      setState(() {
+                        _isSelecting = !_isSelecting;
+                        if (!_isSelecting) _selectedIds.clear();
+                      });
                     },
                   ),
-                  const Spacer(),
                   Text(
                     '${filtered.length} ${s.locale == "de" ? (filtered.length == 1 ? "Wort" : "Wörter") : (filtered.length == 1 ? "word" : "words")}',
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
@@ -259,7 +306,6 @@ class _WordListScreenState extends State<WordListScreen> {
                     icon: const Icon(Icons.more_vert),
                     tooltip: s.locale == 'de' ? 'Mehr' : 'More',
                     onSelected: (v) {
-                      if (v == 'dedupe') _removeDuplicates(context);
                       if (v == 'export') _export(context);
                       if (v == 'archived') {
                         context.push('/archived');
@@ -272,27 +318,18 @@ class _WordListScreenState extends State<WordListScreen> {
                           leading: const Icon(Icons.ios_share),
                           title: Text(s.locale == 'de'
                               ? 'Wortliste exportieren'
-                              : 'Export word list'),
+                              : 'Export Word List'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
+                      const PopupMenuDivider(),
                       PopupMenuItem(
                         value: 'archived',
                         child: ListTile(
                           leading: const Icon(Icons.archive_outlined),
                           title: Text(s.locale == 'de'
                               ? 'Archivierte Wörter'
-                              : 'Archived words'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'dedupe',
-                        child: ListTile(
-                          leading: const Icon(Icons.cleaning_services_outlined),
-                          title: Text(s.locale == 'de'
-                              ? 'Duplikate entfernen'
-                              : 'Remove duplicates'),
+                              : 'Archived Words'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -301,6 +338,100 @@ class _WordListScreenState extends State<WordListScreen> {
                 ],
               ),
             ),
+
+            if (_isSelecting)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer.withAlpha(50),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${_selectedIds.length} selected for study',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                        ),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.rocket_launch, size: 16),
+                          label: const Text('Study'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          onPressed: _selectedIds.isEmpty
+                              ? null
+                              : () {
+                                  final selectedWords = provider.words.where((w) => w.id != null && _selectedIds.contains(w.id!)).toList();
+                                  _startStudySession(context, selectedWords);
+                                },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), minimumSize: Size.zero),
+                            onPressed: () {
+                              setState(() {
+                                _selectedIds.clear();
+                                for (var i = 0; i < filtered.length && i < 20; i++) {
+                                  if (filtered[i].id != null) _selectedIds.add(filtered[i].id!);
+                                }
+                              });
+                            },
+                            child: const Text('Top 20', style: TextStyle(fontSize: 12)),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), minimumSize: Size.zero),
+                            onPressed: () {
+                              setState(() {
+                                _selectedIds.clear();
+                                for (var i = 0; i < filtered.length && i < 40; i++) {
+                                  if (filtered[i].id != null) _selectedIds.add(filtered[i].id!);
+                                }
+                              });
+                            },
+                            child: const Text('Top 40', style: TextStyle(fontSize: 12)),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), minimumSize: Size.zero),
+                            onPressed: () {
+                              setState(() {
+                                _selectedIds.clear();
+                                final now = DateTime.now();
+                                for (var w in filtered) {
+                                  if (w.id != null && (w.srsNextDue == null || w.srsNextDue!.isBefore(now))) {
+                                    _selectedIds.add(w.id!);
+                                  }
+                                }
+                              });
+                            },
+                            child: const Text('Due Today', style: TextStyle(fontSize: 12)),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), minimumSize: Size.zero),
+                            onPressed: () => setState(() => _selectedIds.clear()),
+                            child: const Text('Clear', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // Word list
             Expanded(
@@ -344,32 +475,52 @@ class _WordListScreenState extends State<WordListScreen> {
                             _deleteWord(context, word);
                             return false;
                           },
-                          child: WordCard(
-                            word: word,
-                            onDelete: () => _deleteWord(context, word),
-                            onToggleReview: () {
-                              context.read<WordProvider>().toggleReview(word);
-                            },
-                            // Regenerate the example sentence(s) via AI
-                            onRegenerate: () => _regenerate(context, word),
-                            // 🔊 Speak word in its source language
-                            onSpeakWord: () {
-                              _tts.speak(word.word, language: word.sourceLang);
-                            },
-                            // 🔊 Speak example in its source language
-                            onSpeakExample: word.exampleSource.isNotEmpty
-                                ? () {
-                                    _tts.speak(word.exampleSource,
-                                        language: word.sourceLang);
-                                  }
-                                : null,
-                            // 🔊 Speak target example in target language
-                            onSpeakTargetExample: word.exampleTarget.isNotEmpty
-                                ? () {
-                                    _tts.speak(word.exampleTarget,
-                                        language: word.targetLang);
-                                  }
-                                : null,
+                          child: Row(
+                            children: [
+                              if (_isSelecting)
+                                Checkbox(
+                                  value: word.id != null && _selectedIds.contains(word.id!),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (word.id == null) return;
+                                      if (val == true) {
+                                        _selectedIds.add(word.id!);
+                                      } else {
+                                        _selectedIds.remove(word.id!);
+                                      }
+                                    });
+                                  },
+                                ),
+                              Expanded(
+                                child: WordCard(
+                                  word: word,
+                                  onDelete: () => _deleteWord(context, word),
+                                  onToggleReview: () {
+                                    context.read<WordProvider>().toggleReview(word);
+                                  },
+                                  // Regenerate the example sentence(s) via AI
+                                  onRegenerate: () => _regenerate(context, word),
+                                  // 🔊 Speak word in its source language
+                                  onSpeakWord: () {
+                                    _tts.speak(word.word, language: word.sourceLang);
+                                  },
+                                  // 🔊 Speak example in its source language
+                                  onSpeakExample: word.exampleSource.isNotEmpty
+                                      ? () {
+                                          _tts.speak(word.exampleSource,
+                                              language: word.sourceLang);
+                                        }
+                                      : null,
+                                  // 🔊 Speak target example in target language
+                                  onSpeakTargetExample: word.exampleTarget.isNotEmpty
+                                      ? () {
+                                          _tts.speak(word.exampleTarget,
+                                              language: word.targetLang);
+                                        }
+                                      : null,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -382,31 +533,7 @@ class _WordListScreenState extends State<WordListScreen> {
   }
 }
 
-class _SortChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
 
-  const _SortChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-      avatar: Icon(icon, size: 16),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      showCheckmark: false,
-    );
-  }
-}
 
 // ─── Export options ────────────────────────────────────────────────
 

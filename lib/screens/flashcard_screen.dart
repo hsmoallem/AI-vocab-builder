@@ -7,6 +7,7 @@ import '../widgets/note_edit_dialog.dart';
 import '../config/app_strings.dart';
 import '../utils/clipboard_util.dart';
 import '../widgets/searchable_dropdown.dart';
+import '../widgets/grammar_tutor_sheet.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class FlashcardScreen extends StatefulWidget {
@@ -616,19 +617,44 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               ),
               const SizedBox(height: 8),
 
-              // Language badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  word.targetLang.toUpperCase(),
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600),
-                ),
+              // Language badge & comprehensive teacher grammar traits
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      word.targetLang.toUpperCase(),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (word.partOfSpeech != null && word.partOfSpeech!.isNotEmpty)
+                    _buildGrammarChip(word.partOfSpeech!, Colors.indigo),
+                  if (word.ipa != null && word.ipa!.isNotEmpty)
+                    _buildGrammarChip('[${word.ipa!}]', Colors.purple),
+                  if (word.grammarData?['article'] != null)
+                    _buildGrammarChip('Art: ${word.grammarData?['article']}', Colors.blue),
+                  if (word.grammarData?['plural'] != null && word.grammarData?['plural'].toString().isNotEmpty == true)
+                    _buildGrammarChip('Pl: ${word.grammarData?['plural']}', Colors.teal),
+                  if (word.grammarData?['feminine'] != null && word.grammarData?['feminine'].toString().isNotEmpty == true)
+                    _buildGrammarChip('Fem: ${word.grammarData?['feminine']}', Colors.pink),
+                  if (word.grammarData?['infinitive'] != null && word.grammarData?['infinitive'].toString().isNotEmpty == true)
+                    _buildGrammarChip('Inf: ${word.grammarData?['infinitive']}', Colors.cyan),
+                  if (word.grammarData?['verb_type'] != null && word.grammarData?['verb_type'].toString().isNotEmpty == true)
+                    _buildGrammarChip('${word.grammarData?['verb_type']}', Colors.deepOrange),
+                  if (word.isIrregular) _buildGrammarChip('Irregular', Colors.orange),
+                  if (word.isReflexive) _buildGrammarChip('Reflexive', Colors.blue),
+                  if (word.isSeparable) _buildGrammarChip('Separable', Colors.teal),
+                ],
               ),
 
               // Examples
@@ -736,11 +762,26 @@ class _FlashcardScreenState extends State<FlashcardScreen>
     );
   }
 
-  /// AI grammar/usage tip. null = never generated (show button); '' = generated
-  /// but nothing noteworthy; non-empty = show the tip.
+  Widget _buildGrammarChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        border: Border.all(color: color.withAlpha(120), width: 1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  /// AI grammar/usage tip & Tutor Console.
   Widget _buildGrammarSection(BuildContext context, Word word) {
     final cs = Theme.of(context).colorScheme;
     final tip = word.grammarTip;
+    final hasGrammar = word.grammarVersion >= 1 || (tip != null && tip.isNotEmpty) || (word.grammarData != null && word.grammarData!.isNotEmpty) || word.usageNote != null;
 
     final spinner = SizedBox(
       width: 16,
@@ -748,34 +789,25 @@ class _FlashcardScreenState extends State<FlashcardScreen>
       child: CircularProgressIndicator(strokeWidth: 2, color: cs.tertiary),
     );
 
-    if (tip == null) {
+    if (!hasGrammar) {
       return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: OutlinedButton.icon(
-          onPressed: _grammarLoading ? null : () => _generateGrammar(word),
-          icon: _grammarLoading
-              ? spinner
-              : const Icon(Icons.lightbulb_outline, size: 18),
-          label: Text(_grammarLoading ? 'Generating…' : 'Grammar tip'),
-        ),
-      );
-    }
-
-    if (tip.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        padding: const EdgeInsets.only(top: 16),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
           children: [
-            Text('No notable grammar point',
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-            IconButton(
+            OutlinedButton.icon(
+              onPressed: _grammarLoading ? null : () => _generateGrammar(word),
               icon: _grammarLoading
                   ? spinner
-                  : const Icon(Icons.refresh, size: 16),
-              tooltip: 'Try again',
-              onPressed: _grammarLoading ? null : () => _generateGrammar(word),
-              visualDensity: VisualDensity.compact,
+                  : const Icon(Icons.auto_awesome, size: 18),
+              label: Text(_grammarLoading ? 'Enriching with AI Tutor…' : 'Enrich with AI Tutor'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => showGrammarTutorSheet(context, word),
+              icon: const Icon(Icons.school, size: 18),
+              label: const Text('AI Tutor Console'),
             ),
           ],
         ),
@@ -784,29 +816,40 @@ class _FlashcardScreenState extends State<FlashcardScreen>
 
     return Container(
       margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cs.tertiaryContainer.withAlpha(120),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.tertiary.withAlpha(80)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb, size: 16, color: cs.tertiary),
-              const SizedBox(width: 6),
-              Text('Grammar tip',
+              Icon(Icons.school, size: 18, color: cs.tertiary),
+              const SizedBox(width: 8),
+              Text('AI Language Tutor',
                   style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: cs.tertiary)),
               const Spacer(),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                ),
+                icon: const Icon(Icons.open_in_new, size: 14),
+                label: const Text('Open Console', style: TextStyle(fontSize: 12)),
+                onPressed: () => showGrammarTutorSheet(context, word),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.copy, size: 16),
-                tooltip: 'Copy grammar tip',
+                tooltip: 'Copy teacher notes',
                 onPressed: () =>
-                    copyToClipboard(context, tip, label: 'Grammar tip'),
+                    copyToClipboard(context, '${word.grammarTip ?? ''}\n${word.usageNote ?? ''}'.trim(), label: 'Tutor notes'),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints:
@@ -816,7 +859,7 @@ class _FlashcardScreenState extends State<FlashcardScreen>
                 icon: _grammarLoading
                     ? spinner
                     : const Icon(Icons.refresh, size: 16),
-                tooltip: 'Regenerate',
+                tooltip: 'Re-enrich grammar',
                 onPressed:
                     _grammarLoading ? null : () => _generateGrammar(word),
                 visualDensity: VisualDensity.compact,
@@ -826,8 +869,34 @@ class _FlashcardScreenState extends State<FlashcardScreen>
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(tip, style: const TextStyle(fontSize: 13)),
+          if (tip != null && tip.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(tip, style: const TextStyle(fontSize: 13)),
+          ],
+          if (word.usageNote != null && word.usageNote!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: cs.surface.withAlpha(160),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.record_voice_over_outlined, size: 16, color: cs.secondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Teacher Note: ${word.usageNote}',
+                      style: TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

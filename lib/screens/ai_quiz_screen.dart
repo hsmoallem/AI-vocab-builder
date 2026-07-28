@@ -70,26 +70,14 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
     });
 
     final wordsStr = selected.map((w) => w.word).join(', ');
-    final themePrompt = "A creative short story told across 5 to 6 sequential sentences that incorporate these vocabulary words: $wordsStr. Each item in the phrases list must be the next sentence of the story.";
+    final themePrompt = "Write 5 simple sequential conversational sentences forming a short story using these vocabulary words: $wordsStr. Return each sentence strictly as a string in the JSON phrases list without numbering or markdown formatting.";
 
     try {
-      List<DailyPhrase> phrases;
-      try {
-        phrases = await _api.generateDailyPhrases(
-          lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
-          theme: themePrompt,
-          level: 'B1',
-        );
-      } catch (_) {
-        // Fallback retry with a simplified theme prompt if the first attempt faced a temporary server or timeout hiccup
-        await Future.delayed(const Duration(milliseconds: 1000));
-        final fallbackPrompt = "Short cohesive story in 5 sentences using words: $wordsStr";
-        phrases = await _api.generateDailyPhrases(
-          lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
-          theme: fallbackPrompt,
-          level: 'B1',
-        );
-      }
+      final phrases = await _api.generateDailyPhrases(
+        lang: selected.first.sourceLang.isNotEmpty ? selected.first.sourceLang : 'de',
+        theme: themePrompt,
+        level: 'B1',
+      );
       
       setState(() {
         _generatedStory = phrases.map((p) => p.phrase).join(' '); // Join sentences into a story paragraph
@@ -136,8 +124,8 @@ class _AiQuizScreenState extends State<AiQuizScreen> {
 
             return AlertDialog(
               title: const Text('Select Vocabulary'),
-              content: SizedBox(
-                width: double.maxFinite,
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

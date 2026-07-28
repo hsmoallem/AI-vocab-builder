@@ -59,7 +59,8 @@ class DatabaseService {
       path,
       // v2: note + grammar_tip.  v3: archived.  v4: SM-2 SRS fields + app_state.
       // v5: saved 2nd-language translation.
-      version: 5,
+      // v6: AI Tutor canonical grammar, usage notes, versioning, confidence.
+      version: 6,
       onCreate: (db, version) async {
         // Fresh install — create the table with all current columns.
         await db.execute('''
@@ -83,7 +84,12 @@ class DatabaseService {
             srs_ease_factor REAL NOT NULL DEFAULT 2.5,
             srs_repetitions INTEGER NOT NULL DEFAULT 0,
             srs_next_due TEXT,
-            srs_last_review TEXT
+            srs_last_review TEXT,
+            part_of_speech TEXT,
+            grammar_data TEXT,
+            usage_note TEXT,
+            grammar_version INTEGER NOT NULL DEFAULT 0,
+            grammar_confidence REAL
           )
         ''');
         // Single-row table for streak + study-day tracking.
@@ -143,6 +149,15 @@ class DatabaseService {
           await db.execute('ALTER TABLE words ADD COLUMN second_lang TEXT');
           await db.execute(
               'ALTER TABLE words ADD COLUMN second_translation TEXT');
+        }
+        if (oldVersion < 6) {
+          // AI Tutor canonical grammar fields, conversational usage notes, versioning, confidence.
+          await db.execute('ALTER TABLE words ADD COLUMN part_of_speech TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN grammar_data TEXT');
+          await db.execute('ALTER TABLE words ADD COLUMN usage_note TEXT');
+          await db.execute(
+              'ALTER TABLE words ADD COLUMN grammar_version INTEGER NOT NULL DEFAULT 0');
+          await db.execute('ALTER TABLE words ADD COLUMN grammar_confidence REAL');
         }
       },
     );
@@ -360,8 +375,11 @@ class DatabaseService {
         final dayDiff = today.difference(lastMidnight).inDays;
         if (dayDiff == 1) {
           newCurrent = current.current + 1;
+        } else if (dayDiff == 2) {
+          // Missed 1 day: Automatically apply a Streak Freeze! Preserve and continue streak.
+          newCurrent = current.current + 1;
         } else {
-          // Gap > 1 day — streak broken, restart at 1.
+          // Gap > 2 days — streak broken, restart at 1.
           newCurrent = 1;
         }
       }

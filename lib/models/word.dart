@@ -12,11 +12,16 @@
 ///   and future sync conflict resolution.
 /// - **isReviewed:** Boolean flag for the flashcards feature — tracks
 ///   whether the user has flipped the card at least once.
+/// - **AI Tutor Enrichment (DB v6):** Stores structured grammar rules,
+///   objective linguistic facts (in JSON map `grammarData`), part of speech,
+///   teacher grammar tips, conversational usage notes, versioning, and AI confidence.
 ///
 /// ## Safe parsing in fromMap
 /// The `parseDate` helper catches malformed date strings and returns
 /// `DateTime.now()` instead of crashing. This was added after discovering
 /// that manual DB edits could introduce invalid timestamp formats.
+
+import 'dart:convert';
 
 class Word {
   int? id;
@@ -29,7 +34,7 @@ class Word {
   bool isReviewed;
   // Free-text note the user can attach to a card (nullable — added in DB v2).
   String? note;
-  // AI grammar/usage tip, generated on demand (nullable — added in DB v2).
+  // AI grammar rule tip, generated on demand or during enrichment (nullable — added in DB v2).
   String? grammarTip;
   // Archived words are hidden from Saved Words + flashcards (added in DB v3).
   bool archived;
@@ -55,6 +60,18 @@ class Word {
   /// When the card was last reviewed. null = never reviewed.
   DateTime? srsLastReview;
 
+  // ── AI Tutor & Canonical Grammar fields (DB v6) ─────────────────────
+  /// Part of speech: Noun, Verb, Adjective, Preposition, Adverb, etc. (nullable)
+  String? partOfSpeech;
+  /// Structured canonical objective grammatical facts + "extra" map.
+  Map<String, dynamic>? grammarData;
+  /// Teacher guidance focusing on conversational usage, tone, and real-life frequency.
+  String? usageNote;
+  /// Version of AI enrichment (0 = standard/legacy un-enriched, 1 = v1 tutor enriched).
+  int grammarVersion;
+  /// AI confidence score (0.0 to 1.0). < 0.80 displays a verification notice.
+  double? grammarConfidence;
+
   Word({
     this.id,
     required this.word,
@@ -76,6 +93,11 @@ class Word {
     this.srsRepetitions = 0,
     this.srsNextDue,
     this.srsLastReview,
+    this.partOfSpeech,
+    this.grammarData,
+    this.usageNote,
+    this.grammarVersion = 0,
+    this.grammarConfidence,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -88,6 +110,40 @@ class Word {
     final due = srsNextDue;
     if (due == null) return true; // new card
     return due.isBefore(DateTime.now());
+  }
+
+  // ── Convenience Grammar & Pronunciation Getters ────────────────────
+  /// Whether the word has irregular grammar forms (conjugation, plural, comparative, etc.).
+  bool get isIrregular => grammarData?['is_irregular'] == true;
+
+  /// Whether a verb is reflexive (e.g., sich freuen, se laver).
+  bool get isReflexive => grammarData?['is_reflexive'] == true;
+
+  /// Whether a verb is separable (e.g., aufstehen, meenemen).
+  bool get isSeparable => grammarData?['is_separable'] == true;
+
+  /// Whether a noun is uncountable (e.g., milk, informationen).
+  bool get isUncountable => grammarData?['is_uncountable'] == true;
+
+  /// International Phonetic Alphabet (IPA) pronunciation, if available.
+  String? get ipa => _extractPronunciation('ipa');
+
+  /// Syllable stress notes, if available.
+  String? get stress => _extractPronunciation('stress');
+
+  /// Audio URL for pronunciation playback, if available.
+  String? get audioUrl => _extractPronunciation('audio_url');
+
+  String? _extractPronunciation(String key) {
+    if (grammarData == null) return null;
+    final p = grammarData!['pronunciation'];
+    if (p is Map) {
+      final val = p[key]?.toString();
+      if (val != null && val.isNotEmpty) return val;
+    }
+    // Fallback to top-level key inside grammarData if placed directly
+    final val = grammarData![key]?.toString();
+    return (val != null && val.isNotEmpty) ? val : null;
   }
 
   /// Create from a database row map.
@@ -119,6 +175,23 @@ class Word {
       }
     }
 
+    // Safe JSON decoder for canonical grammar data map (added in DB v6).
+    Map<String, dynamic>? parseGrammarData(dynamic val) {
+      if (val == null) return null;
+      if (val is Map<String, dynamic>) return val;
+      if (val is Map) return Map<String, dynamic>.from(val);
+      if (val is String && val.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(val);
+          if (decoded is Map<String, dynamic>) return decoded;
+          if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
+    }
+
     return Word(
       id: map['id'] as int?,
       word: (map['word'] as String?) ?? '',
@@ -143,6 +216,12 @@ class Word {
       srsRepetitions: (map['srs_repetitions'] as int?) ?? 0,
       srsNextDue: parseNullableDate(map['srs_next_due'] as String?),
       srsLastReview: parseNullableDate(map['srs_last_review'] as String?),
+      // AI Tutor fields (DB v6). Absent on pre-v6 rows → defaults via model.
+      partOfSpeech: map['part_of_speech'] as String?,
+      grammarData: parseGrammarData(map['grammar_data']),
+      usageNote: map['usage_note'] as String?,
+      grammarVersion: (map['grammar_version'] as int?) ?? 0,
+      grammarConfidence: (map['grammar_confidence'] as num?)?.toDouble(),
     );
   }
 
@@ -171,6 +250,11 @@ class Word {
       'srs_repetitions': srsRepetitions,
       'srs_next_due': srsNextDue?.toIso8601String(),
       'srs_last_review': srsLastReview?.toIso8601String(),
+      'part_of_speech': partOfSpeech,
+      'grammar_data': grammarData != null ? jsonEncode(grammarData) : null,
+      'usage_note': usageNote,
+      'grammar_version': grammarVersion,
+      'grammar_confidence': grammarConfidence,
     };
   }
 
@@ -198,6 +282,11 @@ class Word {
     int? srsRepetitions,
     DateTime? srsNextDue,
     DateTime? srsLastReview,
+    String? partOfSpeech,
+    Map<String, dynamic>? grammarData,
+    String? usageNote,
+    int? grammarVersion,
+    double? grammarConfidence,
     // Sentinel-aware optionals: pass [clearSrsNextDue] / [clearSrsLastReview]
     // to set the field back to null (copyWith's usual `??` pattern can't
     // distinguish "leave unchanged" from "explicitly null").
@@ -226,6 +315,12 @@ class Word {
       srsNextDue: clearSrsNextDue ? null : (srsNextDue ?? this.srsNextDue),
       srsLastReview:
           clearSrsLastReview ? null : (srsLastReview ?? this.srsLastReview),
+      partOfSpeech: partOfSpeech ?? this.partOfSpeech,
+      grammarData: grammarData ?? (this.grammarData != null ? Map<String, dynamic>.from(this.grammarData!) : null),
+      usageNote: usageNote ?? this.usageNote,
+      grammarVersion: grammarVersion ?? this.grammarVersion,
+      grammarConfidence: grammarConfidence ?? this.grammarConfidence,
     );
   }
 }
+

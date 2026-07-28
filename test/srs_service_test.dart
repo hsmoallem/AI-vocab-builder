@@ -77,8 +77,8 @@ void main() {
   });
 
   group('SrsService.next — interval progression (Good)', () {
-    test('rep 1 → 1 day, rep 2 → 6 days, rep 3 → I_prev * EF', () {
-      // First Good on a new card: reps 0 → 1, interval 0 → 1.
+    test('rep 1 → 2 days, rep 2 → 6 days, rep 3 → I_prev * EF', () {
+      // First Good on a new card: reps 0 → 1, interval 0 → 2.
       var s = SrsService.next(
         repetitions: 0,
         easeFactor: 2.5,
@@ -87,9 +87,9 @@ void main() {
         now: fixedNow,
       );
       expect(s.repetitions, 1);
-      expect(s.intervalDays, 1);
+      expect(s.intervalDays, 2);
 
-      // Second Good: reps 1 → 2, interval 1 → 6 (SM-2 fixed second step).
+      // Second Good: reps 1 → 2, interval 2 → 6 (SM-2 fixed second step).
       s = SrsService.next(
         repetitions: s.repetitions,
         easeFactor: s.easeFactor,
@@ -195,7 +195,7 @@ void main() {
         now: fixedNow,
       );
       expect(s.repetitions, 1);
-      expect(s.intervalDays, 1);
+      expect(s.intervalDays, 2);
     });
   });
 
