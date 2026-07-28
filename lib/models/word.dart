@@ -31,6 +31,20 @@ class Word {
   String? note;
   // AI grammar/usage tip, generated on demand (nullable — added in DB v2).
   String? grammarTip;
+  // ── Grammar enrichment fields (added in DB v6) ──────────────────
+  String? article;           // der/die/das for German nouns
+  String? plural;            // plural form
+  String? feminineForm;      // feminine counterpart (person/profession)
+  String? masculineForm;     // masculine counterpart (when input is feminine)
+  String? partOfSpeech;      // noun, verb, adjective, etc.
+  String? infinitive;        // base verb form
+  String? pastTense;         // simple past / Präteritum
+  String? pastParticiple;    // Partizip II
+  String? auxiliaryVerb;     // haben/sein
+  String? verbType;          // weak, strong, mixed, irregular
+  bool isReflexive;          // common reflexive usage
+  bool isSeparable;          // separable prefix verb
+  String? posPrepositions;   // common prepositions used with this word
   // Archived words are hidden from Saved Words + flashcards (added in DB v3).
   bool archived;
   // Optional "also translate to" result the user saved on the card (DB v5):
