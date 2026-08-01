@@ -129,9 +129,16 @@ class FirebaseService {
     final uid = currentUser?.uid;
     if (uid == null) throw Exception('Not signed in');
 
-    final batch = firestore.batch();
     final wordsRef = firestore.collection('users').doc(uid).collection('words');
 
+    // Step 1: Delete ALL existing docs so deleted words don't survive.
+    final existingDocs = await wordsRef.get();
+    final batch = firestore.batch();
+    for (final doc in existingDocs.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Step 2: Write current words.
     for (final word in words) {
       final docRef = wordsRef.doc(
         word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
