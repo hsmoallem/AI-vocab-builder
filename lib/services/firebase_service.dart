@@ -131,22 +131,29 @@ class FirebaseService {
 
     final wordsRef = firestore.collection('users').doc(uid).collection('words');
 
-    // Step 1: Delete ALL existing docs so deleted words don't survive.
-    final existingDocs = await wordsRef.get();
-    final batch = firestore.batch();
-    for (final doc in existingDocs.docs) {
-      batch.delete(doc.reference);
-    }
-
-    // Step 2: Write current words.
+    // Step 1: Write current words first (safe — no data lost on failure).
+    final writeBatch = firestore.batch();
+    final backedUpIds = <String>{};
     for (final word in words) {
-      final docRef = wordsRef.doc(
-        word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      );
-      batch.set(docRef, _wordToFirestore(word));
+      final docId = word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
+      backedUpIds.add(docId);
+      writeBatch.set(wordsRef.doc(docId), _wordToFirestore(word));
     }
+    await writeBatch.commit();
 
-    await batch.commit();
+    // Step 2: Only AFTER successful write, delete stale docs not in this backup.
+    final existingDocs = await wordsRef.get();
+    final deleteBatch = firestore.batch();
+    int deleted = 0;
+    for (final doc in existingDocs.docs) {
+      if (!backedUpIds.contains(doc.id)) {
+        deleteBatch.delete(doc.reference);
+        deleted++;
+      }
+    }
+    if (deleted > 0) {
+      await deleteBatch.commit();
+    }
   }
 
   Future<List<Word>> restoreWords() async {
