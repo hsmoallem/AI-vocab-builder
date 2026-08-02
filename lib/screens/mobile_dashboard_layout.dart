@@ -422,7 +422,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
     try {
       final provider = context.read<WordProvider>();
       final words = await provider.getAllWordsForBackup();
-      await FirebaseService.instance.backupWords(words);
+      final syncCount = await FirebaseService.instance.backupWords(words);
       try {
         await FirebaseService.instance.backupSettings();
         await FirebaseService.instance.updateStreak(provider.streak);
@@ -433,7 +433,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Backed up ${words.length} words, streak, and settings to cloud'),
+            content: Text('Backed up $syncCount words, streak, and settings to cloud'),
             backgroundColor: Colors.green,
           ),
         );
@@ -499,7 +499,7 @@ class _MobileDashboardLayoutState extends State<MobileDashboardLayout> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully synced $addedOrUpdated words, streak, and settings from cloud backup.'),
+            content: Text('Restored $addedOrUpdated words from cloud backup.'),
             backgroundColor: Colors.green,
           ),
         );

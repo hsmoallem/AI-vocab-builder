@@ -394,7 +394,7 @@ class WordProvider extends ChangeNotifier {
       await loadWords();
       await refreshSrs();
     }
-    return addedOrUpdated;
+    return uniqueCloudWords.length;
   }
 
   Future<void> deleteWord(int id) async {

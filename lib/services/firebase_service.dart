@@ -127,20 +127,51 @@ class FirebaseService {
 
   // ── Firestore Backup ────────────────────────────────────────────────
 
-  Future<void> backupWords(List<Word> words) async {
+  Future<int> backupWords(List<Word> words) async {
     final uid = currentUser?.uid;
     if (uid == null) throw Exception('Not signed in');
 
-    final batch = firestore.batch();
     final wordsRef = firestore.collection('users').doc(uid).collection('words');
+    final snapshot = await wordsRef.get();
 
+    final currentWords = <String, Word>{};
     for (final word in words) {
       final safeId = base64Url.encode(utf8.encode(word.word.trim().toLowerCase()));
-      final docRef = wordsRef.doc(safeId);
-      batch.set(docRef, _wordToFirestore(word));
+      currentWords[safeId] = word;
     }
 
-    await batch.commit();
+    final operations = <Future<void>>[];
+    var batch = firestore.batch();
+    int opCount = 0;
+
+    void commitBatchIfNeeded() {
+      if (opCount == 500) {
+        operations.add(batch.commit());
+        batch = firestore.batch();
+        opCount = 0;
+      }
+    }
+
+    for (final doc in snapshot.docs) {
+      if (!currentWords.containsKey(doc.id)) {
+        batch.delete(doc.reference);
+        opCount++;
+        commitBatchIfNeeded();
+      }
+    }
+
+    for (final entry in currentWords.entries) {
+      batch.set(wordsRef.doc(entry.key), _wordToFirestore(entry.value));
+      opCount++;
+      commitBatchIfNeeded();
+    }
+
+    if (opCount > 0) {
+      operations.add(batch.commit());
+    }
+
+    await Future.wait(operations);
+    return currentWords.length;
   }
 
   Future<List<Word>> restoreWords() async {

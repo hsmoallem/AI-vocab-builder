@@ -144,7 +144,7 @@ class WebTopBar {
     try {
       final provider = context.read<WordProvider>();
       final words = await provider.getAllWordsForBackup();
-      await FirebaseService.instance.backupWords(words);
+      final syncCount = await FirebaseService.instance.backupWords(words);
       try {
         await FirebaseService.instance.backupSettings();
         await FirebaseService.instance.updateStreak(provider.streak);
@@ -152,7 +152,7 @@ class WebTopBar {
         debugPrint('Non-fatal error backing up secondary data: $e');
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backed up ${words.length} words, streak, and settings to cloud'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backed up $syncCount words, streak, and settings to cloud'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
@@ -199,7 +199,7 @@ class WebTopBar {
       }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully synced $addedOrUpdated words, streak, and settings from cloud backup.'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Restored $addedOrUpdated words from cloud backup.'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
