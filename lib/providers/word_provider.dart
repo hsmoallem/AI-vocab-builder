@@ -345,11 +345,21 @@ class WordProvider extends ChangeNotifier {
 
   /// Restore and sync words from cloud backup, updating archived status & SRS state of existing words.
   Future<int> syncRestoredWords(List<Word> cloudWords) async {
+    final uniqueCloudWords = <String, Word>{};
+    for (final cw in cloudWords) {
+      final key = cw.word.trim().toLowerCase();
+      final existing = uniqueCloudWords[key];
+      if (existing == null || cw.srsRepetitions > existing.srsRepetitions ||
+          (cw.srsLastReview != null && (existing.srsLastReview == null || cw.srsLastReview!.isAfter(existing.srsLastReview!)))) {
+        uniqueCloudWords[key] = cw;
+      }
+    }
+
     final allLocal = await DatabaseService.getAllWordsForBackup();
     final localMap = {for (var w in allLocal) w.word.trim().toLowerCase(): w};
     int addedOrUpdated = 0;
 
-    for (final cloudWord in cloudWords) {
+    for (final cloudWord in uniqueCloudWords.values) {
       final key = cloudWord.word.trim().toLowerCase();
       final existing = localMap[key];
       if (existing == null) {

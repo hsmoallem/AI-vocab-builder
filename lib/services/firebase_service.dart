@@ -135,9 +135,8 @@ class FirebaseService {
     final wordsRef = firestore.collection('users').doc(uid).collection('words');
 
     for (final word in words) {
-      final docRef = wordsRef.doc(
-        word.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      );
+      final safeId = base64Url.encode(utf8.encode(word.word.trim().toLowerCase()));
+      final docRef = wordsRef.doc(safeId);
       batch.set(docRef, _wordToFirestore(word));
     }
 
