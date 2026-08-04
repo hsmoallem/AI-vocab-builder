@@ -334,7 +334,7 @@ class _WebWordListScreenState extends State<WebWordListScreen> {
               clipBehavior: Clip.antiAlias,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final double tableWidth = constraints.maxWidth < 850 ? 850.0 : constraints.maxWidth;
+                  final double tableWidth = constraints.maxWidth < 500 ? 500.0 : constraints.maxWidth;
                   const headerStyle = TextStyle(
                     color: Color(0xFF64748B),
                     fontSize: 12,
